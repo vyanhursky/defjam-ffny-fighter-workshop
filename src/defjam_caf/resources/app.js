@@ -1,0 +1,123 @@
+import * as THREE from 'three';
+import {OrbitControls} from './vendor/OrbitControls.js';
+
+const $ = id => document.getElementById(id);
+let bridge, current=null, serial=0, busyCount=0, options=[], selectionKey=null, previewEpoch=0;
+const pending=new Map();
+function toast(message,error=false){$('toast').textContent=message;$('toast').classList.toggle('error',error);$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,error?12000:6500);}
+function call(action,args={},label=null){
+  const id=String(++serial);
+  if(label){busyCount++;$('busy-label').textContent=label;$('busy').hidden=false;}
+  return new Promise((resolve,reject)=>{pending.set(id,{resolve,reject,label});bridge.dispatch(JSON.stringify({id,action,args}));});
+}
+function fail(error){toast(error.message||String(error),true);$('status-message').textContent='Operation could not be completed';}
+async function act(action,args={},label=null){try{const result=await call(action,args,label);if(result?.snapshot)renderState(result.snapshot);else if(result?.profiles)renderState(result);if(result?.message)toast(result.message);return result;}catch(e){fail(e);return null;}}
+function makeOptions(select,items,value){select.replaceChildren(...items.map(x=>new Option(x.label,String(x.value))));if(value!==undefined)select.value=String(value);select.disabled=!items.length;}
+function discard(){return !current?.dirty||confirm('Discard unsaved changes to this fighter?');}
+function readyFighter(){return Boolean(current?.fields?.has_fighter);}
+function renderState(state){
+  current=state;window.__cafState=state;
+  $('data-path').textContent=state.data||'Choose your Recomp data directory to begin';
+  $('fighter-name').textContent=state.selected||'YOUR FIGHTER';
+  $('fighter-subtitle').textContent=state.fields?(state.fields.has_fighter?'YOUR STORY FIGHTER · ORIGINAL GAME ASSETS':'NO STORY FIGHTER · CREATE ONE IN THE GAME'):'Open a profile to get started';
+  $('save-status').textContent=state.dirty?'● Unsaved changes':state.selected?'● Saved profile':'No profile loaded';$('save-status').classList.toggle('dirty',state.dirty);
+  $('profiles').replaceChildren();
+  for(const p of state.profiles){const b=document.createElement('button');b.className='profile-card'+(p.name===state.selected?' selected':'');const mon=document.createElement('span');mon.className='profile-monogram';mon.textContent=p.name.slice(0,2);const text=document.createElement('span'),name=document.createElement('strong'),sub=document.createElement('small');name.textContent=p.name;sub.textContent=p.has_fighter?'Story fighter':'No Story fighter';text.append(name,sub);b.append(mon,text);b.onclick=()=>{if(discard())act('select_profile',{name:p.name},'Loading profile…');};$('profiles').append(b);}
+  $('profile-note').textContent=state.issues.length?`${state.issues.length} save folder(s) could not be loaded. ${state.issues.map(x=>x.error).join('; ')}`:state.data?`${state.profiles.length} profiles found. Your global Options are kept separate.`:'Profiles are discovered from your local save data.';
+  $('save').disabled=!state.dirty;$('undo').disabled=!state.undo;$('reset').disabled=!state.dirty;
+  for(const id of ['export','duplicate'])$(id).disabled=!state.selected;
+  $('import').disabled=!state.data;
+  $('changes').replaceChildren(...(state.changes.length?state.changes:['No changes yet.']).map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
+  $('status-message').textContent=state.dirty?`${state.changes.length} pending change(s) · review before saving`:'Ready · changes stay local';
+  const f=state.fields;
+  makeOptions($('build'),'ABCDEF'.split('').map(v=>({value:v,label:`Build ${v}`})),f?'ABCDEF'[f.caf_values[0]]:'C');
+  makeOptions($('skin'),state.skins.map(n=>({value:n,label:`Tone ${n}`})),f?.caf_values[1]);
+  const category=$('category').value;
+  makeOptions($('category'),state.groups.map(g=>({value:g.id,label:g.label})),state.groups.some(g=>g.id===category)?category:'12');
+  $('stats').replaceChildren();
+  for(const [key,label] of [['upper','Upper power'],['lower','Lower power'],['speed','Speed'],['toughness','Toughness'],['health','Health']]){
+    const row=document.createElement('div');row.className='stat-row';const heading=document.createElement('div');heading.className='stat-heading';const span=document.createElement('span');span.textContent=label;const number=document.createElement('input');Object.assign(number,{type:'number',min:'0',max:'50',value:String(f?.stats[key]||0)});number.id=`stat-${key}`;number.setAttribute('aria-label',label);const slider=document.createElement('input');Object.assign(slider,{type:'range',min:'0',max:'50',value:number.value});slider.setAttribute('aria-label',label+' slider');slider.oninput=()=>number.value=slider.value;number.oninput=()=>slider.value=number.value;const change=()=>{const value=Number(number.value);if(!Number.isInteger(value)||value<0||value>50){fail(new Error('Training stats must be 0–50.'));return;}act('stage',{edits:{stats:{[key]:value}}});};number.onchange=change;slider.onchange=change;heading.append(span,number);row.append(heading,slider);$('stats').append(row);
+  }
+  $('cash').value=f?.cash??0;$('development').value=f?.development??0;
+  for(let i=0;i<3;i++)makeOptions($(`style-${i}`),[...(i?[{value:-1,label:'None'}]:[]),...state.style_names.map((name,n)=>({value:n,label:name}))],f?.styles[i]??-1);
+  $('moveset').textContent=f?.styles.length?f.styles.map(i=>state.style_names[i]).join(' + '):'No fighting style assigned.';
+  for(const el of document.querySelectorAll('.tab-content input,.tab-content select,.tab-content button'))el.disabled=!readyFighter()||(el.closest('#tab-appearance')&&!state.preview_available);
+  loadCategory().catch(fail);
+  updatePreview();
+}
+function groupKey(o){return `${o.garment}||${(Number(o.key.split(':')[1])&0xff00ffff)>>>0}`;}
+async function loadCategory(){
+  if(!readyFighter()||!current.preview_available){options=[];return;}
+  const slot=$('category').value;if(!slot)return;
+  options=await call('options',{slot});
+  selectionKey=current.appearance_selected?.[slot];
+  wardrobe();
+}
+function wardrobe(){
+  const query=$('search').value.toLowerCase().trim(),filtered=options.filter(o=>o.label.toLowerCase().includes(query));
+  const groups=new Map();for(const o of filtered)if(!groups.has(groupKey(o)))groups.set(groupKey(o),o.garment);
+  const selected=options.find(o=>o.key===selectionKey),prior=$('garment').value;
+  const value=selected&&groups.has(groupKey(selected))?groupKey(selected):groups.has(prior)?prior:groups.keys().next().value;
+  makeOptions($('garment'),[...groups].map(([value,label])=>({value,label})),value);
+  renderColors(selected);updateEquipped();
+}
+function garmentOptions(){return options.filter(o=>groupKey(o)===$('garment').value);}
+function renderColors(selected=null){const rows=garmentOptions(),colors=[...new Set(rows.map(o=>o.color_name))];makeOptions($('color'),colors.map(v=>({value:v,label:v||'Default'})),selected&&rows.includes(selected)?selected.color_name:colors[0]);renderFittings(selected);}
+function renderFittings(selected=null){const rows=garmentOptions().filter(o=>o.color_name===$('color').value),fits=[...new Set(rows.map(o=>o.fitting))];makeOptions($('fitting'),fits.map(v=>({value:v,label:v||'Default'})),selected&&rows.includes(selected)?selected.fitting:fits[0]);$('equip').disabled=!rows.length;}
+function updateEquipped(){const selected=options.find(o=>o.key===selectionKey);$('equipped-label').textContent=selected?'Equipped: '+selected.label:'Saved selection is preserved.';}
+
+const scene=new THREE.Scene();scene.background=null;
+const camera=new THREE.PerspectiveCamera(32,1,.01,1000);
+const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0,0);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
+$('viewport').append(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.075;controls.minDistance=.2;controls.maxDistance=100;
+scene.add(new THREE.HemisphereLight(0xe5edd6,0x3c4538,2.1));const key=new THREE.DirectionalLight(0xffedcc,3.5);key.position.set(3,5,5);scene.add(key);const rim=new THREE.DirectionalLight(0xaac7b7,2.5);rim.position.set(-4,3,-3);scene.add(rim);
+let model=new THREE.Group(),bounds=null,baseline=null;scene.add(model);
+function dispose(){for(const child of model.children){child.geometry?.dispose();if(child.material?.map)child.material.map.dispose();child.material?.dispose();}scene.remove(model);model=new THREE.Group();scene.add(model);}
+function frame(view='fit'){
+  if(!bounds)return;const [lo,hi]=bounds;const center=new THREE.Vector3(...lo).add(new THREE.Vector3(...hi)).multiplyScalar(.5),height=hi[1]-lo[1];let target=center,distance=height*1.98;
+  if(view==='face'){target=new THREE.Vector3(center.x,hi[1]-height*.12,center.z);distance=height*.61;}
+  controls.target.copy(target);camera.position.set(target.x,target.y+(view==='face'?0:height*.03),target.z+(view==='back'?-distance:distance));camera.near=Math.max(.001,height*.001);camera.far=height*100;camera.updateProjectionMatrix();controls.update();
+}
+async function renderScene(data,keepCamera){
+  const textures={};const loader=new THREE.TextureLoader();
+  await Promise.all(Object.entries(data.textures).map(async([name,url])=>{const tex=await loader.loadAsync(url);tex.colorSpace=THREE.SRGBColorSpace;tex.flipY=false;tex.wrapS=tex.wrapT=THREE.ClampToEdgeWrapping;tex.magFilter=THREE.LinearFilter;tex.minFilter=THREE.LinearMipmapLinearFilter;tex.anisotropy=renderer.capabilities.getMaxAnisotropy();textures[name]=tex;}));
+  dispose();
+  for(const part of data.meshes){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(part.positions.flat(),3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(part.normals.flat(),3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(part.uv.flat(),2));geometry.setIndex(part.indices);const material=materialFor(textures[part.atlas],part.transparent);const mesh=new THREE.Mesh(geometry,material);mesh.userData={atlas:part.atlas,transparent:part.transparent};model.add(mesh);}
+  bounds=data.bounds;if(!keepCamera)frame();$('empty').hidden=true;$('empty').style.display='none';$('preview-note').textContent=data.notices.length?data.notices.join(' · '):'Static preview · game lighting and animated fit may differ.';window.__cafPreview={meshes:data.meshes.length,bounds:data.bounds,ready:true};
+}
+function materialFor(texture,transparent){const config={map:texture,transparent:Boolean(transparent),side:THREE.FrontSide};return $('studio').checked?new THREE.MeshStandardMaterial({...config,roughness:.85,metalness:0}):new THREE.MeshBasicMaterial(config);}
+async function updatePreview(){
+  const epoch=++previewEpoch;
+  if(!readyFighter()||!current.preview_available){dispose();$('empty').hidden=false;$('empty').style.display='flex';$('empty').querySelector('h3').textContent=current?.selected?'No preview available':'Your fighter, your way.';$('empty').querySelector('p').textContent=current?.preview_error||'Create a Story fighter in the game to begin editing.';window.__cafPreview={ready:false};return;}
+  $('status-message').textContent='Updating fighter preview…';
+  try{const data=await call('preview');if(epoch!==previewEpoch)return;const same=baseline===current.selected;await renderScene(data,same);baseline=current.selected;$('status-message').textContent=current.dirty?'Preview updated · unsaved changes':'Ready · profile loaded';}
+  catch(e){if(epoch===previewEpoch){dispose();$('empty').hidden=false;$('empty').style.display='flex';$('empty').querySelector('h3').textContent='Preview needs attention';$('empty').querySelector('p').textContent=e.message;window.__cafPreview={ready:false,error:e.message};fail(e);}}
+}
+new ResizeObserver(()=>{const box=$('viewport');renderer.setSize(box.clientWidth,box.clientHeight,false);camera.aspect=box.clientWidth/Math.max(1,box.clientHeight);camera.updateProjectionMatrix();}).observe($('viewport'));
+renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
+
+for(const b of document.querySelectorAll('.tab'))b.onclick=()=>{for(const button of document.querySelectorAll('.tab'))button.classList.toggle('active',button===b);for(const panel of document.querySelectorAll('.tab-content'))panel.hidden=panel.id!==`tab-${b.dataset.tab}`;};
+$('open-data').onclick=$('empty-open').onclick=()=>{if(discard())act('choose_data',{},'Loading profiles and original assets…');};
+$('refresh').onclick=()=>{if(current?.data&&discard())act('open_data',{path:current.data},'Refreshing profiles…');};
+$('import').onclick=()=>{if(discard())act('choose_import',{},'Importing complete profile…');};
+$('export').onclick=()=>act('choose_export',{},'Exporting complete profile…');
+$('duplicate').onclick=()=>act('choose_duplicate',{},'Duplicating profile…');
+$('save').onclick=()=>{if(confirm('Save these changes to '+current.selected+'?\n\n'+current.changes.join('\n')+'\n\nA backup will be created first. Close the game before saving.'))act('save',{},'Saving profile and backup…');};
+$('undo').onclick=()=>act('undo');$('reset').onclick=()=>{if(confirm('Reset all unsaved fighter changes?'))act('reset');};
+$('build').onchange=()=>act('appearance',{changes:{build:$('build').value}});
+$('skin').onchange=()=>act('appearance',{changes:{skin:Number($('skin').value)}});
+$('category').onchange=()=>{$('search').value='';loadCategory().catch(fail);};$('search').oninput=wardrobe;
+$('garment').onchange=()=>renderColors();$('color').onchange=()=>renderFittings();
+$('equip').onclick=()=>{const selected=garmentOptions().find(o=>o.color_name===$('color').value&&o.fitting===$('fitting').value);if(selected)act('appearance',{changes:{part:selected.key}});};
+for(const id of ['cash','development'])$(id).onchange=()=>{const value=Number($(id).value);if(!Number.isInteger(value)||value<0||value>current.limits[id]){fail(new Error(`${id} must be between 0 and ${current.limits[id].toLocaleString()}.`));return;}act('stage',{edits:{[id]:value}});};
+$('apply-styles').onclick=()=>{const styles=[0,1,2].map(i=>Number($(`style-${i}`).value));if(styles[1]===-1&&styles[2]!==-1){fail(new Error('Choose a second style before adding a third.'));return;}act('stage',{edits:{styles:styles.filter(s=>s!==-1)}});};
+for(const id of ['front','back','face','fit'])$(id).onclick=()=>frame(id);
+$('studio').onchange=()=>{for(const mesh of model.children){const old=mesh.material;mesh.material=materialFor(old.map,mesh.userData.transparent);old.dispose();}};
+
+new QWebChannel(qt.webChannelTransport,channel=>{
+  bridge=channel.objects.editor;
+  bridge.response.connect(raw=>{const message=JSON.parse(raw),task=pending.get(message.id);if(!task)return;pending.delete(message.id);if(task.label){busyCount--;$('busy').hidden=busyCount<=0;}if(message.error)task.reject(new Error(message.error));else task.resolve(message.result);});
+  bridge.progress.connect(message=>{$('busy-label').textContent=message;$('status-message').textContent=message;});
+  act('boot',{},'Loading local fighter data…');
+});

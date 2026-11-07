@@ -1,0 +1,8 @@
+# Windows local beta, Python 3.13.5. Build each OS natively.
+PySide6==6.8.3
+Pillow==12.3.0
+numpy==2.5.4
+PyInstaller==6.22.3
+pytest==9.2.0
+setuptools==84.2.1
+wheel==0.48.0

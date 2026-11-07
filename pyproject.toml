@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "defjam-ffny-caf-customizer"
+version = "0.1.0b1"
+description = "Offline Create-a-Fighter and profile editor for Def Jam FFNY Recomp"
+requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+authors = [{name = "Vlad Yanhursky"}]
+dependencies = ["Pillow>=10,<13", "numpy>=1.26,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+desktop = ["PySide6==6.8.3"]
+build = ["PyInstaller>=6.12,<7"]
+
+[project.scripts]
+defjam-caf = "defjam_caf.cli:main"
+defjam-caf-desktop = "defjam_caf.desktop:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+defjam_caf = ["resources/*", "resources/vendor/*", "_vendor/LICENSE"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

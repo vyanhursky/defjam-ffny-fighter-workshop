@@ -2,7 +2,9 @@
 
 ## Status — 2026-11-07
 
-Local beta implementation is present. No GitHub publication yet.
+Local beta implementation is present. Source publication is authorized on
+`develop/0.1`; owner hands-on validation is still pending. No packaged release
+has been authorized or published.
 
 - Mapped and implemented cash/development, five training stats0–50, five retail
   styles and55 combinations with dependent bonus correction, and CAF appearance.
@@ -58,7 +60,8 @@ uses Python3.13.5, PySide6/Qt6.8.3, Pillow12.3, NumPy2.5.4, PyInstaller6.22.3.
 1. Collect owner feedback using the copied-save launcher and beta test guide.
 2. Address reported fit/appearance or editor issues and repeat affected checks.
 3. Perform native Mac/Linux package/game acceptance before claiming those targets.
-4. Owner review precedes public publication. No remote repository has been created.
+4. Publish development source on `develop/0.1`. Owner review remains a gate for a
+   packaged release; publishing source does not imply owner acceptance.
 
 Final verification: thirty tests pass using an explicitly writable temporary
 directory. An initial repeat used an inaccessible sandbox temp directory and

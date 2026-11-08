@@ -1,7 +1,11 @@
 # defjam-ffny-caf-customizer
 
 A standalone, offline desktop Create-a-Fighter and save editor for **Def Jam:
-Fight for NY Recomp**, planned for Windows, macOS and Linux.
+Fight for NY Recomp**, targeting Windows, macOS and Linux.
+
+**Development preview — `develop/0.1`.** Windows functional checks pass; owner
+hands-on review and native macOS/Linux validation are pending. This repository
+currently publishes source; no packaged release is available yet.
 
 Local beta: browse existing profiles, preview the saved fighter in 3D, edit
 appearance, training stats, cash, development points and retail CAF style

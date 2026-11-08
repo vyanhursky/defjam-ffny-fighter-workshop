@@ -52,4 +52,5 @@ performance measurements.
 Owner hands-on review, broader retail outfit comparisons and native macOS/Linux
 package/game tests remain outstanding. Native checks verify representative
 appearance/style changes and profile persistence, not every combination or move.
-Publication has not been requested or performed.
+Development source publication on `develop/0.1` is authorized. No packaged release
+has been authorized; source publication does not imply owner acceptance.

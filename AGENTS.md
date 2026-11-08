@@ -18,4 +18,6 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   Keep this utility independent of its production corpus/review workspaces.
 - Packaged Windows/macOS/Linux desktop application; offline assets and dependencies.
   Verify each target natively before claiming it is tested.
-- No GitHub publication yet. Update PROGRESS.md when work or decisions change.
+- Source publication is authorized on `develop/0.1`. Owner hands-on validation
+  remains pending; do not publish a packaged release without a new instruction.
+  Update PROGRESS.md when work or decisions change.

@@ -18,8 +18,9 @@ Owner decisions, 2026-11-07.
   duplicate to a new named profile while preserving Story progress.
 - Backups, undo/reset, change review, collision refusal and stale-file detection.
 - Standalone public repository named `defjam-ffny-caf-customizer`. Build and test
-  locally, owner-test, then perform game import/export functional acceptance
-  before publication. No publication has been requested yet.
+  locally and perform game import/export functional acceptance. Development
+  source publication on `develop/0.1` is authorized; owner hands-on review remains
+  pending before a packaged release.
 
 Fresh profile creation, console/emulator compatibility and fighter-only presets
 are outside this beta's required scope.

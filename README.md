@@ -3,10 +3,19 @@
 A standalone, offline desktop Create-a-Fighter and save editor for **Def Jam:
 Fight for NY Recomp**, targeting Windows, macOS and Linux.
 
-**Development preview — `develop/0.1`.** Windows functional checks and all 29 Apple Silicon macOS editor checks pass.
-Native CI builds and starts standalone packages on Windows x64, macOS Apple
-Silicon/Intel and Linux x64. Full owner and native game acceptance remain pending. This repository
-currently publishes source; no packaged release is available yet.
+**0.1 Beta 1** — [Download the prerelease](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/tag/v0.1.0-beta.1).
+Standalone packages include Python and Qt; no Python installation is required.
+
+| Platform | Download |
+| --- | --- |
+| Windows x64 | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.1/defjam-ffny-fighter-workshop-0.1.0b1-windows-x64.zip) |
+| macOS Apple Silicon | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.1/defjam-ffny-fighter-workshop-0.1.0b1-macos-arm64.zip) |
+| macOS Intel | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.1/defjam-ffny-fighter-workshop-0.1.0b1-macos-x64.zip) |
+| Linux x64 | [tar.gz](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.1/defjam-ffny-fighter-workshop-0.1.0b1-linux-x64.tar.gz) |
+
+Checksums accompany each package. Windows functional checks, all 29 local Apple
+Silicon editor checks, and native build/startup CI on all four targets pass.
+This is a beta; broader native editor/game acceptance remains ongoing.
 
 Local beta: browse existing profiles, preview the saved fighter in 3D, edit
 appearance, training stats, cash, development points and retail CAF style
@@ -23,6 +32,27 @@ Warm shop, Cool rim and Texture reference lighting. Wardrobe-inspired and Relaxe
 use approximate preview deformation, not the retail shop animation. Uncommitted
 try-ons are excluded from saves and exports. Equip stages an item; clothing
 visibility, pose and lighting always remain preview-only.
+
+## Screenshots
+
+Captured from the macOS app with a disposable DEMO profile and original assets
+decoded locally from the user's own game files.
+
+**Main window** — browse profiles and preview your fighter.
+
+![Main window with the DEMO fighter](docs/media/workshop-overview.png)
+
+**Stats and cash** — adjust the five training stats, cash and development points.
+
+![Training stats, cash and development-point controls](docs/media/workshop-stats.png)
+
+**Fighting-style combinations** — combine up to three retail fighting styles.
+
+![Kickboxing, Martial Arts and Wrestling combination](docs/media/workshop-fighting-styles.png)
+
+**Clothing try-on** — preview items, colors and fits before adding them to Pending Changes.
+
+![Live Fila Velour Jacket try-on with color and wearing-style controls](docs/media/workshop-clothing.png)
 
 On macOS, open the `.app`. On Windows or Linux, keep the complete application
 folder together and launch its executable.

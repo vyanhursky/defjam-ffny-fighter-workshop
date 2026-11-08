@@ -4,8 +4,11 @@
 
 Local beta source is published at
 https://github.com/vyanhursky/defjam-ffny-fighter-workshop on `develop/0.1`, the
-default branch. Full owner acceptance is still pending. No packaged release
-has been published; saves, game assets and local builds remain private.
+default branch. The owner approved the four README screenshots and authorized
+the first packaged prerelease, v0.1.0-beta.1. Publication is gated on the tagged
+source's native CI and checksum/provenance verification; the release page records
+publication state. Broader owner/game acceptance remains ongoing. Saves and
+original extracted assets stay private; binaries are release attachments only.
 
 The chosen project name is Def Jam FFNY Fighter Workshop. Repository metadata,
 desktop branding and future package filenames use `defjam-ffny-fighter-workshop`.
@@ -208,3 +211,35 @@ The local checkout returns to `develop/0.1`; the merged feature branch is
 removed after synchronization. No tagged release was created. Next work remains
 owner acceptance and the broader native editor/game checks documented above;
 CI package/startup evidence does not replace those checks.
+
+## README screenshot approval — 2026-11-07
+
+Owner requested four examples for the develop/0.1 README, with candidate review
+before publishing: main window, stats/cash, fighting-style combinations and
+clothing. Four actual Qt window captures were prepared from source 418d08d,
+using a disposable DEMO profile and a generic temporary data path. Each capture
+is 2880 x 2076; no pixel alterations or UI text replacements were applied.
+The original source profile's hashes are unchanged.
+
+The owner approved all four exact candidates. They are committed under
+docs/media with SHA-256 pins and an artwork exception in AGENTS.md; the main
+README shows the approved gallery. No original assets or saves are committed.
+
+## 0.1 Beta 1 release authorization and handoff — 2026-11-07
+
+Owner requested `v0.1.0-beta.1` with native binaries. Python package version is
+already 0.1.0b1; the human-readable tag is v0.1.0-beta.1. The release is a GitHub
+prerelease, never a stable/latest release. Native packages include linked README
+documentation and the exact approved images; no original save/dump/cache or
+compiled game code enters a package. The editor itself may be distributed.
+
+Build all four targets on this source, retain their frozen startup receipts,
+verify native archives and SHA-256 sidecars, then attach those exact CI outputs
+with SHA256SUMS and source/CI provenance. Verify uploaded asset digests before
+publishing. Notes: docs/releases/v0.1.0-beta.1.md. Release page:
+https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/tag/v0.1.0-beta.1
+
+Next after publication: collect beta feedback using copied saves; keep broader
+native game acceptance, physical GPU and Wayland qualifications distinct from
+the native package/startup evidence. No fresh save creation or named-fighter
+moveset override is claimed.

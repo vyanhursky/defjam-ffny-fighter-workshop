@@ -80,7 +80,7 @@ jobs:
           name: startup-${{ matrix.target }}
           path: build/package-smoke
           if-no-files-found: ignore
-      # These are game-free CI artifacts, never a tagged/public release.
+      # Promote these validated packages only for an owner-authorized release.
       - name: Keep validated native package
         uses: actions/upload-artifact@v4
         with:

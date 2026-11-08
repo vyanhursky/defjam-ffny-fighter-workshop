@@ -27,3 +27,12 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   `defjam.png`). Their source paths/commit and SHA-256 hashes are recorded in
   `provenance.json` there. This is an icon-only exception, not general permission
   to track game assets. The MIT license does not cover that artwork.
+
+- Owner-approved README screenshot exception (2026-11-07): the four exact
+  `docs/media/workshop-*.png` files listed in `docs/media/SHA256SUMS` were reviewed
+  and approved for publication. Keep this set pinned; further captures need a
+  new approval. Game artwork in these images is outside the MIT license.
+- Owner authorized the first packaged prerelease `v0.1.0-beta.1` (2026-11-07).
+  Publish only native workshop packages from the tagged source's green CI,
+  with checksums and provenance. Never include original saves, extracted assets,
+  caches or any compiled game executable. Future releases require instruction.

@@ -22,3 +22,8 @@ from DefJamFFNY-recomp at the owner's request (2026-11-07). See the accompanying
 `provenance.json` for source paths, commit and SHA-256 fingerprints. They contain
 the game's artwork, which remains the property of its rights holders and is
 not covered by this project's MIT license.
+
+The four README screenshots in `docs/media`, pinned by `SHA256SUMS` there, were
+reviewed and approved by the owner on 2026-11-07. They include original game
+artwork, which remains the property of its rights holders and is not covered
+by the project MIT license. The permission is limited to those exact captures.

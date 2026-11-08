@@ -7,12 +7,14 @@ import sys
 import traceback
 
 from PySide6.QtCore import QObject, Signal, Slot, QUrl, QStandardPaths, QTimer, qInstallMessageHandler
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QInputDialog, QMessageBox
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineUrlRequestInterceptor
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
 from .editor import Editor
+from .locations import default_data_directory, initial_data_directory
 
 
 class OfflineOnly(QWebEngineUrlRequestInterceptor):
@@ -55,7 +57,7 @@ class Bridge(QObject):
                 else:
                     action = "snapshot"
             if action == "choose_data":
-                path = QFileDialog.getExistingDirectory(self.window, "Select Recomp data directory", str(self.editor.data or Path.home()))
+                path = QFileDialog.getExistingDirectory(self.window, "Select Recomp data directory", str(self.editor.data or default_data_directory() or Path.home()))
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "open_data", {"path": path}
@@ -97,6 +99,8 @@ class Bridge(QObject):
 class Window(QMainWindow):
     def __init__(self, workspace, initial=None):
         super().__init__()
+        icon_name = "defjam.icns" if sys.platform == "darwin" else "defjam.png"
+        self.setWindowIcon(QIcon(str(Path(__file__).parent / "resources" / "branding" / icon_name)))
         self.setWindowTitle("Def Jam FFNY · Fighter Workshop · Local Beta")
         self.resize(1440, 940)
         self.setMinimumSize(1080, 740)
@@ -142,6 +146,7 @@ def startup_smoke(app, window, receipt):
         timer.stop()
         receipt.parent.mkdir(parents=True, exist_ok=True)
         receipt.write_text(json.dumps(dict(passed=not error, error=error, details=details,
+            icon_loaded=not window.windowIcon().isNull(),
             platform=sys.platform, machine=platform.machine(), frozen=bool(getattr(sys, "frozen", False)),
             seconds=round(time.monotonic() - started, 2)), indent=2), encoding="utf-8")
         app.exit(1 if error else 0)
@@ -195,7 +200,10 @@ def main(argv=None):
         print(f"[START] {sys.executable} resources={Path(__file__).parent / 'resources'}", flush=True)
         qInstallMessageHandler(lambda kind, context, message: print(f"[QT] {message}", flush=True))
     app = QApplication(sys.argv[:1])
-    window = Window(workspace, args.data)
+    # Automated package checks without --data stay independent of installed saves.
+    initial = args.data if args.smoke_test else initial_data_directory(args.data)
+    window = Window(workspace, initial)
+    app.setWindowIcon(window.windowIcon())
     window.show()
     if args.smoke_test:
         startup_smoke(app, window, args.smoke_test)

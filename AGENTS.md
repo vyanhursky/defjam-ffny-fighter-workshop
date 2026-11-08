@@ -21,3 +21,9 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
 - Source publication is authorized on `develop/0.1`. Owner hands-on validation
   remains pending; do not publish a packaged release without a new instruction.
   Update PROGRESS.md when work or decisions change.
+
+- Owner-approved artwork exception (2026-11-07): reuse the exact Recomp app icon
+  files under `src/defjam_caf/resources/branding/` (`defjam.icns`, `defjam.ico`,
+  `defjam.png`). Their source paths/commit and SHA-256 hashes are recorded in
+  `provenance.json` there. This is an icon-only exception, not general permission
+  to track game assets. The MIT license does not cover that artwork.

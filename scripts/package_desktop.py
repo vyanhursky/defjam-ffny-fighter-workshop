@@ -87,8 +87,11 @@ def main(argv=None):
                    "--add-data", f"{root / 'src/defjam_caf/resources'}:defjam_caf/resources",
                    "--add-data", f"{root / 'src/defjam_caf/_vendor/LICENSE'}:defjam_caf/_vendor",
                    "--add-data", f"{docs}:documentation"]
+        icons = root / "src/defjam_caf/resources/branding"
         if sys.platform == "darwin":
-            command += ["--osx-bundle-identifier", BUNDLE_ID]
+            command += ["--osx-bundle-identifier", BUNDLE_ID, "--icon", str(icons / "defjam.icns")]
+        elif sys.platform == "win32":
+            command += ["--icon", str(icons / "defjam.ico")]
         command.append(str(root / "scripts/launch_desktop.py"))
         subprocess.run(command, cwd=root, check=True, env=dict(os.environ,
             PYINSTALLER_CONFIG_DIR=str(root / "build" / "pyinstaller-cache")))

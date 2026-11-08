@@ -52,7 +52,7 @@ def main():
                             '--smoke-test', str(receipt)], cwd=relocated, env=env,
                            stdout=log, stderr=subprocess.STDOUT, timeout=150, check=True)
         result = json.loads(receipt.read_text(encoding='utf-8'))
-        if not result.get('passed') or not result.get('frozen'):
+        if not result.get('passed') or not result.get('frozen') or not result.get('icon_loaded'):
             raise SystemExit('Frozen desktop startup failed: ' + str(result))
         print(json.dumps(result, indent=2))
 

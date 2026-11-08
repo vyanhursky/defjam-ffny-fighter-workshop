@@ -67,8 +67,14 @@ and working GL support even though the UI is offline.
 
 ## Workspaces and diagnostics
 
-Choose the Recomp **data** directory containing `save` and `extracted` on every
-platform. All assets are read locally; Xbox asset names are resolved without
+On macOS, normal startup uses the Recomp installer's default
+`~/Library/Application Support/DefJamRecompiled/data` when an FFNY title-save
+directory exists there. The folder picker starts there too. An explicit
+`--data` path takes priority. If no installation is found, the app opens normally
+with manual selection. This discovery reads the directory without changing saves.
+
+Choose the Recomp **data** directory containing `save` and `extracted` on other
+platforms, or for a custom installation. All assets are read locally; Xbox asset names are resolved without
 case sensitivity, including on case-sensitive Linux volumes. Ambiguous names
 are rejected. Hex profile directory collisions are also rejected on Linux.
 
@@ -98,6 +104,16 @@ For a read-only packaged startup check (no game data required):
 
 Exit 0 requires the actual offline JavaScript modules, WebGL 2 and Qt WebChannel
 to initialize. Renderer failure or a 120-second timeout exits 1. The receipt
-records the platform, CPU and frozen status. This checks startup, not a fighter
+records the platform, CPU, frozen status and whether the app icon loaded.
+With no `--data`, automated smoke mode skips installer-data discovery so CI
+never reads an existing user installation. This checks startup, not a fighter
 preview or native game acceptance. Use `scripts/desktop_smoke.py` on marked
 copies for the full 29-step editor check. Keep its captures and receipts private.
+
+## App icon
+
+The app reuses the owner's approved Def Jam Recomp icon: `.icns` for the Mac
+bundle/Dock, `.ico` for the Windows executable and a PNG window icon on other
+platforms. Source paths and exact fingerprints are recorded in
+`src/defjam_caf/resources/branding/provenance.json`. The game artwork remains
+outside the project MIT license. No icon is regenerated during packaging.

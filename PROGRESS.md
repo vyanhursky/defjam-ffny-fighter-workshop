@@ -128,3 +128,29 @@ Next: run the prepared native CI matrix when source publication is requested,
 then qualify representative packaged workflows on Linux/Intel and test edited
 profiles in the game. Maintain the owner acceptance/release gate. Public docs
 contain no private data paths; local receipts and copied saves stay outside Git.
+
+## Installer data default and Recomp icon — 2026-11-07
+
+Owner requested macOS discovery of the installer's default data directory and
+reuse of the Def Jam Recomp app icon. Normal Mac startup reads
+`~/Library/Application Support/DefJamRecompiled/data` when it contains FFNY title
+saves; the folder picker defaults there. Explicit `--data` takes priority. No
+matching installation leaves manual selection available. Workspace/cache/backup
+locations stay separate from the game data. Automated smoke mode without --data
+skips personal installation discovery.
+
+The exact Recomp `.icns`, `.ico` and 256px PNG are reused, with SHA-256/source
+provenance and the icon-only owner exception recorded in AGENTS.md/THIRD_PARTY.md.
+The Mac bundle and Windows executable receive native icons, and Qt sets the app
+and window icon. These game artwork files are not MIT-licensed.
+
+Validation: 38 Python tests passed; two filesystem cases remain skipped on the
+case-insensitive Mac. The native source app starts without --data at the real
+installer default and loads its icon (the local default contains zero supported
+fighter profiles). No profile write was performed by this discovery check.
+
+The rebuilt standalone Mac app also opens the installer data default without
+--data (confirmed in its captured UI). Its CFBundleIconFile is defjam.icns and
+matches the reused source byte for byte. Checksum-verified ZIP relocation,
+strict deep signature verification and frozen WebGL/WebChannel startup pass,
+including icon_loaded=true. No native Windows/Linux run is claimed here.

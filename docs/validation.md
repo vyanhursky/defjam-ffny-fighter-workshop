@@ -113,3 +113,19 @@ The final frozen Mac app also loaded the imported copied profile and rendered
 its actual fighter (`preview_ready: true`, WebGL 2, `frozen: true`) in 1.69 seconds
 with the previously built private cache. That timing is a warm-cache startup,
 not a first-use conversion or native game performance measurement.
+
+## Installer default and app icon — 2026-11-07
+
+Thirty-eight Python tests pass (two case-sensitive filesystem skips). The added
+cases cover the Mac installer's exact default path, absent installation, explicit
+path precedence, read-only discovery and unchanged behavior on other platforms.
+A native source startup without --data selects the installed default title-save
+directory, and Qt loads the reused `.icns` window icon. That local installation
+contains no supported fighter profiles; no fighter rendering pass is inferred
+from this particular discovery check.
+
+The rebuilt standalone Mac app also opens the installer data default without
+--data (confirmed in its captured UI). Its CFBundleIconFile is defjam.icns and
+matches the reused source byte for byte. Checksum-verified ZIP relocation,
+strict deep signature verification and frozen WebGL/WebChannel startup pass,
+including icon_loaded=true. No native Windows/Linux run is claimed here.

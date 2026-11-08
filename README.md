@@ -26,8 +26,10 @@ visibility, pose and lighting always remain preview-only.
 
 On macOS, open the `.app`. On Windows or Linux, keep the complete application
 folder together and launch its executable.
-Choose **Open data directory** and select the Recomp directory containing `save`
-and `extracted`. Start with separate copies of your saves and close the game using
+On macOS, the app automatically opens the installer's default
+`~/Library/Application Support/DefJamRecompiled/data` directory when it contains
+FFNY saves. Use **Open data directory** or `--data` to select another directory
+containing `save` and `extracted`. Start with separate copies of your saves and close the game using
 those copies before editing. Original game assets are decoded locally; nothing
 is uploaded or downloaded at runtime.
 

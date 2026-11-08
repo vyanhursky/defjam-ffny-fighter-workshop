@@ -78,9 +78,17 @@ jobs:
       - name: Create draft and upload verified packages
         shell: bash
         run: |
-          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --target "$RELEASE_SHA" --title '0.1 Beta 1' --notes-file "release-source/docs/releases/$RELEASE_TAG.md" --prerelease --draft --latest=false
-          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/workshop-release/assets/"* --repo "$GITHUB_REPOSITORY"
-          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > "$RUNNER_TEMP/workshop-release/uploaded-release.json"
+          # GitHub's by-tag REST endpoint excludes unpublished drafts. Discover
+          # the exact draft by ID, and refuse any published/different-source release.
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/workshop-release/releases.json"
+          release_id=$(python publisher/scripts/stage_release.py --source release-source --staging "$RUNNER_TEMP/workshop-release" --source-sha "$RELEASE_SHA" --run-id "$RELEASE_RUN" --tag "$RELEASE_TAG" --find-draft "$RUNNER_TEMP/workshop-release/releases.json")
+          if [ -z "$release_id" ]; then
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --target "$RELEASE_SHA" --title '0.1 Beta 1' --notes-file "release-source/docs/releases/$RELEASE_TAG.md" --prerelease --draft --latest=false
+          fi
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/workshop-release/assets/"* --repo "$GITHUB_REPOSITORY" --clobber
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/workshop-release/releases.json"
+          release_id=$(python publisher/scripts/stage_release.py --source release-source --staging "$RUNNER_TEMP/workshop-release" --source-sha "$RELEASE_SHA" --run-id "$RELEASE_RUN" --tag "$RELEASE_TAG" --find-draft "$RUNNER_TEMP/workshop-release/releases.json")
+          gh api "repos/$GITHUB_REPOSITORY/releases/$release_id" > "$RUNNER_TEMP/workshop-release/uploaded-release.json"
           python publisher/scripts/stage_release.py --source release-source --staging "$RUNNER_TEMP/workshop-release" --source-sha "$RELEASE_SHA" --run-id "$RELEASE_RUN" --tag "$RELEASE_TAG" --verify-upload "$RUNNER_TEMP/workshop-release/uploaded-release.json"
       # Publication remains a separate explicit step after checking the draft.
       - name: Keep release verification metadata

@@ -134,6 +134,20 @@ def verify_uploaded(assets, metadata, tag):
     print('All uploaded GitHub asset digests match:',len(expected))
 
 
+
+def find_draft(metadata, tag, source_sha):
+    pages=json.loads(metadata.read_text())
+    releases=[item for page in pages for item in page] if pages and isinstance(pages[0],list) else pages
+    matches=[r for r in releases if r['tag_name']==tag]
+    assert len(matches)<=1
+    if not matches:return None
+    release=matches[0]
+    assert release['draft'] and release['prerelease'], 'Refuse to replace a published release'
+    assert release['target_commitish']==source_sha, 'Draft belongs to another source commit'
+    assert isinstance(release['id'],int) and release['id']>0
+    return release['id']
+
+
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--source',type=Path,required=True)
@@ -142,8 +156,12 @@ def main():
     ap.add_argument('--run-id',type=int,required=True)
     ap.add_argument('--tag',required=True)
     ap.add_argument('--verify-upload',type=Path)
+    ap.add_argument('--find-draft',type=Path)
     args=ap.parse_args()
-    if args.verify_upload:
+    if args.find_draft:
+        ident=find_draft(args.find_draft,args.tag,args.source_sha)
+        if ident is not None:print(ident)
+    elif args.verify_upload:
         verify_uploaded(args.staging/'assets',args.verify_upload,args.tag)
     else:
         prepare(args.source,args.staging,args.source_sha,args.run_id,args.tag)

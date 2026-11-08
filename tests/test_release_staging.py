@@ -101,3 +101,16 @@ def test_checks_uploaded_digests_and_keeps_a_failed_draft_unpublished(staged):
     metadata['assets'][0]['digest']='sha256:'+'0'*64
     report.write_text(json.dumps(metadata))
     with pytest.raises(AssertionError):release.verify_uploaded(assets,report,TAG)
+
+
+def test_draft_lookup_resumes_only_the_same_unpublished_source(tmp_path):
+    path=tmp_path/'releases.json'
+    path.write_text('[]')
+    assert release.find_draft(path,TAG,SHA) is None
+    draft={'id':42,'tag_name':TAG,'draft':True,'prerelease':True,'target_commitish':SHA}
+    path.write_text(json.dumps([[draft]]))
+    assert release.find_draft(path,TAG,SHA)==42
+    with pytest.raises(AssertionError):release.find_draft(path,TAG,'b'*40)
+    draft['draft']=False
+    path.write_text(json.dumps([draft]))
+    with pytest.raises(AssertionError):release.find_draft(path,TAG,SHA)

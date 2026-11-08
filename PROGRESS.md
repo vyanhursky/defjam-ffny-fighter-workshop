@@ -260,3 +260,10 @@ the exact already-qualified a7a7e35 application source. Local staging fixtures
 pass 44 Python tests with two filesystem skips (the tagged application suite
 remains 40 cases). The owner authorized the beta publication; the final
 publication step follows successful draft verification, without another prompt.
+
+
+Initial draft staging run 42448226560 verified all four archives and uploaded
+the ten assets, then failed because GitHub's by-tag REST endpoint excludes
+unpublished drafts. The draft stayed unpublished. Resolve its numeric ID from
+the authenticated release list, allow retries only for an unpublished draft
+of the same source SHA, and verify all uploaded digests before publication.

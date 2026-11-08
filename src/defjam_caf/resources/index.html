@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FFNY CAF Customizer</title><link rel="stylesheet" href="app.css">
+<title>FFNY Fighter Workshop</title><link rel="stylesheet" href="app.css">
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <script src="qrc:///qtwebchannel/qwebchannel.js"></script><script type="module" src="app.js"></script>
 </head><body>
-<header><div class="brand"><span class="badge">FF<span>NY</span></span><div><h1>CAF CUSTOMIZER</h1><p>DEF JAM: FIGHT FOR NY</p></div></div><div class="header-actions"><span class="beta">LOCAL BETA</span><button id="open-data">Open data directory</button><button id="import" class="quiet">Import profile</button></div></header>
+<header><div class="brand"><span class="badge">FF<span>NY</span></span><div><h1>FIGHTER WORKSHOP</h1><p>DEF JAM: FIGHT FOR NY</p></div></div><div class="header-actions"><span class="beta">LOCAL BETA</span><button id="open-data">Open data directory</button><button id="import" class="quiet">Import profile</button></div></header>
 <div class="data-strip"><span class="dot"></span><span id="data-path">Choose your Recomp data directory to begin</span><span id="connection">OFFLINE · LOCAL FILES</span></div>
 <main>
 <aside class="profiles"><div class="eyebrow">YOUR PROFILES</div><div id="profiles"></div><div id="profile-note" class="muted">Profiles are discovered from your local save data.</div><div class="sidebar-bottom"><span class="eyebrow">SAVE WITH CONFIDENCE</span><p>Automatic backup before each save.<br>Story progress stays with the profile.</p><button id="refresh" class="quiet">Refresh profiles</button></div></aside>
@@ -15,6 +15,6 @@
 <section id="tab-styles" class="tab-content" hidden><div class="panel-title"><h3>Find your fight.</h3><p>Choose up to three distinct retail styles.</p></div><label>Primary style<select id="style-0"></select></label><label>Second style<select id="style-1"></select></label><label>Third style<select id="style-2"></select></label><button id="apply-styles" class="accent">Apply combination</button><div id="moveset" class="moveset"></div><p class="hint">The primary style defines the combination. Style bonuses are updated with the selection. Named fighter movesets that require a runtime mod are deferred.</p></section>
 <section class="change-section"><div class="rule"></div><div class="change-heading"><span class="eyebrow">PENDING CHANGES</span><div><button id="undo" class="text-button">Undo</button><button id="reset" class="text-button">Reset</button></div></div><ul id="changes"><li>No changes yet.</li></ul></section></div>
 <div class="save-actions"><button id="save" class="primary" disabled>Save changes</button><div class="two-cols"><button id="export">Export profile</button><button id="duplicate">Duplicate profile</button></div></div></aside>
-</main><footer><span id="status-message">Ready</span><span>defjam-ffny-caf-customizer · 0.1.0 beta</span></footer>
+</main><footer><span id="status-message">Ready</span><span>defjam-ffny-fighter-workshop · 0.1.0 beta</span></footer>
 <div id="busy" hidden><div class="spinner"></div><strong id="busy-label">Loading your fighter…</strong><span>Everything stays on your computer.</span></div><div id="toast" role="status" hidden></div>
 </body></html>

@@ -1,4 +1,4 @@
-# defjam-ffny-caf-customizer
+# Def Jam FFNY Fighter Workshop
 
 A standalone, offline desktop Create-a-Fighter and save editor for **Def Jam:
 Fight for NY Recomp**, targeting Windows, macOS and Linux.
@@ -55,7 +55,7 @@ only the generated app folder to the ordinary Medium level, then verify the
 packaged preview:
 
 ```powershell
-icacls 'dist\defjam-ffny-caf-customizer' /setintegritylevel '(OI)(CI)M' /T /Q
+icacls 'dist\defjam-ffny-fighter-workshop' /setintegritylevel '(OI)(CI)M' /T /Q
 ```
 
 This does not disable Chromium sandboxing or change Windows security policy.

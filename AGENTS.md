@@ -1,4 +1,4 @@
-# defjam-ffny-caf-customizer
+# defjam-ffny-fighter-workshop
 
 Read PROGRESS.md and docs/specification.md first. This is a separate, local-first
 desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.

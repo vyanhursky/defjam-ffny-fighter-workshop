@@ -98,7 +98,7 @@ class Bridge(QObject):
 class Window(QMainWindow):
     def __init__(self, workspace, initial=None):
         super().__init__()
-        self.setWindowTitle("Def Jam FFNY · CAF Customizer · Local Beta")
+        self.setWindowTitle("Def Jam FFNY · Fighter Workshop · Local Beta")
         self.resize(1440, 940)
         self.setMinimumSize(1080, 740)
         self.web = QWebEngineView(self)
@@ -139,14 +139,14 @@ def main(argv=None):
     if getattr(sys, "frozen", False):
         # Windowed executables have no console. Retain local diagnostics so a
         # failed renderer is observable instead of presenting a silent blank.
-        log_root = (args.workspace or Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "defjam-ffny-caf-customizer") / "logs"
+        log_root = (args.workspace or Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "defjam-ffny-fighter-workshop") / "logs"
         log_root.mkdir(parents=True, exist_ok=True)
         log = (log_root / "desktop.log").open("a", encoding="utf-8", buffering=1)
         sys.stdout = sys.stderr = log
         print(f"[START] {sys.executable} resources={Path(__file__).parent / 'resources'}", flush=True)
         qInstallMessageHandler(lambda kind, context, message: print(f"[QT] {message}", flush=True))
     app = QApplication(sys.argv[:1])
-    app.setApplicationName("defjam-ffny-caf-customizer")
+    app.setApplicationName("defjam-ffny-fighter-workshop")
     app.setOrganizationName("FFNY Community Tools")
     workspace = args.workspace or Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation))
     window = Window(workspace, args.data)

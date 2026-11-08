@@ -8,11 +8,11 @@ import sys
 def main():
     root = Path(__file__).resolve().parents[1]
     subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir", "--windowed",
-                    "--name", "defjam-ffny-caf-customizer", "--paths", str(root / "src"),
+                    "--name", "defjam-ffny-fighter-workshop", "--paths", str(root / "src"),
                     "--add-data", f"{root / 'src/defjam_caf/resources'}:defjam_caf/resources",
                     "--add-data", f"{root / 'src/defjam_caf/_vendor/LICENSE'}:defjam_caf/_vendor",
                     str(root / "scripts/launch_desktop.py")], cwd=root, check=True)
-    destination = root / "dist" / "defjam-ffny-caf-customizer"
+    destination = root / "dist" / "defjam-ffny-fighter-workshop"
     for name in ("LICENSE", "THIRD_PARTY.md", "README.md"):
         shutil.copy2(root / name, destination / name)
     for name in ("beta-test-guide.md", "validation.md"):

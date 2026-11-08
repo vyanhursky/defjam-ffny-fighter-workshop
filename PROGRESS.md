@@ -3,9 +3,12 @@
 ## Status — 2026-11-07
 
 Local beta source is published at
-https://github.com/vyanhursky/defjam-ffny-caf-customizer on `develop/0.1`, the
+https://github.com/vyanhursky/defjam-ffny-fighter-workshop on `develop/0.1`, the
 default branch. Owner hands-on validation is still pending. No packaged release
 has been published; saves, game assets and local builds remain private.
+
+The chosen project name is Def Jam FFNY Fighter Workshop. Repository metadata,
+desktop branding and future package filenames use `defjam-ffny-fighter-workshop`.
 
 - Mapped and implemented cash/development, five training stats0–50, five retail
   styles and55 combinations with dependent bonus correction, and CAF appearance.

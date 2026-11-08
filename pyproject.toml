@@ -3,7 +3,7 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "defjam-ffny-caf-customizer"
+name = "defjam-ffny-fighter-workshop"
 version = "0.1.0b1"
 description = "Offline Create-a-Fighter and profile editor for Def Jam FFNY Recomp"
 requires-python = ">=3.11"

@@ -11,6 +11,14 @@ from .storage import save_profile, export_profile, duplicate, read_archive, inst
 
 
 class Editor:
+    def group_label(self, slot):
+        if slot == 25:
+            return "Earrings (pair)"
+        if slot >= 29:
+            return "Tattoo - " + ("Head & Neck", "Chest & Stomach", "Back", "Left Arm", "Left Forearm",
+                                  "Right Arm", "Right Forearm", "Left Leg", "Right Leg")[slot - 29]
+        return self.cache.groups[str(slot)]["label"]
+
     def __init__(self, workspace, progress=lambda message: None):
         self.workspace = Path(workspace)
         self.progress = progress
@@ -104,7 +112,7 @@ class Editor:
             if old != new or oc != nc:
                 label = {0: "Body build", 1: "Skin tone"}.get(slot)
                 if not label and self.cache:
-                    label = self.cache.groups[str(slot)]["label"]
+                    label = self.group_label(slot)
                 result.append((label or "Appearance") + " changed")
         return result
 
@@ -124,20 +132,30 @@ class Editor:
             if self.appearance:
                 fields = result["fields"]
                 result["appearance_selected"] = self.appearance.selected(fields)
-                result["groups"] = [dict(id=str(slot), label="Earrings (pair)" if slot == 25 else self.cache.groups[str(slot)]["label"],
+                result["groups"] = [dict(id=str(slot), label=self.group_label(slot),
                                           section=self.cache.groups[str(slot)]["section"], count=len(self.appearance.options[str(slot)]))
                                     for slot in range(12, 38) if slot not in (17, 26)]
                 build = "abcdef"[fields["caf_values"][0]] if fields["caf_values"][0] in range(6) else "c"
                 result["skins"] = [int(k[2:]) for k in self.cache.catalog["resources"][f"v2cp_a_{build}"]["images"] if k.startswith("pl")]
         return result
 
-    def preview(self):
+    def preview(self, changes=None, hide_clothes=False):
         if self.appearance is None:
             raise SaveError(self.preview_error or "No preview assets")
         fields = read_fields(self.current().payload)
         if not fields["has_fighter"]:
             raise SaveError("This profile has no Story fighter yet")
-        return self.cache.compose(self.appearance.outfit(fields))
+        if changes:
+            fields.update(self.appearance.change(fields, changes))
+        # Preview overlays never pass through stage/current/save. Use the game's
+        # empty clothing meshes (including underwear), retaining skin/tattoos.
+        if hide_clothes:
+            for slot in (*range(12, 20), *range(22, 27), 28):
+                fields["caf_values"][slot] = 0xffffffff
+                fields["caf_colors"][slot] = 0
+        result = self.cache.compose(self.appearance.outfit(fields))
+        result["preview_only"] = dict(changes=changes or {}, hide_clothes=hide_clothes)
+        return result
 
     def request(self, action, args):
         if action == "open_data":
@@ -156,7 +174,7 @@ class Editor:
             return [{k: v for k, v in row.items() if k not in {"selection", "value", "color"}}
                     for row in self.appearance.options[args["slot"]]]
         if action == "preview":
-            return self.preview()
+            return self.preview(args.get("changes"), bool(args.get("hide_clothes", False)))
         if action == "undo":
             if self.history:
                 self.edits = self.history.pop()

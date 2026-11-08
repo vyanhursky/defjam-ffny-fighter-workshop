@@ -4,11 +4,18 @@
    of `save` plus access to the original `extracted` directory is sufficient.
 2. Select an existing Story fighter. Rotate with the mouse, zoom, and use the
    front/back buttons. Compare the body, face, clothing, hair and tattoos with
-   the game. The pose is static and the lighting is approximate.
+   the game. Try Wardrobe-inspired, Relaxed and T-pose, then Studio, Warm shop,
+   Cool rim and Texture reference lighting. Wardrobe-inspired and Relaxed are
+   approximate preview poses, not the decoded retail shop animation.
 3. Change body build or skin, then select a clothing/hair/tattoo category and
-   choose a retail item, color and fitting. Click Equip. Check that the preview
-   and pending change list update. Undo reverses the last staged action; Reset
-   discards all staged edits.
+   choose a retail item, color and fitting. The preview changes immediately;
+   Pending Changes and exports retain the equipped outfit until you click Equip.
+   Click Equip to add the choice to Pending Changes. Undo reverses the last
+   staged action; Reset discards all staged edits. Try rapid color/fit changes
+   and check that the final selection wins.
+   Tattoos have a dedicated menu group and names such as Tattoo - Left Arm.
+   Toggle No clothes to hide apparel/accessories temporarily and inspect tattoos.
+   Turning it off restores the outfit. These viewer controls never alter a save.
 4. In Stats & cash, edit the five training stats (0–50), cash (0–10,000,000), and
    development points (0–100,000). These currency limits are conservative beta
    policies verified by game load/save, not claimed universal format maxima.

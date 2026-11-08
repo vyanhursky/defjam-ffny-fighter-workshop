@@ -3,14 +3,25 @@
 A standalone, offline desktop Create-a-Fighter and save editor for **Def Jam:
 Fight for NY Recomp**, targeting Windows, macOS and Linux.
 
-**Development preview — `develop/0.1`.** Windows functional checks pass; owner
-hands-on review and native macOS/Linux validation are pending. This repository
+**Development preview — `develop/0.1`.** Windows functional checks pass; full owner
+acceptance and native macOS/Linux validation are pending. This repository
 currently publishes source; no packaged release is available yet.
 
 Local beta: browse existing profiles, preview the saved fighter in 3D, edit
 appearance, training stats, cash, development points and retail CAF style
 combinations. Save with an original-profile backup, export/import a complete
 profile, or duplicate it under a new ID while retaining Story progress.
+
+Items, colors and fits preview immediately as you browse. **Equip** adds the
+choice to Pending Changes; **Save changes** writes the profile. Tattoo categories
+are grouped and named by body area. **No clothes** temporarily hides apparel and
+accessories, retaining underwear, so tattoos are easier to inspect.
+
+The viewer offers Wardrobe-inspired, Relaxed and source T-pose, plus Studio,
+Warm shop, Cool rim and Texture reference lighting. Wardrobe-inspired and Relaxed
+use approximate preview deformation, not the retail shop animation. Uncommitted
+try-ons are excluded from saves and exports. Equip stages an item; clothing
+visibility, pose and lighting always remain preview-only.
 
 Keep the complete application folder together and launch the Windows executable.
 Choose **Open data directory** and select the Recomp directory containing `save`
@@ -31,6 +42,7 @@ python -m pip install -e '.[desktop,dev,build]'
 defjam-caf-desktop --data /path/to/recomp-data
 defjam-caf inspect --data /path/to/recomp-data
 python -m pytest -q
+node --test tests/poses.test.mjs
 python scripts/package_desktop.py
 ```
 

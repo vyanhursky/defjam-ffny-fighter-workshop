@@ -30,7 +30,10 @@ def main():
         raise SystemExit("Refusing UI writes without the disposable-data marker")
     args.output.mkdir(parents=True, exist_ok=False)
     export = args.output / "ui-export.djprofile"
-    QFileDialog.getSaveFileName = lambda *a, **k: (str(export), "FFNY profiles (*.djprofile)")
+    preview_export = args.output / "preview-only.djprofile"
+    original = next(p.container for p in discover(args.data).profiles if p.name == "CAFTEST")
+    export_paths = iter([preview_export, export])
+    QFileDialog.getSaveFileName = lambda *a, **k: (str(next(export_paths)), "FFNY profiles (*.djprofile)")
     QInputDialog.getText = lambda *a, **k: ("UITEST", True)
     if args.import_data:
         if not (args.import_data / ".caf-disposable-test-data").is_file() or discover(args.import_data).profiles:
@@ -49,6 +52,33 @@ def main():
     evidence = []
     steps = [
         ("initial preview", "Boolean(window.__cafState?.selected && window.__cafPreview?.ready)", None),
+        ("tattoo category group", "[...document.querySelectorAll('#category optgroup[label=Tattoos] option')].length===9 && [...document.querySelectorAll('#category optgroup[label=Tattoos] option')].every(e=>e.text.startsWith('Tattoo - '))", None),
+        ("live garment preview without staging", "window.__cafPreview?.ready && window.__cafPreview.part && !window.__cafState.dirty && window.__cafState.fields.caf_values[12]===window.__originalTop",
+         "window.__originalTop=window.__cafState.fields.caf_values[12];let e=document.getElementById('garment');e.value=[...e.options].find(o=>o.text==='Fila Logo Tee').value;e.dispatchEvent(new Event('change'))"),
+        ("live color preview without staging", "window.__cafPreview?.ready && window.__cafPreview.part!==window.__oldTryOn && !window.__cafState.dirty",
+         "window.__oldTryOn=window.__cafPreview.part;let e=document.getElementById('color');e.selectedIndex=1;e.dispatchEvent(new Event('change'))"),
+        ("live fitting preview without staging", "window.__cafPreview?.ready && window.__cafPreview.part!==window.__oldTryOn && !window.__cafState.dirty",
+         "window.__oldTryOn=window.__cafPreview.part;let e=document.getElementById('fitting');e.selectedIndex=1;e.dispatchEvent(new Event('change'))"),
+        ("rapid selectors keep latest preview", "window.__cafPreview?.ready && window.__cafPreview.part===window.__latestTryOn && !window.__cafState.dirty",
+         "window.__latestTryOn=window.__cafPreview.part;for(let index of [2,0,1]){let c=document.getElementById('color');c.selectedIndex=index;c.dispatchEvent(new Event('change'));let f=document.getElementById('fitting');f.selectedIndex=1;f.dispatchEvent(new Event('change'))}"),
+        ("export excludes try-on", "document.getElementById('toast').textContent.includes('preview-only.djprofile')",
+         "document.getElementById('export').click()"),
+        ("no clothes temporary preview", "window.__cafPreview?.ready && window.__cafPreview.hideClothes && !window.__cafState.dirty && window.__cafState.fields.caf_values[12]===window.__originalTop",
+         "document.getElementById('no-clothes').click()"),
+        ("warm lighting", "window.__cafView?.lighting==='warm' && !window.__cafState.dirty",
+         "let e=document.getElementById('lighting');e.value='warm';e.dispatchEvent(new Event('change'))"),
+        ("cool lighting", "window.__cafView?.lighting==='cool' && window.__cafView.materials.every(t=>t==='MeshStandardMaterial') && !window.__cafState.dirty",
+         "let e=document.getElementById('lighting');e.value='cool';e.dispatchEvent(new Event('change'))"),
+        ("texture reference lighting", "window.__cafView?.lighting==='flat' && window.__cafView.materials.every(t=>t==='MeshBasicMaterial') && !window.__cafState.dirty",
+         "let e=document.getElementById('lighting');e.value='flat';e.dispatchEvent(new Event('change'))"),
+        ("source T-pose", "window.__cafView?.pose==='tpose' && window.__cafView.bounds[1][0]-window.__cafView.bounds[0][0]>window.__wardrobeWidth*1.25 && !window.__cafState.dirty",
+         "window.__wardrobeWidth=window.__cafView.bounds[1][0]-window.__cafView.bounds[0][0];let e=document.getElementById('pose');e.value='tpose';e.dispatchEvent(new Event('change'))"),
+        ("relaxed pose", "window.__cafView?.pose==='relaxed' && !window.__cafState.dirty",
+         "let e=document.getElementById('pose');e.value='relaxed';e.dispatchEvent(new Event('change'))"),
+        ("restore clothes", "window.__cafPreview?.ready && !window.__cafPreview.hideClothes && window.__cafPreview.part && !window.__cafState.dirty",
+         "document.getElementById('no-clothes').click();let e=document.getElementById('pose');e.value='wardrobe';e.dispatchEvent(new Event('change'));document.getElementById('lighting').value='studio';document.getElementById('lighting').dispatchEvent(new Event('change'))"),
+        ("equip commits preview", "window.__cafState.dirty && window.__cafState.fields.caf_values[12]!==window.__originalTop && window.__cafPreview?.ready && !window.__cafPreview.part",
+         "document.getElementById('equip').click()"),
         ("cash edit", "window.__cafState?.fields?.cash===12345 && window.__cafState.dirty",
          "document.querySelector('[data-tab=stats]').click();let e=document.getElementById('cash');e.value='12345';e.dispatchEvent(new Event('change'))"),
         ("health edit", "window.__cafState?.fields?.stats.health===50",
@@ -91,6 +121,8 @@ def main():
         if error:
             print("FAILED: " + error, flush=True)
         else:
+            _, preview_only, _ = read_archive(preview_export)
+            assert preview_only == original, "Uncommitted preview leaked into export"
             _, exported, files = read_archive(export)
             exported_fields = read_fields(exported.payload)
             assert exported_fields["cash"] == 12345 and exported_fields["styles"] == [0, 2, 4]
@@ -133,6 +165,9 @@ def main():
                 print("PASS: " + title, flush=True)
                 if index == 0:
                     window.grab().save(str(args.output / "desktop-initial.png"))
+                if title in {"no clothes temporary preview", "warm lighting", "cool lighting", "texture reference lighting", "source T-pose", "relaxed pose", "equip commits preview"}:
+                    capture = args.output / (title.replace(" ", "-") + ".png")
+                    QTimer.singleShot(250, lambda path=capture: window.grab().save(str(path)))
                 state.update(step=index + 1, sent=False)
         window.page.runJavaScript("Boolean(" + condition + ")", checked)
 

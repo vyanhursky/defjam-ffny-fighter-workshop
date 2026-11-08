@@ -4,11 +4,25 @@
 
 Local beta source is published at
 https://github.com/vyanhursky/defjam-ffny-fighter-workshop on `develop/0.1`, the
-default branch. Owner hands-on validation is still pending. No packaged release
+default branch. Full owner acceptance is still pending. No packaged release
 has been published; saves, game assets and local builds remain private.
 
 The chosen project name is Def Jam FFNY Fighter Workshop. Repository metadata,
 desktop branding and future package filenames use `defjam-ffny-fighter-workshop`.
+
+Preview feedback update: automatic item/color/fit try-on is isolated from Pending
+Changes until Equip. Temporary No clothes hides apparel/accessories while
+retaining underwear and tattoos. Tattoo categories are grouped and explicitly
+prefixed. Three pose options and four lighting presets are available; the two
+non-T poses use original joint pivots with approximate editor deformation, not
+the retail shop animation. Full owner acceptance remains pending.
+
+Feedback validation: 31 Python tests, four Node pose checks and 29 real desktop
+steps pass on disposable copies. Checks include rapid selection changes,
+uncommitted try-on exclusion from export, every lighting mode, all three poses,
+temporary clothing visibility, explicit Equip, backups and full-profile import.
+The Windows package has been rebuilt and its new default pose/controls rendered
+successfully on copied profile data. The local test shortcut targets this build.
 
 - Mapped and implemented cash/development, five training stats0–50, five retail
   styles and55 combinations with dependent bonus correction, and CAF appearance.
@@ -33,9 +47,9 @@ desktop branding and future package filenames use `defjam-ffny-fighter-workshop`
   Normalizing only the generated app folder to Medium resolves it with Chromium
   sandboxing enabled. Source-helper and isolated-runtime experiments are retained
   privately as diagnostic evidence; the delivered package uses PyInstaller.
-- Packaged preview and actual stats-panel editing/undo were observed through
-  Windows UI automation. User copies and an app shortcut are ready; the beta is
-  left open with VY3 selected and no staged changes. Owner review is pending.
+- Initial packaged preview and actual stats-panel editing/undo were observed
+  through Windows UI automation. The owner-test handoff uses copied profiles
+  and a local shortcut. Full owner acceptance remains pending.
 
 ## Decisions and limits
 
@@ -67,7 +81,7 @@ uses Python3.13.5, PySide6/Qt6.8.3, Pillow12.3, NumPy2.5.4, PyInstaller6.22.3.
 4. Maintain development source on `develop/0.1`. Owner review remains a gate for
    a packaged release; publishing source does not imply owner acceptance.
 
-Final verification: thirty tests pass using an explicitly writable temporary
+Initial beta verification: thirty tests pass using an explicitly writable temporary
 directory. An initial repeat used an inaccessible sandbox temp directory and
 failed during fixture setup; this is retained in logs and is not a product test
 failure. Fifteen real desktop steps pass. Native current-profile samples and

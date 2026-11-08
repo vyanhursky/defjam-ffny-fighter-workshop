@@ -1,4 +1,5 @@
 import io
+import copy
 import json
 from pathlib import Path
 import struct
@@ -12,6 +13,8 @@ from defjam_caf.profiles import discover, directory_name, PROFILE_SIZE
 from defjam_caf.storage import (save_profile, duplicate, export_profile, read_archive,
                                 install_files, writer_lock, sha)
 from defjam_caf._vendor.hd_assets import unswizzle, morton_offset
+from defjam_caf.editor import Editor
+from defjam_caf.appearance import Appearance
 
 
 @pytest.fixture
@@ -116,6 +119,35 @@ def test_writer_lock_is_exclusive_and_released_after_exception(profile):
                 pass
     with writer_lock(profile.path.parent):
         pass
+
+
+def test_preview_overlays_never_enter_pending_edits_or_export(profile, tmp_path):
+    editor = Editor(tmp_path / "workspace")
+    editor.profile = profile
+    editor.edits = {"cash": 1000}
+    editor.history = [{"cash": 900}]
+    appearance = Appearance.__new__(Appearance)
+    appearance.by_key = {"try-on": {"key": "12:test", "value": 0x10000123, "color": 1}}
+    appearance.outfit = lambda fields: copy.deepcopy(fields)
+    editor.appearance = appearance
+    class Capture:
+        def compose(self, outfit):
+            return {"outfit": outfit}
+    editor.cache = Capture()
+    staged = editor.current()
+    before = profile.path.read_bytes()
+    result = editor.preview({"part": "try-on"})
+    assert result["outfit"]["caf_values"][12] == 0x10000123
+    hidden = editor.preview({"part": "try-on"}, hide_clothes=True)
+    assert all(hidden["outfit"]["caf_values"][i] == 0xffffffff for i in range(12, 20))
+    assert hidden["outfit"]["caf_values"][29:] == read_fields(staged.payload)["caf_values"][29:]
+    with pytest.raises(SaveError):
+        editor.preview({"part": "unknown"})
+    assert editor.current() == staged and editor.history == [{"cash": 900}]
+    assert profile.path.read_bytes() == before
+    destination = tmp_path / "staged-only.djprofile"
+    editor.request("export", {"path": str(destination)})
+    assert read_archive(destination)[1] == staged
 
 
 @pytest.mark.parametrize("shape", [(4, 4, 1), (8, 4, 4), (4, 16, 4), (1, 16, 1), (32, 2, 4)])

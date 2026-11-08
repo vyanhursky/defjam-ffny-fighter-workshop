@@ -194,6 +194,38 @@ class AssetCache:
             self._geometries[key] = result
         return self._geometries[key]
 
+    def arm_pivots(self):
+        """Read original bind joints; pose rotations are editor approximations.
+
+        Skeleton header is 16 bytes; each joint is scale3/parent/quaternion4/
+        translation4/inverse-bind16 (112 bytes). No game clip is decoded here.
+        """
+        from ._vendor.defjam_model import ElfData
+        key = "preview-arm-pivots"
+        if key not in self._geometries:
+            source = self.catalog["objects"]["v2cp_110_0001_c"]
+            elf = ElfData(self.verified(source))
+            skeleton = elf.symbol("__Skeleton:::")
+            count = elf.u(skeleton + 8)
+            if not 1 <= count <= 256:
+                raise ValueError("Unsupported preview skeleton")
+            names = {s["name"].removeprefix("__Bone:::root."): elf.u(s["value"])
+                     for s in elf.symbols if s["name"].startswith("__Bone:::root.")}
+            result = {}
+            for name in ("L_arm1", "L_arm2", "R_arm1", "R_arm2"):
+                index = names[name]
+                if not 0 <= index < count:
+                    raise ValueError("Preview joint leaves skeleton")
+                at = skeleton + 16 + index * 112
+                inverse = np.array(elf.unpack("<16f", at + 48)).reshape(4, 4).T
+                world = np.linalg.inv(inverse)
+                pivot = world[:3, 3].tolist()
+                if not all(np.isfinite(pivot)):
+                    raise ValueError("Invalid preview joint")
+                result[name] = pivot
+            self._geometries[key] = result
+        return self._geometries[key]
+
     def compose(self, outfit):
         meshes, layers, notices = [], [], []
         hair = outfit["slots"].get("20")
@@ -272,5 +304,5 @@ class AssetCache:
         if not meshes:
             raise ValueError("No renderable fighter geometry")
         points = [p for m in meshes for p in m["positions"]]
-        return dict(meshes=meshes, textures=textures, notices=notices,
+        return dict(meshes=meshes, textures=textures, notices=notices, arm_pivots=self.arm_pivots(),
                     bounds=[[min(p[i] for p in points) for i in range(3)], [max(p[i] for p in points) for i in range(3)]])

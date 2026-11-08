@@ -168,7 +168,9 @@ def startup_smoke(app, window, receipt):
             if(!window.__cafState || !gl || gl.isContextLost())return null;
             if(window.__cafState.fields?.has_fighter && window.__cafState.preview_available
                 && !window.__cafPreview?.ready)return null;
+            const debug=gl.getExtension('WEBGL_debug_renderer_info');
             return JSON.stringify({webchannel:true,webgl:gl.getParameter(gl.VERSION),
+                renderer:gl.getParameter(debug?debug.UNMASKED_RENDERER_WEBGL:gl.RENDERER),
                 profiles:window.__cafState.profiles.length,selected:window.__cafState.selected,
                 preview_ready:Boolean(window.__cafPreview?.ready)});
         })()""", checked)

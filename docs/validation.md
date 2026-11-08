@@ -129,3 +129,14 @@ The rebuilt standalone Mac app also opens the installer data default without
 matches the reused source byte for byte. Checksum-verified ZIP relocation,
 strict deep signature verification and frozen WebGL/WebChannel startup pass,
 including icon_loaded=true. No native Windows/Linux run is claimed here.
+
+## Initial native CI run — 2026-11-07
+
+[Run 42444607060](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/actions/runs/42444607060)
+passed Linux x64 package/startup. Windows and Mac arm64 package creation and
+signature checks (Mac) succeeded, but their frozen startup checks timed out
+because Chromium blocklisted the hosted software graphics adapters. Preserve
+those failed receipts. The CI-only --ignore-gpu-blocklist setting permits the
+virtual adapters while still requiring a real WebGL 2 context; it is not an
+application default and does not disable the sandbox. Receipts also name the
+actual renderer used. This does not qualify physical GPUs or native game load.

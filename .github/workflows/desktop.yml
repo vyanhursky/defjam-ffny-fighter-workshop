@@ -58,6 +58,11 @@ jobs:
         run: python scripts/package_desktop.py
       - name: Relocated frozen desktop startup
         if: runner.os != 'Linux'
+        # Hosted Mac/Windows VMs expose software graphics adapters that Chromium
+        # blocklists. Permit them only for this offline CI check; still require
+        # a real WebGL 2 context and keep the browser sandbox enabled.
+        env:
+          QTWEBENGINE_CHROMIUM_FLAGS: --ignore-gpu-blocklist
         run: |
           python scripts/smoke_package.py --archive dist/*-${{ matrix.target }}.${{ matrix.extension }} --output build/package-smoke
       - name: Linux relocated desktop under X11

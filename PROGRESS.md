@@ -154,3 +154,18 @@ The rebuilt standalone Mac app also opens the installer data default without
 matches the reused source byte for byte. Checksum-verified ZIP relocation,
 strict deep signature verification and frozen WebGL/WebChannel startup pass,
 including icon_loaded=true. No native Windows/Linux run is claimed here.
+
+## Native CI publication — 2026-11-07
+
+Owner authorized source push and native Windows/macOS/Linux CI. The source is
+pushed on `codex/macos-linux`, PR #1 into `develop/0.1`. No release is tagged.
+Initial run: https://github.com/vyanhursky/defjam-ffny-fighter-workshop/actions/runs/42444607060
+
+Linux x64 built and its relocated frozen WebGL 2/WebChannel/icon startup passed.
+Windows and Apple Silicon Mac built, but startup timed out because Chromium
+blocklisted the hosted VMs' software adapters (Microsoft Basic Render Driver
+and Apple Software Renderer). Their failed receipts remain in CI artifacts;
+do not treat these initial jobs as passes. Allow the virtual software adapters
+with --ignore-gpu-blocklist only in the offline CI smoke steps, retaining the
+actual WebGL 2 requirement and browser sandbox. Record the renderer in receipts.
+The native application keeps its ordinary graphics defaults.

@@ -4,8 +4,8 @@ A standalone, offline desktop Create-a-Fighter and save editor for **Def Jam:
 Fight for NY Recomp**, targeting Windows, macOS and Linux.
 
 **Development preview — `develop/0.1`.** Windows functional checks and all 29 Apple Silicon macOS editor checks pass.
-The standalone Mac package passes signature/relocated-startup checks. Full owner
-acceptance and Linux/Intel Mac native validation are pending. This repository
+Native CI builds and starts standalone packages on Windows x64, macOS Apple
+Silicon/Intel and Linux x64. Full owner and native game acceptance remain pending. This repository
 currently publishes source; no packaged release is available yet.
 
 Local beta: browse existing profiles, preview the saved fighter in 3D, edit

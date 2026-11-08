@@ -53,5 +53,6 @@ Native Windows functional evidence is retained. All 29 editor checks pass on
 Apple Silicon macOS using disposable copies, alongside standalone `.app`
 signature and frozen startup checks; see [platforms](desktop-platforms.md)
 for launch commands and the remaining native acceptance. Linux and Intel Mac
-packages have CI build/startup checks defined; their native results are pending. Custom content and granular movesets remain on the
+packages now pass native CI build and relocated startup checks, alongside
+Windows and Apple Silicon Mac. Broader native game acceptance remains pending. Custom content and granular movesets remain on the
 roadmap in the specification.

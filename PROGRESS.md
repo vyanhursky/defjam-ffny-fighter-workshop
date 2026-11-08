@@ -61,8 +61,9 @@ Neutral static face preview preserves features; animation/expression/lighting
 parity is deferred. Named fighter moveset overrides remain unverified.
 Cash10m/development100k are conservative beta limits validated natively, not
 claimed universal game maxima. Apple Silicon macOS standalone package startup
-and all 29 source editor checks are verified; Linux/Intel Mac native packages and native macOS/Linux game
-acceptance remain outstanding. Game assets, saves and captures stay private and outside source.
+and all 29 source editor checks are verified. Native package build/startup
+checks now pass for Windows x64, Mac arm64/x64 and Linux x64; broader native
+macOS/Linux editor/game acceptance remains outstanding. Game assets, saves and captures stay private and outside source.
 Custom Fighter R&D, production art/review state and runtime source are untouched.
 
 Early exploratory native tests failed guard checks because unrelated Options or a
@@ -169,3 +170,29 @@ do not treat these initial jobs as passes. Allow the virtual software adapters
 with --ignore-gpu-blocklist only in the offline CI smoke steps, retaining the
 actual WebGL 2 requirement and browser sandbox. Record the renderer in receipts.
 The native application keeps its ordinary graphics defaults.
+
+## Native CI results and handoff — 2026-11-07
+
+Source is pushed in PR #1 on `codex/macos-linux` into `develop/0.1`:
+https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/1
+The corrected run built and started Windows x64, macOS arm64/x64 and Linux x64:
+https://github.com/vyanhursky/defjam-ffny-fighter-workshop/actions/runs/42445039193
+All four startup receipts report passed=true, frozen=true, icon_loaded=true,
+WebGL 2 and working WebChannel after archive extraction/relocation. Mac signatures
+verify strictly. Source documentation is updated to reflect native package CI.
+
+The initial failures were Chromium's blocklist of the VMs' software adapters,
+not a build/signature failure. Allow those adapters only in CI, keep requiring
+WebGL 2, and keep the browser sandbox. Actual renderers are recorded in receipts.
+Linux uses Mesa llvmpipe under Xvfb; Windows uses the Microsoft Basic Render
+Driver, and both Macs use Apple Software Renderer. The application retains its
+normal graphics defaults. Initial failed receipts remain in the earlier run.
+
+Linux executes all 40 Python cases; Windows passes 37 with three skips, Mac
+arm64 passes 38 with two skips. Four Node pose checks pass. The separate local
+29-step editor/save/import test and unchanged-original-save hashes remain the
+functional evidence for Apple Silicon. CI startup uses no save/game fixtures.
+
+Next: use the PR's current-head check links and native package artifacts for
+review. No tagged release was created. Full owner acceptance, physical GPU and
+Wayland checks, and broader native game qualification remain distinct gates.

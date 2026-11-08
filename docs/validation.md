@@ -60,7 +60,8 @@ performance measurements.
 ## Remaining acceptance
 
 Full owner acceptance, broader retail outfit comparisons, native macOS game
-acceptance, and native Linux/Intel Mac package/game tests remain outstanding. Native checks verify representative
+acceptance, and broader Linux/Intel Mac editor/game tests remain outstanding (native package
+build/startup checks now pass in CI). Native checks verify representative
 appearance/style changes and profile persistence, not every combination or move.
 Development source publication on `develop/0.1` is authorized. No packaged release
 has been authorized; source publication does not imply owner acceptance.
@@ -91,7 +92,8 @@ run locally; tar-format tests on macOS do not establish Linux runtime support.
 
 The native CI matrix targets Windows x64, macOS arm64/x64 and Ubuntu 22.04 x64.
 It builds packages and checks their actual offline UI after relocation. The
-workflow is prepared locally; no remote run is claimed. No game data is used in
+initial workflow was prepared locally; the native CI results below supersede
+that initial status. No game data is used in
 CI, and no tagged release is created. The Linux check uses Xvfb/software GL;
 a physical GPU/Wayland and native game checks remain distinct acceptance gates.
 
@@ -140,3 +142,29 @@ those failed receipts. The CI-only --ignore-gpu-blocklist setting permits the
 virtual adapters while still requiring a real WebGL 2 context; it is not an
 application default and does not disable the sandbox. Receipts also name the
 actual renderer used. This does not qualify physical GPUs or native game load.
+
+## Native package CI qualification — 2026-11-07
+
+[Corrected run 42445039193](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/actions/runs/42445039193)
+built and successfully started all four native packages after checksum-verified
+extraction into paths with spaces and a non-ASCII character:
+
+| Target | WebGL renderer | Frozen startup | Icon |
+| --- | --- | --- | --- |
+| Windows x64 | Microsoft Basic Render Driver through ANGLE/D3D11 | pass, 0.56 s | loaded |
+| macOS arm64 | Apple Software Renderer through ANGLE/OpenGL 4.1 | pass, 2.01 s | loaded |
+| macOS x64 | Apple Software Renderer through ANGLE/OpenGL 4.1 | pass, 14.49 s | loaded |
+| Linux x64 | Mesa llvmpipe through ANGLE/OpenGL 4.5, Xvfb | pass, 1.56 s | loaded |
+
+The Mac packages also passed strict deep signature verification. Linux passed
+all 40 Python cases, Windows passed 37 with three platform/filesystem skips,
+and Mac arm64 passed 38 with two filesystem skips. Four Node pose tests passed
+on each completed job. Startup receipts and native archives with SHA-256
+sidecars are retained as CI artifacts; the PR links its current head's checks.
+These timings measure an empty editor startup on CI VMs, not game performance
+or first-use asset conversion. The full 29-step copied-save editor workflow was
+validated locally on Apple Silicon, separately from these game-data-free jobs.
+
+The initial failed run above is preserved. The correction permits only the
+hosted software adapters in CI; the shipped app retains normal graphics defaults.
+Physical GPUs, Wayland and full native game acceptance remain separate work.

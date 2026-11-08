@@ -1,0 +1,96 @@
+name: Stage beta release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Owner-authorized beta tag (must match package version)'
+        required: true
+        type: string
+      source_sha:
+        description: 'Exact 40-character commit built by green Native desktop packages CI'
+        required: true
+        type: string
+      run_id:
+        description: 'Successful native build workflow run ID'
+        required: true
+        type: string
+
+concurrency:
+  group: stage-beta-${{ inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  draft:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      RELEASE_SHA: ${{ inputs.source_sha }}
+      RELEASE_RUN: ${{ inputs.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: publisher
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          path: release-source
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Verify source and tag
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os,re,subprocess,tomllib
+          from pathlib import Path
+          sha=os.environ['RELEASE_SHA']; tag=os.environ['RELEASE_TAG']; run=os.environ['RELEASE_RUN']
+          assert re.fullmatch(r'[0-9a-f]{40}',sha) and re.fullmatch(r'[0-9]+',run)
+          version=tomllib.loads(Path('release-source/pyproject.toml').read_text())['project']['version']
+          match=re.fullmatch(r'(\d+\.\d+\.\d+)b(\d+)',version)
+          assert match and tag==f'v{match[1]}-beta.{match[2]}'
+          subprocess.run(['git','-C','release-source','fetch','origin',f'refs/tags/{tag}:refs/tags/{tag}'],check=True)
+          tagged=subprocess.check_output(['git','-C','release-source','rev-parse',f'{tag}^{{commit}}'],text=True).strip()
+          assert tagged==sha
+          PY
+      - name: Collect native CI outputs
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/workshop-release/artifacts"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_RUN" > "$RUNNER_TEMP/workshop-release/ci-run.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_RUN/jobs" > "$RUNNER_TEMP/workshop-release/ci-jobs.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_RUN/artifacts" > "$RUNNER_TEMP/workshop-release/ci-artifacts.json"
+          gh run download "$RELEASE_RUN" --repo "$GITHUB_REPOSITORY" --pattern 'workshop-*' --pattern 'startup-*' --dir "$RUNNER_TEMP/workshop-release/artifacts"
+      - name: Audit and assemble release assets
+        shell: bash
+        run: |
+          python publisher/scripts/stage_release.py --source release-source --staging "$RUNNER_TEMP/workshop-release" --source-sha "$RELEASE_SHA" --run-id "$RELEASE_RUN" --tag "$RELEASE_TAG"
+      - name: Create draft and upload verified packages
+        shell: bash
+        run: |
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --target "$RELEASE_SHA" --title '0.1 Beta 1' --notes-file "release-source/docs/releases/$RELEASE_TAG.md" --prerelease --draft --latest=false
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/workshop-release/assets/"* --repo "$GITHUB_REPOSITORY"
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > "$RUNNER_TEMP/workshop-release/uploaded-release.json"
+          python publisher/scripts/stage_release.py --source release-source --staging "$RUNNER_TEMP/workshop-release" --source-sha "$RELEASE_SHA" --run-id "$RELEASE_RUN" --tag "$RELEASE_TAG" --verify-upload "$RUNNER_TEMP/workshop-release/uploaded-release.json"
+      # Publication remains a separate explicit step after checking the draft.
+      - name: Keep release verification metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-release-verification
+          path: |
+            ${{ runner.temp }}/workshop-release/ci-*.json
+            ${{ runner.temp }}/workshop-release/uploaded-release.json
+            ${{ runner.temp }}/workshop-release/assets/provenance.json
+            ${{ runner.temp }}/workshop-release/assets/SHA256SUMS
+          if-no-files-found: ignore

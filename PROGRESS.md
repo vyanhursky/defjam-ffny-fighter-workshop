@@ -243,3 +243,20 @@ Next after publication: collect beta feedback using copied saves; keep broader
 native game acceptance, physical GPU and Wayland qualifications distinct from
 the native package/startup evidence. No fresh save creation or named-fighter
 moveset override is claimed.
+
+## Beta draft staging — 2026-11-07
+
+The approved gallery/release source is a7a7e354df78b5eab6ecabbcf0c03430d129e910;
+its native build run 42447467964 passed all four targets. Slow local artifact
+transfers are replaced by a GitHub-hosted draft-staging workflow. It downloads
+the exact green run's outputs, checks commit/tag/version binding, archive
+integrity and native entry points, approved screenshot hashes and notices,
+and rejects save/dump/compiled-game files. It attaches four native packages,
+four sidecars, SHA256SUMS and source/CI/startup provenance to a draft only.
+Uploaded GitHub SHA-256 digests are compared before any publication.
+
+Publisher infrastructure is a later develop/0.1 commit; the beta tag stays on
+the exact already-qualified a7a7e35 application source. Local staging fixtures
+pass 44 Python tests with two filesystem skips (the tagged application suite
+remains 40 cases). The owner authorized the beta publication; the final
+publication step follows successful draft verification, without another prompt.

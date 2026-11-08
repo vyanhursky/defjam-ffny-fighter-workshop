@@ -59,8 +59,8 @@ performance measurements.
 
 ## Remaining acceptance
 
-Full owner acceptance, broader retail outfit comparisons and native macOS/Linux
-package/game tests remain outstanding. Native checks verify representative
+Full owner acceptance, broader retail outfit comparisons, native macOS game
+acceptance, and native Linux/Intel Mac package/game tests remain outstanding. Native checks verify representative
 appearance/style changes and profile persistence, not every combination or move.
 Development source publication on `develop/0.1` is authorized. No packaged release
 has been authorized; source publication does not imply owner acceptance.
@@ -73,3 +73,43 @@ rotations and blending weights are editor approximations. The retail shop clip
 and full game skinning are not decoded. The source T-pose remains exact and
 every pose is temporary. Native save acceptance above concerns profile fields;
 the new viewer controls are validated through pure-data and desktop checks.
+
+## macOS/Linux portability — 2026-11-07
+
+The Apple Silicon macOS source desktop and standalone ad-hoc-signed `.app` pass
+Qt WebChannel and WebGL 2 startup with Qt 6.8.3/Python 3.13. The package was
+extracted from its checksum-verified ZIP to a path containing spaces and a
+non-ASCII character; strict deep signature verification and frozen startup pass.
+The local host runs macOS 26.5.2. This is not evidence for older macOS or Intel.
+
+Thirty-five Python tests pass on the local case-insensitive Mac filesystem; two
+additional case-collision tests skip because they require a case-sensitive
+filesystem. Four Node pose tests pass. Added tests cover mixed-case Xbox asset
+lookup, ambiguity refusal, lowercase canonical/legacy profile collisions and
+Linux archive executable modes, symlinks and checksums. No Linux executable was
+run locally; tar-format tests on macOS do not establish Linux runtime support.
+
+The native CI matrix targets Windows x64, macOS arm64/x64 and Ubuntu 22.04 x64.
+It builds packages and checks their actual offline UI after relocation. The
+workflow is prepared locally; no remote run is claimed. No game data is used in
+CI, and no tagged release is created. The Linux check uses Xvfb/software GL;
+a physical GPU/Wayland and native game checks remain distinct acceptance gates.
+
+An initial full Mac desktop check hit the original 60-second preview deadline
+while the first-use cache was being decoded. Its failed receipt is retained
+privately. The harness now allows 600 seconds for that initial conversion and
+retains the 60-second limit for subsequent steps. Its exit path bypasses the
+production busy/unsaved close guard so a failed check cannot wait at a modal.
+
+The repeat also exposed a fixture assumption at Equip: the copied fighter
+already wore that item/color, so only its fitting byte changed. The harness now
+checks item and fitting together. That failed receipt is retained. The subsequent
+Mac source desktop run passes all 29 checks in 34.96 seconds, including backup,
+export, duplication, save and complete-profile import. Hashes of all 21 original
+save files match before and after. Private receipts distinguish these source
+editor checks from the standalone frozen startup check.
+
+The final frozen Mac app also loaded the imported copied profile and rendered
+its actual fighter (`preview_ready: true`, WebGL 2, `frozen: true`) in 1.69 seconds
+with the previously built private cache. That timing is a warm-cache startup,
+not a first-use conversion or native game performance measurement.

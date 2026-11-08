@@ -3,8 +3,9 @@
 A standalone, offline desktop Create-a-Fighter and save editor for **Def Jam:
 Fight for NY Recomp**, targeting Windows, macOS and Linux.
 
-**Development preview — `develop/0.1`.** Windows functional checks pass; full owner
-acceptance and native macOS/Linux validation are pending. This repository
+**Development preview — `develop/0.1`.** Windows functional checks and all 29 Apple Silicon macOS editor checks pass.
+The standalone Mac package passes signature/relocated-startup checks. Full owner
+acceptance and Linux/Intel Mac native validation are pending. This repository
 currently publishes source; no packaged release is available yet.
 
 Local beta: browse existing profiles, preview the saved fighter in 3D, edit
@@ -23,7 +24,8 @@ use approximate preview deformation, not the retail shop animation. Uncommitted
 try-ons are excluded from saves and exports. Equip stages an item; clothing
 visibility, pose and lighting always remain preview-only.
 
-Keep the complete application folder together and launch the Windows executable.
+On macOS, open the `.app`. On Windows or Linux, keep the complete application
+folder together and launch its executable.
 Choose **Open data directory** and select the Recomp directory containing `save`
 and `extracted`. Start with separate copies of your saves and close the game using
 those copies before editing. Original game assets are decoded locally; nothing
@@ -57,8 +59,11 @@ Preview assets are derived locally from the user's own game files. Initial
 conversion takes several minutes; later launches reuse a private cache.
 
 Builds use PyInstaller and include their own Python runtime; the target machine
-does not require Python. Build on each target OS. macOS/Linux require native
-package validation.
+does not require Python. Build on each target OS. The packaging script produces
+a macOS `.app`/ZIP, Windows ZIP, or Linux `.tar.gz`, with SHA-256 sidecars. See
+[desktop platforms](docs/desktop-platforms.md) for prerequisites, launch commands,
+workspace paths and validation. Native CI checks each package after relocation;
+CI startup checks do not replace game acceptance.
 `requirements-tested.txt` records the local Windows build environment.
 
 If a restricted Windows build workspace labels generated files Low integrity,

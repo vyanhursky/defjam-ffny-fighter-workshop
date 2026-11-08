@@ -12,6 +12,7 @@ from ._vendor.caf_assets import build_catalog, expanded, palette_images, with_pa
 from ._vendor.hd_assets import archive_entries, shpx_images
 from ._vendor.caf_shop import ShopDatabase, Locale
 from .storage import atomic_json
+from .game_paths import game_file
 
 
 def image_uri(image):
@@ -43,9 +44,9 @@ class Database:
     """Bounded generic SODB row-index adapter for serialized selection IDs."""
     def __init__(self, dump):
         dump = Path(dump)
-        raw = next(expanded(b) for name, b in archive_entries((dump / "assets/misc.viv").read_bytes())
+        raw = next(expanded(b) for name, b in archive_entries(game_file(dump, "assets/misc.viv").read_bytes())
                    if name.lower() == "cmusen.loc")
-        self.shop = ShopDatabase((dump / "assets/djv2.sod").read_bytes(), Locale(raw))
+        self.shop = ShopDatabase(game_file(dump, "assets/djv2.sod").read_bytes(), Locale(raw))
         self.tables = self.shop.mapping(self.shop.word(16), b"DATA")
         self.cache = {}
 
@@ -84,10 +85,10 @@ class Database:
 
 def build_cache(dump, workspace, progress=lambda message: None):
     dump, workspace = Path(dump), Path(workspace)
-    sources = [dump / "assets" / f"v2cp_{n}.viv" for n in range(4)]
+    sources = [game_file(dump, f"assets/v2cp_{n}.viv") for n in range(4)]
     identity = sha(b"caf-customizer-cache-1" + b"".join(hashlib.sha256(p.read_bytes()).digest() for p in sources)
-                   + hashlib.sha256((dump / "assets/djv2.sod").read_bytes()).digest()
-                   + hashlib.sha256((dump / "assets/misc.viv").read_bytes()).digest())
+                   + hashlib.sha256(game_file(dump, "assets/djv2.sod").read_bytes()).digest()
+                   + hashlib.sha256(game_file(dump, "assets/misc.viv").read_bytes()).digest())
     root = workspace / "assets" / identity
     if (root / "catalog" / "catalog.json").is_file():
         return AssetCache(root, dump)

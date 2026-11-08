@@ -60,8 +60,9 @@ have no proven valid retail-save encoding, so preserve rather than invent values
 Neutral static face preview preserves features; animation/expression/lighting
 parity is deferred. Named fighter moveset overrides remain unverified.
 Cash10m/development100k are conservative beta limits validated natively, not
-claimed universal game maxima. macOS/Linux native builds and acceptance remain
-outstanding. Game assets, saves and captures stay private and outside source.
+claimed universal game maxima. Apple Silicon macOS standalone package startup
+and all 29 source editor checks are verified; Linux/Intel Mac native packages and native macOS/Linux game
+acceptance remain outstanding. Game assets, saves and captures stay private and outside source.
 Custom Fighter R&D, production art/review state and runtime source are untouched.
 
 Early exploratory native tests failed guard checks because unrelated Options or a
@@ -91,3 +92,39 @@ fighter hashes and the prepared owner copies match their starting identities.
 Windows packaging in a restricted workspace needs the documented normal-shell
 `icacls` step: the Python build subprocess can lack the relabel privilege. Only
 the generated application folder is relabeled; no system policy is changed.
+
+## macOS/Linux compatibility — 2026-11-07
+
+Work is on `codex/macos-linux`, based on beta commit `84b3171`. No source push or
+packaged release has been performed by this porting session.
+
+- Resolve workspace and packaged logs through the same Qt native application
+  data path; `--workspace` overrides cache, backups and logs together.
+- Resolve Xbox asset names case-insensitively without changing the dump; reject
+  ambiguous paths. Prevent lowercase hex identity collisions during discovery,
+  import and duplication on case-sensitive filesystems.
+- Package a correctly identified macOS `.app` with notices included before
+  signing; create a symlink-preserving ZIP, Windows ZIP, or Linux tar.gz and
+  SHA-256 sidecar. Build caches are scoped to this project's `build` directory.
+- Add a frozen startup check for the offline modules, WebChannel and WebGL 2,
+  plus a checksum/relocation/signature checker. CI defines native Windows x64,
+  Mac arm64/x64 and Ubuntu 22.04 x64 builds; it has not been run remotely.
+- Local evidence: 35 Python tests passed, two case-sensitive filesystem cases
+  skipped, four Node pose tests passed. Mac source and frozen relocated startup
+  passed on macOS 26.5.2 arm64 with Qt 6.8.3/Python 3.13. All 29 real source
+  editor checks pass in 34.96 seconds, including save/backup/export/import and
+  duplication. All 21 original save files retain their hashes. The final frozen
+  app also renders the imported CAFTEST fighter (`preview_ready: true`) in
+  1.69 seconds using the existing private cache. No Linux or Intel Mac
+  native runtime pass is claimed; no native game acceptance was repeated.
+- The initial full desktop check timed out during first-use decoding under its
+  original 60-second deadline. Its failed receipt remains private. Give initial
+  decoding 600 seconds, subsequent actions 60, and exit the test event loop
+  without invoking production busy/unsaved close guards. A second failed receipt
+  exposed an Equip assertion that assumed the item value changed, although the
+  selected fitting alone changed; check both item and fitting bytes.
+
+Next: run the prepared native CI matrix when source publication is requested,
+then qualify representative packaged workflows on Linux/Intel and test edited
+profiles in the game. Maintain the owner acceptance/release gate. Public docs
+contain no private data paths; local receipts and copied saves stay outside Git.

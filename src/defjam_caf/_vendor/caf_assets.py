@@ -265,6 +265,7 @@ def with_palette(blob, record, palette):
 
 def build_catalog(dump, corpus, output):
     from ..storage import atomic_json
+    from ..game_paths import game_file
     output = require_private_output(output)
     if output.exists():
         raise ValueError("Build into a new private directory; existing CAF caches are immutable")
@@ -278,7 +279,7 @@ def build_catalog(dump, corpus, output):
     resources, objects, xmls = {}, {}, []
     for index in range(4):
         arc = f"v2cp_{index}.viv"
-        for name, raw in archive_entries((Path(dump) / "assets" / arc).read_bytes()):
+        for name, raw in archive_entries(game_file(dump, "assets/" + arc).read_bytes()):
             if not name.lower().endswith((".o", ".xsh", ".xml")):
                 continue
             raw = expanded(raw)

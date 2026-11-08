@@ -215,8 +215,9 @@ def wardrobe(database, groups):
 
 def read_shop(dump, groups):
     dump = Path(dump)
-    sod = (dump / "assets/djv2.sod").read_bytes()
-    locale = next((expanded(raw) for name, raw in archive_entries((dump / "assets/misc.viv").read_bytes())
+    from ..game_paths import game_file
+    sod = game_file(dump, "assets/djv2.sod").read_bytes()
+    locale = next((expanded(raw) for name, raw in archive_entries(game_file(dump, "assets/misc.viv").read_bytes())
                    if name.lower() == "cmusen.loc"), None)
     if locale is None:
         raise ValueError("Missing English shop localization")

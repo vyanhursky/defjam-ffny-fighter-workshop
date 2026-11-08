@@ -4,10 +4,9 @@
 
 Local beta source is published at
 https://github.com/vyanhursky/defjam-ffny-fighter-workshop on `develop/0.1`, the
-default branch. The owner approved the four README screenshots and authorized
-the first packaged prerelease, v0.1.0-beta.1. Publication is gated on the tagged
-source's native CI and checksum/provenance verification; the release page records
-publication state. Broader owner/game acceptance remains ongoing. Saves and
+default branch. The four owner-approved README screenshots are published.
+The first packaged prerelease, v0.1.0-beta.1, is published with Windows x64,
+macOS arm64/x64 and Linux x64 binaries, checksums and source/CI provenance. Broader owner/game acceptance remains ongoing. Saves and
 original extracted assets stay private; binaries are release attachments only.
 
 The chosen project name is Def Jam FFNY Fighter Workshop. Repository metadata,
@@ -267,3 +266,24 @@ the ten assets, then failed because GitHub's by-tag REST endpoint excludes
 unpublished drafts. The draft stayed unpublished. Resolve its numeric ID from
 the authenticated release list, allow retries only for an unpublished draft
 of the same source SHA, and verify all uploaded digests before publication.
+
+## 0.1 Beta 1 published — 2026-11-07
+
+Published https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/tag/v0.1.0-beta.1
+as a prerelease, not Latest. Tag/application source: a7a7e354df78b5eab6ecabbcf0c03430d129e910.
+Native release build/startup CI 42447467964 passed all four targets. Corrected
+server-side staging/verification run 42448445592 passed the archive/content
+checks and all ten GitHub-uploaded SHA-256 comparisons. Release ID: 438038559.
+
+Assets: four native archives, four .sha256 sidecars, SHA256SUMS and provenance.json.
+The public checksum file was downloaded and compared byte for byte, and all
+four README binary links match the published asset URLs. The approved gallery
+is committed and pinned. Publisher infrastructure through 542ad01 also passed
+all four native CI jobs in 42448445705. The tagged application suite and later
+publisher-fixture tests remain distinct evidence.
+
+The first staging run's draft lookup failure remains recorded above; its audits
+and uploads had passed, and publication waited for corrected digest verification.
+Next: beta feedback using copied saves, then broader editor/game/GPU/Wayland
+qualification. No original saves, raw game assets or compiled game executable
+were published; the exact approved screenshots/icon retain their artwork exception.

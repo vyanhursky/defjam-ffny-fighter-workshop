@@ -25,6 +25,8 @@ def main():
     ap.add_argument("--workspace", type=Path, required=True)
     ap.add_argument("--output", type=Path, required=True)
     ap.add_argument("--import-data", type=Path)
+    ap.add_argument("--startup-timeout", type=float, default=600,
+                    help="Seconds allowed for first-use original asset conversion (default: 600)")
     args = ap.parse_args()
     if not (args.data / ".caf-disposable-test-data").is_file():
         raise SystemExit("Refusing UI writes without the disposable-data marker")
@@ -54,7 +56,7 @@ def main():
         ("initial preview", "Boolean(window.__cafState?.selected && window.__cafPreview?.ready)", None),
         ("tattoo category group", "[...document.querySelectorAll('#category optgroup[label=Tattoos] option')].length===9 && [...document.querySelectorAll('#category optgroup[label=Tattoos] option')].every(e=>e.text.startsWith('Tattoo - '))", None),
         ("live garment preview without staging", "window.__cafPreview?.ready && window.__cafPreview.part && !window.__cafState.dirty && window.__cafState.fields.caf_values[12]===window.__originalTop",
-         "window.__originalTop=window.__cafState.fields.caf_values[12];let e=document.getElementById('garment');e.value=[...e.options].find(o=>o.text==='Fila Logo Tee').value;e.dispatchEvent(new Event('change'))"),
+         "window.__originalTop=window.__cafState.fields.caf_values[12];window.__originalTopColor=window.__cafState.fields.caf_colors[12];let e=document.getElementById('garment');e.value=[...e.options].find(o=>o.text==='Fila Logo Tee').value;e.dispatchEvent(new Event('change'))"),
         ("live color preview without staging", "window.__cafPreview?.ready && window.__cafPreview.part!==window.__oldTryOn && !window.__cafState.dirty",
          "window.__oldTryOn=window.__cafPreview.part;let e=document.getElementById('color');e.selectedIndex=1;e.dispatchEvent(new Event('change'))"),
         ("live fitting preview without staging", "window.__cafPreview?.ready && window.__cafPreview.part!==window.__oldTryOn && !window.__cafState.dirty",
@@ -77,7 +79,7 @@ def main():
          "let e=document.getElementById('pose');e.value='relaxed';e.dispatchEvent(new Event('change'))"),
         ("restore clothes", "window.__cafPreview?.ready && !window.__cafPreview.hideClothes && window.__cafPreview.part && !window.__cafState.dirty",
          "document.getElementById('no-clothes').click();let e=document.getElementById('pose');e.value='wardrobe';e.dispatchEvent(new Event('change'));document.getElementById('lighting').value='studio';document.getElementById('lighting').dispatchEvent(new Event('change'))"),
-        ("equip commits preview", "window.__cafState.dirty && window.__cafState.fields.caf_values[12]!==window.__originalTop && window.__cafPreview?.ready && !window.__cafPreview.part",
+        ("equip commits preview", "window.__cafState.dirty && (window.__cafState.fields.caf_values[12]!==window.__originalTop || window.__cafState.fields.caf_colors[12]!==window.__originalTopColor) && window.__cafPreview?.ready && !window.__cafPreview.part",
          "document.getElementById('equip').click()"),
         ("cash edit", "window.__cafState?.fields?.cash===12345 && window.__cafState.dirty",
          "document.querySelector('[data-tab=stats]').click();let e=document.getElementById('cash');e.value='12345';e.dispatchEvent(new Event('change'))"),
@@ -136,7 +138,7 @@ def main():
             window.grab().save(str(args.output / "desktop-final.png"))
             window.resize(1100, 760)
         (args.output / "receipt.json").write_text(json.dumps(dict(passed=not error, error=error, steps=evidence), indent=2))
-        QTimer.singleShot(800, lambda: (window.grab().save(str(args.output / "desktop-compact.png")), app.quit()))
+        QTimer.singleShot(800, lambda: (window.grab().save(str(args.output / "desktop-compact.png")), app.exit(1 if error else 0)))
 
     def tick():
         if state["checking"]:
@@ -154,7 +156,8 @@ def main():
             state["waiting_since"] = time.monotonic()
             if action:
                 window.page.runJavaScript("(()=>{" + action + "})()")
-        if time.monotonic() - state["waiting_since"] > 60:
+        timeout = args.startup_timeout if index == 0 else 60
+        if time.monotonic() - state["waiting_since"] > timeout:
             finish("Timed out during " + title)
             return
         state["checking"] = True

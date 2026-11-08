@@ -80,17 +80,21 @@ def title_root(data: Path) -> Path:
 def discover(data: Path) -> Discovery:
     root = title_root(data)
     result = Discovery(root)
-    for folder in sorted(root.iterdir(), key=lambda p: p.name):
+    folders = sorted(root.iterdir(), key=lambda p: p.name)
+    identities = [p.name.upper() for p in folders]
+    for folder in folders:
         if not folder.is_dir():
             continue
         try:
             if folder.is_symlink() or not re.fullmatch(r"[0-9A-Fa-f]{12}", folder.name):
                 raise SaveError("Unexpected or linked profile directory")
+            if identities.count(folder.name.upper()) > 1:
+                raise SaveError("Case-colliding profile directories")
             name = metadata_name(read_bounded(folder / "SaveMeta.xbx", 4096))
             canonical, legacy = directory_name(name), directory_name(name, legacy=True)
             if folder.name.upper() == canonical:
                 kind = "canonical"
-            elif folder.name.upper() == legacy and not (root / canonical).exists():
+            elif folder.name.upper() == legacy and canonical not in identities:
                 kind = "legacy"
             else:
                 raise SaveError("Folder identity does not match the profile metadata")

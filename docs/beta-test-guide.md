@@ -49,6 +49,10 @@ are preserved. XML-only right-wrist models have no established retail-save
 encoding and are not exposed as writable options. Existing paired earrings are
 resolved by the retail pairing rules. New face sculpting is deferred.
 
-Windows is the local test target. macOS and Linux packaging and native acceptance
-remain to be performed. Custom content and granular movesets remain on the
+Native Windows functional evidence is retained. All 29 editor checks pass on
+Apple Silicon macOS using disposable copies, alongside standalone `.app`
+signature and frozen startup checks; see [platforms](desktop-platforms.md)
+for launch commands and the remaining native acceptance. Linux and Intel Mac
+packages now pass native CI build and relocated startup checks, alongside
+Windows and Apple Silicon Mac. Broader native game acceptance remains pending. Custom content and granular movesets remain on the
 roadmap in the specification.

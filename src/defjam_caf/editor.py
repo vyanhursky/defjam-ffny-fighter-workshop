@@ -37,7 +37,7 @@ class Editor:
         self.data, self.discovery = data, result
         self.cache = self.appearance = None
         self.preview_error = None
-        if (data / "extracted" / "assets" / "v2cp_0.viv").is_file():
+        if (data / "extracted").is_dir():
             try:
                 self.cache = build_cache(data / "extracted", self.workspace, self.progress)
                 self.appearance = Appearance(self.cache)

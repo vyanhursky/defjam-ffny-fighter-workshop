@@ -1,0 +1,20 @@
+{
+  "source_repository": "https://github.com/vyanhursky/DefJamFFNY-recomp",
+  "source_commit": "ae1191d5f4e6632ccd917118ea0c4d2b22120f6f",
+  "authorization": "Owner requested reuse of the Def Jam Recomp icon on 2026-11-07.",
+  "license": "Game artwork remains property of its rights holders; not covered by the project MIT license.",
+  "files": {
+    "defjam.icns": {
+      "source_path": "branding/icon/macos/defjam.icns",
+      "sha256": "825b774fcb6ce77dd0dbc99a47d9eaeebafecbeef50b60880b823cb1c369ba04"
+    },
+    "defjam.ico": {
+      "source_path": "branding/icon/defjam.ico",
+      "sha256": "23f2c8fc10747359e8dd750f2b2ba195ecaa382dd2c1bf0eaf647173efa2365f"
+    },
+    "defjam.png": {
+      "source_path": "branding/icon/png/defjam-256.png",
+      "sha256": "50ee7b528d887187d524d484ecd08f4488c74a7436e3eb287b603013d1af641c"
+    }
+  }
+}

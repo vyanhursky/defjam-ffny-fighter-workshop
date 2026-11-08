@@ -16,3 +16,9 @@ The desktop application uses PySide6/Qt under its applicable LGPL/GPL/commercial
 licenses. Packaged builds must include the dependency license notices and use
 dynamic libraries. Pillow, NumPy, Python and PyInstaller retain their respective
 licenses in the packaged dependency notices. No modified Qt build is shipped.
+
+The app icons in `src/defjam_caf/resources/branding` are reused byte for byte
+from DefJamFFNY-recomp at the owner's request (2026-11-07). See the accompanying
+`provenance.json` for source paths, commit and SHA-256 fingerprints. They contain
+the game's artwork, which remains the property of its rights holders and is
+not covered by this project's MIT license.

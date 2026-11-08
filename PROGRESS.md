@@ -60,8 +60,10 @@ have no proven valid retail-save encoding, so preserve rather than invent values
 Neutral static face preview preserves features; animation/expression/lighting
 parity is deferred. Named fighter moveset overrides remain unverified.
 Cash10m/development100k are conservative beta limits validated natively, not
-claimed universal game maxima. macOS/Linux native builds and acceptance remain
-outstanding. Game assets, saves and captures stay private and outside source.
+claimed universal game maxima. Apple Silicon macOS standalone package startup
+and all 29 source editor checks are verified. Native package build/startup
+checks now pass for Windows x64, Mac arm64/x64 and Linux x64; broader native
+macOS/Linux editor/game acceptance remains outstanding. Game assets, saves and captures stay private and outside source.
 Custom Fighter R&D, production art/review state and runtime source are untouched.
 
 Early exploratory native tests failed guard checks because unrelated Options or a
@@ -91,3 +93,106 @@ fighter hashes and the prepared owner copies match their starting identities.
 Windows packaging in a restricted workspace needs the documented normal-shell
 `icacls` step: the Python build subprocess can lack the relabel privilege. Only
 the generated application folder is relabeled; no system policy is changed.
+
+## macOS/Linux compatibility — 2026-11-07
+
+Work is on `codex/macos-linux`, based on beta commit `84b3171`. No source push or
+packaged release has been performed by this porting session.
+
+- Resolve workspace and packaged logs through the same Qt native application
+  data path; `--workspace` overrides cache, backups and logs together.
+- Resolve Xbox asset names case-insensitively without changing the dump; reject
+  ambiguous paths. Prevent lowercase hex identity collisions during discovery,
+  import and duplication on case-sensitive filesystems.
+- Package a correctly identified macOS `.app` with notices included before
+  signing; create a symlink-preserving ZIP, Windows ZIP, or Linux tar.gz and
+  SHA-256 sidecar. Build caches are scoped to this project's `build` directory.
+- Add a frozen startup check for the offline modules, WebChannel and WebGL 2,
+  plus a checksum/relocation/signature checker. CI defines native Windows x64,
+  Mac arm64/x64 and Ubuntu 22.04 x64 builds; it has not been run remotely.
+- Local evidence: 35 Python tests passed, two case-sensitive filesystem cases
+  skipped, four Node pose tests passed. Mac source and frozen relocated startup
+  passed on macOS 26.5.2 arm64 with Qt 6.8.3/Python 3.13. All 29 real source
+  editor checks pass in 34.96 seconds, including save/backup/export/import and
+  duplication. All 21 original save files retain their hashes. The final frozen
+  app also renders the imported CAFTEST fighter (`preview_ready: true`) in
+  1.69 seconds using the existing private cache. No Linux or Intel Mac
+  native runtime pass is claimed; no native game acceptance was repeated.
+- The initial full desktop check timed out during first-use decoding under its
+  original 60-second deadline. Its failed receipt remains private. Give initial
+  decoding 600 seconds, subsequent actions 60, and exit the test event loop
+  without invoking production busy/unsaved close guards. A second failed receipt
+  exposed an Equip assertion that assumed the item value changed, although the
+  selected fitting alone changed; check both item and fitting bytes.
+
+Next: run the prepared native CI matrix when source publication is requested,
+then qualify representative packaged workflows on Linux/Intel and test edited
+profiles in the game. Maintain the owner acceptance/release gate. Public docs
+contain no private data paths; local receipts and copied saves stay outside Git.
+
+## Installer data default and Recomp icon — 2026-11-07
+
+Owner requested macOS discovery of the installer's default data directory and
+reuse of the Def Jam Recomp app icon. Normal Mac startup reads
+`~/Library/Application Support/DefJamRecompiled/data` when it contains FFNY title
+saves; the folder picker defaults there. Explicit `--data` takes priority. No
+matching installation leaves manual selection available. Workspace/cache/backup
+locations stay separate from the game data. Automated smoke mode without --data
+skips personal installation discovery.
+
+The exact Recomp `.icns`, `.ico` and 256px PNG are reused, with SHA-256/source
+provenance and the icon-only owner exception recorded in AGENTS.md/THIRD_PARTY.md.
+The Mac bundle and Windows executable receive native icons, and Qt sets the app
+and window icon. These game artwork files are not MIT-licensed.
+
+Validation: 38 Python tests passed; two filesystem cases remain skipped on the
+case-insensitive Mac. The native source app starts without --data at the real
+installer default and loads its icon (the local default contains zero supported
+fighter profiles). No profile write was performed by this discovery check.
+
+The rebuilt standalone Mac app also opens the installer data default without
+--data (confirmed in its captured UI). Its CFBundleIconFile is defjam.icns and
+matches the reused source byte for byte. Checksum-verified ZIP relocation,
+strict deep signature verification and frozen WebGL/WebChannel startup pass,
+including icon_loaded=true. No native Windows/Linux run is claimed here.
+
+## Native CI publication — 2026-11-07
+
+Owner authorized source push and native Windows/macOS/Linux CI. The source is
+pushed on `codex/macos-linux`, PR #1 into `develop/0.1`. No release is tagged.
+Initial run: https://github.com/vyanhursky/defjam-ffny-fighter-workshop/actions/runs/42444607060
+
+Linux x64 built and its relocated frozen WebGL 2/WebChannel/icon startup passed.
+Windows and Apple Silicon Mac built, but startup timed out because Chromium
+blocklisted the hosted VMs' software adapters (Microsoft Basic Render Driver
+and Apple Software Renderer). Their failed receipts remain in CI artifacts;
+do not treat these initial jobs as passes. Allow the virtual software adapters
+with --ignore-gpu-blocklist only in the offline CI smoke steps, retaining the
+actual WebGL 2 requirement and browser sandbox. Record the renderer in receipts.
+The native application keeps its ordinary graphics defaults.
+
+## Native CI results and handoff — 2026-11-07
+
+Source is pushed in PR #1 on `codex/macos-linux` into `develop/0.1`:
+https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/1
+The corrected run built and started Windows x64, macOS arm64/x64 and Linux x64:
+https://github.com/vyanhursky/defjam-ffny-fighter-workshop/actions/runs/42445039193
+All four startup receipts report passed=true, frozen=true, icon_loaded=true,
+WebGL 2 and working WebChannel after archive extraction/relocation. Mac signatures
+verify strictly. Source documentation is updated to reflect native package CI.
+
+The initial failures were Chromium's blocklist of the VMs' software adapters,
+not a build/signature failure. Allow those adapters only in CI, keep requiring
+WebGL 2, and keep the browser sandbox. Actual renderers are recorded in receipts.
+Linux uses Mesa llvmpipe under Xvfb; Windows uses the Microsoft Basic Render
+Driver, and both Macs use Apple Software Renderer. The application retains its
+normal graphics defaults. Initial failed receipts remain in the earlier run.
+
+Linux executes all 40 Python cases; Windows passes 37 with three skips, Mac
+arm64 passes 38 with two skips. Four Node pose checks pass. The separate local
+29-step editor/save/import test and unchanged-original-save hashes remain the
+functional evidence for Apple Silicon. CI startup uses no save/game fixtures.
+
+Next: use the PR's current-head check links and native package artifacts for
+review. No tagged release was created. Full owner acceptance, physical GPU and
+Wayland checks, and broader native game qualification remain distinct gates.

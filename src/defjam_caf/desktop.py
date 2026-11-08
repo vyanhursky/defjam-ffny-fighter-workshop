@@ -2,18 +2,19 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
-import os
 from pathlib import Path
 import sys
 import traceback
 
 from PySide6.QtCore import QObject, Signal, Slot, QUrl, QStandardPaths, QTimer, qInstallMessageHandler
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QInputDialog, QMessageBox
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineUrlRequestInterceptor
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
 from .editor import Editor
+from .locations import default_data_directory, initial_data_directory
 
 
 class OfflineOnly(QWebEngineUrlRequestInterceptor):
@@ -56,7 +57,7 @@ class Bridge(QObject):
                 else:
                     action = "snapshot"
             if action == "choose_data":
-                path = QFileDialog.getExistingDirectory(self.window, "Select Recomp data directory", str(self.editor.data or Path.home()))
+                path = QFileDialog.getExistingDirectory(self.window, "Select Recomp data directory", str(self.editor.data or default_data_directory() or Path.home()))
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "open_data", {"path": path}
@@ -98,6 +99,8 @@ class Bridge(QObject):
 class Window(QMainWindow):
     def __init__(self, workspace, initial=None):
         super().__init__()
+        icon_name = "defjam.icns" if sys.platform == "darwin" else "defjam.png"
+        self.setWindowIcon(QIcon(str(Path(__file__).parent / "resources" / "branding" / icon_name)))
         self.setWindowTitle("Def Jam FFNY · Fighter Workshop · Local Beta")
         self.resize(1440, 940)
         self.setMinimumSize(1080, 740)
@@ -129,28 +132,83 @@ class Window(QMainWindow):
         event.accept()
 
 
+def startup_smoke(app, window, receipt):
+    import platform
+    import time
+    started = time.monotonic()
+    timer = QTimer(window)
+    state = {"done": False, "checking": False}
+
+    def finish(error=None, details=None):
+        if state["done"]:
+            return
+        state["done"] = True
+        timer.stop()
+        receipt.parent.mkdir(parents=True, exist_ok=True)
+        receipt.write_text(json.dumps(dict(passed=not error, error=error, details=details,
+            icon_loaded=not window.windowIcon().isNull(),
+            platform=sys.platform, machine=platform.machine(), frozen=bool(getattr(sys, "frozen", False)),
+            seconds=round(time.monotonic() - started, 2)), indent=2), encoding="utf-8")
+        app.exit(1 if error else 0)
+
+    def tick():
+        if time.monotonic() - started > 120:
+            finish("Timed out waiting for WebGL and the editor WebChannel")
+            return
+        if state["checking"] or state["done"]:
+            return
+        state["checking"] = True
+        def checked(raw):
+            state["checking"] = False
+            if raw and not state["done"]:
+                finish(details=json.loads(raw))
+        window.page.runJavaScript("""(()=>{
+            const canvas=document.querySelector('#viewport canvas');
+            const gl=canvas?.getContext('webgl2');
+            if(!window.__cafState || !gl || gl.isContextLost())return null;
+            if(window.__cafState.fields?.has_fighter && window.__cafState.preview_available
+                && !window.__cafPreview?.ready)return null;
+            const debug=gl.getExtension('WEBGL_debug_renderer_info');
+            return JSON.stringify({webchannel:true,webgl:gl.getParameter(gl.VERSION),
+                renderer:gl.getParameter(debug?debug.UNMASKED_RENDERER_WEBGL:gl.RENDERER),
+                profiles:window.__cafState.profiles.length,selected:window.__cafState.selected,
+                preview_ready:Boolean(window.__cafPreview?.ready)});
+        })()""", checked)
+
+    window.page.renderProcessTerminated.connect(lambda status, code: finish("Renderer exited: " + str(code)))
+    timer.timeout.connect(tick)
+    timer.start(250)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path)
     parser.add_argument("--workspace", type=Path)
+    parser.add_argument("--smoke-test", type=Path, help="Write a read-only desktop startup receipt and exit")
     parser.add_argument("--capture", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--quit-after", type=int, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+    QApplication.setApplicationName("defjam-ffny-fighter-workshop")
+    QApplication.setOrganizationName("FFNY Community Tools")
+    workspace = (args.workspace or Path(QStandardPaths.writableLocation(
+        QStandardPaths.StandardLocation.AppLocalDataLocation))).expanduser().resolve()
     if getattr(sys, "frozen", False):
         # Windowed executables have no console. Retain local diagnostics so a
         # failed renderer is observable instead of presenting a silent blank.
-        log_root = (args.workspace or Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "defjam-ffny-fighter-workshop") / "logs"
+        log_root = workspace / "logs"
         log_root.mkdir(parents=True, exist_ok=True)
         log = (log_root / "desktop.log").open("a", encoding="utf-8", buffering=1)
         sys.stdout = sys.stderr = log
         print(f"[START] {sys.executable} resources={Path(__file__).parent / 'resources'}", flush=True)
         qInstallMessageHandler(lambda kind, context, message: print(f"[QT] {message}", flush=True))
     app = QApplication(sys.argv[:1])
-    app.setApplicationName("defjam-ffny-fighter-workshop")
-    app.setOrganizationName("FFNY Community Tools")
-    workspace = args.workspace or Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation))
-    window = Window(workspace, args.data)
+    # Automated package checks without --data stay independent of installed saves.
+    initial = args.data if args.smoke_test else initial_data_directory(args.data)
+    window = Window(workspace, initial)
+    app.setWindowIcon(window.windowIcon())
     window.show()
+    if args.smoke_test:
+        startup_smoke(app, window, args.smoke_test)
     if args.capture:
         def capture():
             args.capture.parent.mkdir(parents=True, exist_ok=True)

@@ -159,7 +159,7 @@ def install_files(title, name, files):
         raise SaveError("Choose a regular FFNY title-save folder")
     title.mkdir(parents=True, exist_ok=True)
     canonical, legacy = directory_name(name), directory_name(name, legacy=True)
-    if (title / canonical).exists() or (title / legacy).exists():
+    if any(p.name.upper() in {canonical, legacy} for p in title.iterdir()):
         raise SaveError("A profile with this identity already exists")
     stage = title / (".caf-import-" + uuid.uuid4().hex)
     stage.mkdir()
@@ -168,7 +168,7 @@ def install_files(title, name, files):
             (stage / filename).write_bytes(raw)
         # Reserve identity to prevent two editors installing the same name.
         with writer_lock(title):
-            if (title / canonical).exists() or (title / legacy).exists():
+            if any(p.name.upper() in {canonical, legacy} for p in title.iterdir()):
                 raise SaveError("A profile with this identity already exists")
             stage.rename(title / canonical)
     finally:

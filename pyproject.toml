@@ -25,7 +25,7 @@ defjam-caf-desktop = "defjam_caf.desktop:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-defjam_caf = ["resources/*", "resources/vendor/*", "_vendor/LICENSE"]
+defjam_caf = ["resources/*", "resources/vendor/*", "resources/branding/*", "_vendor/LICENSE"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

@@ -196,3 +196,15 @@ functional evidence for Apple Silicon. CI startup uses no save/game fixtures.
 Next: use the PR's current-head check links and native package artifacts for
 review. No tagged release was created. Full owner acceptance, physical GPU and
 Wayland checks, and broader native game qualification remain distinct gates.
+
+## PR #1 merged — 2026-11-07
+
+Owner approved and PR #1 merged into `develop/0.1` at `5bbcccc`. The final PR
+head `3878375` passed all four native CI jobs in run 42445695324: Windows x64,
+macOS arm64/x64 and Linux x64. The merge preserves the tested source tree.
+The default branch now runs native package CI on pushes as well as PRs.
+
+The local checkout returns to `develop/0.1`; the merged feature branch is
+removed after synchronization. No tagged release was created. Next work remains
+owner acceptance and the broader native editor/game checks documented above;
+CI package/startup evidence does not replace those checks.

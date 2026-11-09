@@ -319,7 +319,7 @@ capture/save, unsaved details/reset and complete ZIP export. Final frozen Mac
 build starts in1.01s with two copied profiles, WebChannel/WebGL preview and icon.
 Its bundled helper validates a complete portrait-bearing pack against the updated
 compiler. Earlier bundled PNG conversion also passes. Node is unavailable on
-PATH; pose source is unchanged. Native Windows/Linux qualification is pending.
+PATH; pose source is unchanged. Windows/Linux in-game acceptance is pending; hosted package/startup results follow below.
 
 Runtime native build passes143 manual-address checks. Fighter fixtures initially
 passed1437; after adding CAF teardown cleanup, an aggregate had1432 passes/five
@@ -360,7 +360,7 @@ Export compilation does not claim game acceptance or activate a mod. Existing
 Custom Fighter runtime shipping/installation/profile/capacity gates still apply.
 
 Ready for review as source-only local feature branches in persistent repositories. Before a new release, qualify
-Windows/Linux and the matching runtime/launcher integration. No source push or
+Windows/Linux gameplay and the matching runtime/launcher integration. No source push or
 release publication this turn.
 
 ## PR publication and cross-platform CI — 2026-11-09
@@ -369,9 +369,20 @@ Owner authorized publishing codex/fighter-projects into develop/0.1 and the
 companion recomp codex/workshop-caf-export into research/custom-fighter-mods.
 Open both PRs, preserve the native evidence above, and complete Windows, macOS
 and Linux CI. No merge or new release is requested. This supersedes the earlier
-no-push handoff for this feature. PR links and CI results follow when available.
+no-push handoff for this feature. Workshop PR: https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/2.
+Companion runtime PR: https://github.com/vyanhursky/DefJamFFNY-recomp/pull/213.
 
-Workshop PR: https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/2.
+Workshop CI run42640408538 passes all four native package targets at8a8e0ab:
+Windows x64, macOS arm64, macOS x64 and Linux x64. Each runs Python/pose tests,
+builds the game-free package, relocates it through a path with spaces/non-ASCII,
+and verifies frozen WebChannel/WebGL/icon startup plus the synthetic authoring
+subprocess and DXT5 portrait encoder.
+https://github.com/vyanhursky/defjam-ffny-fighter-workshop/actions/runs/42640408538
+
+The runtime PR integrates current research fixes; its hosted CI is still being
+qualified. The original in-game evidence above remains macOS-only and predates
+that base integration. Hosted game-free checks do not replace gameplay tests.
+
 Native package CI now also executes the relocated frozen authoring helper with
 a synthetic selected runtime and a16x16 DXT5 portrait encode. This verifies
 bundled runpy/Pillow plugins and DDS support on each OS/CPU without game data;

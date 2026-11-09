@@ -1,5 +1,32 @@
 # Progress and handoff
 
+## Editable Blazin' assignments — 2026-11-09
+
+Owner approved a four-slot menu for Story CAFs and standalone CAF projects,
+using the complete original-game move pool, with room for future custom moves.
+Implemented a named catalog from the verified SODB DisplayName/choice schema;
+all82 retail choices are available independent of styles/unlocks. Provider-qualified
+stable keys and source-grouped options decouple the menu from native ordinals.
+Custom animation providers remain a future versioned resource/runtime extension.
+
+Four selectors stage an explicit complete selection; duplicates are allowed.
+Profile writes affect only16 payload bytes at0x120, using normal backup/stale-file
+checks. Projects retain retail record identities and may remove their override
+with Use inherited moves. Undo/Reset, close/discard protection, named change
+review, project conversion/copy/variant/export and existing texture bindings are
+preserved. Unknown/unassigned values remain untouched until explicitly replaced;
+missing original assets disable selection. No editor animation playback is claimed.
+
+Validation:98 Python tests pass (3 platform skips), plus4 Node pose tests.
+Seventeen real Qt/WebChannel steps pass on marked disposable data: draft versus
+Apply, all four menus, duplicate choices, Undo/Reset, profile save/reload,
+CAF-to-project conversion, inheritance, textured project edit/copy/reopen.
+Decoded saved profile comparison confirms no bytes outside the four references
+changed. The UI-edited textured project passes the actual CAF v2 compiler/export.
+Native acceptance and updated cross-platform CI are in progress. Original saves,
+projects, artwork and captures remain private; the existing2Pac delivery keeps
+its original assignments. No merge or release is included.
+
 ## Texture-mod fighter pilot — 2026-11-09
 
 Owner approved general-purpose roadmap work for native texture import and fighter

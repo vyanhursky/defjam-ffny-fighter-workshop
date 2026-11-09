@@ -3,7 +3,8 @@ import copy
 from pathlib import Path
 
 from .appearance import Appearance
-from .assets import build_cache
+from .assets import build_cache, Database
+from . import blazin
 from .container import SaveError
 from .fields import apply_fields, read_fields, STYLE_NAMES, CASH_LIMIT, DEV_LIMIT
 from .profiles import discover
@@ -30,6 +31,8 @@ class Editor:
         self.history = []
         self.cache = None
         self.appearance = None
+        self.blazin = None
+        self.blazin_error = "Load original game assets to choose Blazin' moves."
         self.preview_error = None
         self.project = self.project_path = self.project_hash = None
         self.portrait_edit = None
@@ -53,6 +56,12 @@ class Editor:
             document.update(copy.deepcopy(self.metadata_edit))
         fields = read_fields(self.current().payload)
         document["fighter"].update({k: copy.deepcopy(fields[k]) for k in projects.FIGHTER_FIELDS})
+        if "finishers" in self.edits:
+            if self.edits["finishers"] is None:
+                document["fighter"].pop("finishers", None)
+            else:
+                document["schema"] = projects.SCHEMA2
+                document["fighter"]["finishers"] = self.edits["finishers"][:]
         if self.portrait_edit is not None:
             document["portrait"] = self.portrait_edit
         if self.texture_edit is not None:
@@ -61,7 +70,7 @@ class Editor:
 
     def create_project(self, path):
         fields = read_fields(self.current().payload)
-        document = (projects.from_profile(self.current().payload, self.profile.name, self.cache.db if self.cache else None)
+        document = (projects.from_profile(self.current().payload, self.profile.name, self.blazin.database if self.blazin else self.cache.db if self.cache else None)
                     if self.profile else projects.from_fields(fields, self.project["metadata"]["name"]))
         if self.project is not None:
             source = self.project_document()
@@ -95,6 +104,8 @@ class Editor:
         result = discover(data)
         self.data, self.discovery = data, result
         self.cache = self.appearance = None
+        self.blazin = None
+        self.blazin_error = "Load original game assets to choose Blazin' moves."
         self.preview_error = None
         if (data / "extracted").is_dir():
             try:
@@ -104,6 +115,12 @@ class Editor:
                 self.preview_error = "CAF cache could not be loaded: " + str(exc)
         else:
             self.preview_error = "Choose the Recomp data directory containing extracted game assets for the 3D preview."
+        if (data / "extracted").is_dir():
+            try:
+                self.blazin = blazin.Catalog(self.cache.db if self.cache else Database(data / "extracted"))
+                self.blazin_error = None
+            except (OSError, ValueError, KeyError, SaveError) as exc:
+                self.blazin_error = "Blazin' catalog could not be loaded: " + str(exc)
         candidates = [p for p in result.profiles if read_fields(p.container.payload)["has_fighter"]]
         chosen = max(candidates or result.profiles, key=lambda p: p.path.stat().st_mtime, default=None)
         if self.project is not None:
@@ -127,20 +144,37 @@ class Editor:
         return self.snapshot()
 
     def current(self):
-        return apply_fields(self.base(), self.edits)
+        return apply_fields(self.base(), {k: v for k, v in self.edits.items() if k != "finishers"})
+
+    def blazin_keys(self, edits=None):
+        edits = self.edits if edits is None else edits
+        if self.project is not None:
+            return blazin.project_keys(edits.get("finishers", self.project["fighter"].get("finishers")))
+        if self.blazin and self.profile:
+            return self.blazin.profile_keys(apply_fields(self.base(), edits).payload)
+        return [None] * 4
 
     def stage(self, changes):
         if self.project is not None and set(changes) & {"cash", "development"}:
             raise SaveError("Fighter projects have no Story currency")
         if not read_fields(self.current().payload)["has_fighter"]:
             raise SaveError("This profile has no Story fighter. Create one in the game first")
+        if "blazin_values" in changes:
+            if self.project is not None or not self.blazin:
+                raise SaveError("Choose Blazin' moves through the loaded catalog")
+            self.blazin.validate_values(changes["blazin_values"])
+        if "finishers" in changes:
+            if self.project is None or not self.blazin:
+                raise SaveError("Choose project Blazin' moves through the loaded catalog")
+            if changes["finishers"] is not None:
+                self.blazin.select(blazin.project_keys(changes["finishers"]))
         previous = copy.deepcopy(self.edits)
         combined = copy.deepcopy(self.edits)
         if "stats" in changes:
             combined["stats"] = dict(combined.get("stats", {}), **changes["stats"])
         combined.update({k: v for k, v in changes.items() if k != "stats"})
-        candidate = apply_fields(self.base(), combined)
-        if candidate.payload == self.current().payload:
+        candidate = apply_fields(self.base(), {k: v for k, v in combined.items() if k != "finishers"})
+        if candidate.payload == self.current().payload and self.blazin_keys(combined) == self.blazin_keys():
             return self.snapshot()
         self.history.append(previous)
         self.history = self.history[-100:]
@@ -178,6 +212,10 @@ class Editor:
                 result.append(f"{key.capitalize()}: {before['stats'][key]} → {after['stats'][key]}")
         if before["styles"] != after["styles"]:
             result.append("Fighting styles: " + ", ".join(STYLE_NAMES[i] for i in after["styles"]))
+        before_moves = self.blazin_keys({})
+        for slot, (old, new) in enumerate(zip(before_moves, self.blazin_keys())):
+            if old != new:
+                result.append(f"Blazin' slot {slot + 1}: " + (self.blazin.label(new) if self.blazin else str(new)))
         for slot, (old, new, oc, nc) in enumerate(zip(before["caf_values"], after["caf_values"], before["caf_colors"], after["caf_colors"])):
             if old != new or oc != nc:
                 label = {0: "Body build", 1: "Skin tone"}.get(slot)
@@ -199,13 +237,15 @@ class Editor:
                       portrait_available=self.portrait_edit is not None or bool(self.project and "portrait" in self.project))
         textures = self.texture_edit if self.texture_edit is not None else (self.project or {}).get("textures", {})
         result["atlas_slots"] = sorted(textures.get("atlases", {}))
+        result["blazin"] = dict(options=self.blazin.options if self.blazin else [], selected=self.blazin_keys(),
+                                error=self.blazin_error)
         if self.discovery:
             result["profiles"] = [dict(name=p.name, has_fighter=read_fields(p.container.payload)["has_fighter"],
                                        legacy=p.directory_kind == "legacy") for p in self.discovery.profiles]
         if self.profile or self.project:
             result.update(selected=self.project["metadata"]["name"] if self.project else self.profile.name,
                           fields=read_fields(self.current().payload),
-                          changes=self.changes(), dirty=self.current().encode() != self.base().encode() or self.portrait_edit is not None or self.metadata_edit is not None or self.texture_edit is not None,
+                          changes=self.changes(), dirty=self.current().encode() != self.base().encode() or self.blazin_keys() != self.blazin_keys({}) or self.portrait_edit is not None or self.metadata_edit is not None or self.texture_edit is not None,
                           undo=bool(self.history))
             if self.appearance:
                 fields = result["fields"]
@@ -254,6 +294,14 @@ class Editor:
         return result
 
     def request(self, action, args):
+        if action == "blazin":
+            if not self.blazin:
+                raise SaveError(self.blazin_error)
+            rows = self.blazin.select(args["moves"])
+            return self.stage({"finishers": [row["record"] for row in rows]} if self.project else
+                              {"blazin_values": [row["value"] for row in rows]})
+        if action == "blazin_inherit":
+            return self.stage({"finishers": None})
         if action in ("project_atlas", "project_atlas_clear"):
             if self.project is None:
                 raise SaveError("Create or open a fighter project first")

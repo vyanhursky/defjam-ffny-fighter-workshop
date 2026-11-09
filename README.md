@@ -40,6 +40,8 @@ portrait capture/import and validated CAF-to-Custom-Fighter-Mod ZIP export.
 Native 256×256 atlas import and saved retail finisher preservation are available
 with the matching version 2 runtime. Experimental [PS2 snapshot recovery](docs/ps2-caf-recovery.md)
 can create a new project from a verified CAF without converting its Story save.
+The **Blazin' moves** tab edits four assignments for Story CAFs and projects,
+using the complete original-game pool with normal Apply, Undo, Reset and Save.
 This requires the companion Custom Fighter runtime extension and is not part
 of the Beta 1 downloads above. See [the project/export workflow](docs/fighter-projects.md).
 

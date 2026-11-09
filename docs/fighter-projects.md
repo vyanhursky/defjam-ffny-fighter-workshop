@@ -58,8 +58,35 @@ remain readable and keep their original fields. Creating a project from a save
 now resolves its finishers against the original game database; missing or
 unverified references are refused instead of silently discarded. PS2 snapshot
 recovery is an [experimental separate input path](ps2-caf-recovery.md).
-All four finisher slots must be concrete or all absent; partial assignments
-remain unsupported until their native semantics are verified.
+All four finisher slots must be concrete or all absent; partial project
+assignments remain unsupported until their native semantics are verified.
+
+### Editing Blazin' assignments
+
+The **Blazin' moves** tab offers four named selectors populated from the player's
+original game database (82 moves in the verified dump). Character finishers and
+CAF moves share the full pool, independent of styles and Story unlocks. Duplicate
+choices are allowed. Pick all four, then **Apply Blazin' moves** to stage them.
+Review slot/name changes, use Undo or Reset as needed, then Save. Browsing a
+dropdown alone does not alter the fighter. Animation playback is not included.
+
+For a Story CAF, saving updates only its four assignment references, with the
+normal original backup and stale-save protection. Creating a standalone project
+from that fighter retains the edited moves. For a project, saving retains four
+stable retail record identities, and export resolves them through the matching
+CAF v2 runtime. **Use inherited moves** removes a project's explicit override;
+it is unavailable for Story profiles. Saving/copying/creating variants retains
+assignments; changing them does not invalidate imported outfit textures.
+
+Missing assets disable the catalog. Missing/unknown saved references display an
+unavailable/unassigned placeholder and remain untouched until all four are
+explicitly replaced. Names/order come from the local database. The UI consumes
+provider-qualified stable keys and source groups, leaving room for future custom
+move catalogs. Custom animations are not currently accepted by native profile or
+CAF v2 export; that requires a versioned resource/runtime extension, not a raw
+animation index in the menu.
+
+### Atlas workflow
 
 Under **Project & mod → Texture atlases**, choose an atlas and import its PNG.
 The preview uses its RGB while retaining the original material alpha. A–D are

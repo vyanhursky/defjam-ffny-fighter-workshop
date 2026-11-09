@@ -56,8 +56,23 @@ function renderState(state){
   for(const key of ['name','author','version','description','license','donor']){const input=$('project-'+key);input.value=state.project?.metadata[key]||'';input.disabled=!state.project;}
   for(const key of ['pack','fighter']){$('project-'+key).value=state.project?.identity[key]||'';$('project-'+key).disabled=!state.project;}
   for(const id of ['save-project-details','project-copy','export-mod','capture-portrait','import-portrait','import-atlas','clear-atlases','atlas-slot'])$(id).disabled=!state.project;
+  renderBlazin(state);
   loadCategory().catch(fail);
   queuePreview(0);
+}
+function renderBlazin(state){
+  const catalog=state.blazin,rows=catalog?.options||[],sources=[...new Set(rows.map(row=>row.source))];
+  for(let slot=0;slot<4;slot++){
+    const select=$(`blazin-${slot}`),selected=catalog?.selected[slot];select.replaceChildren();
+    const known=rows.some(row=>row.key===selected);
+    const placeholder=new Option(selected&&!known?'Unavailable saved move · choose a replacement':state.project?'Inherited · choose a move':'Unassigned · choose a move','');
+    placeholder.disabled=true;select.append(placeholder);
+    for(const source of sources){const group=document.createElement('optgroup');group.label=source;for(const row of rows.filter(row=>row.source===source))group.append(new Option(row.label,row.key));select.append(group);}
+    select.value=known?selected:'';select.disabled=!readyFighter()||!rows.length;
+  }
+  $('apply-blazin').disabled=!readyFighter()||!rows.length;
+  $('inherit-blazin').hidden=!state.project;$('inherit-blazin').disabled=!readyFighter()||!rows.length;
+  $('blazin-status').textContent=catalog?.error||`${rows.length} moves available · all fighters and styles`;
 }
 function groupKey(o){return `${o.garment}||${(Number(o.key.split(':')[1])&0xff00ffff)>>>0}`;}
 async function loadCategory(){
@@ -149,6 +164,8 @@ $('garment').onchange=()=>{renderColors();tryOn();};$('color').onchange=()=>{ren
 $('equip').onclick=()=>{const selected=garmentOptions().find(o=>o.color_name===$('color').value&&o.fitting===$('fitting').value);if(selected)act('appearance',{changes:{part:selected.key}});};
 for(const id of ['cash','development'])$(id).onchange=()=>{const value=Number($(id).value);if(!Number.isInteger(value)||value<0||value>current.limits[id]){fail(new Error(`${id} must be between 0 and ${current.limits[id].toLocaleString()}.`));return;}act('stage',{edits:{[id]:value}});};
 $('apply-styles').onclick=()=>{const styles=[0,1,2].map(i=>Number($(`style-${i}`).value));if(styles[1]===-1&&styles[2]!==-1){fail(new Error('Choose a second style before adding a third.'));return;}act('stage',{edits:{styles:styles.filter(s=>s!==-1)}});};
+$('apply-blazin').onclick=()=>{const moves=[0,1,2,3].map(i=>$(`blazin-${i}`).value);if(moves.some(key=>!key)){fail(new Error('Choose a move for all four Blazin’ slots.'));return;}act('blazin',{moves});};
+$('inherit-blazin').onclick=()=>act('blazin_inherit');
 for(const id of ['front','back','face','fit'])$(id).onclick=()=>frame(id);
 $('pose').onchange=applyPose;$('lighting').onchange=applyLighting;$('no-clothes').onchange=()=>{queuePreview(0);updateViewState();};
 applyLighting();

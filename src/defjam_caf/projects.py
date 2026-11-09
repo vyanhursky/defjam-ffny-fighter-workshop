@@ -131,6 +131,7 @@ def portrait_bytes(value):
 
 def empty_container():
     payload = bytearray(PROFILE_SIZE)
+    payload[0x120:0x130] = b"\xff" * 16
     payload[0x134:0x137] = b"\xff" * 3
     payload[0x4d87] = 87
     return Container(bytes(64), bytes(payload))

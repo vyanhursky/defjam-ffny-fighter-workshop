@@ -57,6 +57,21 @@ Granular movesets, animation player, custom meshes/textures, custom animations,
 custom fight voices and fighter modpack authoring. Do not investigate the separate
 Custom Fighter R&D worktree as part of this beta.
 
+## Approved four-slot Blazin' editor — 2026-11-09
+
+The owner requested editable assignments, analogous to fighting styles, for both
+Story CAFs and standalone CAF projects. Offer all verified original-game Blazin'
+moves, including character moves, without style or shop-unlock filtering. Allow
+duplicates. Stage all four assignments together; use normal Undo/Reset, named
+change review, profile backup and project save/copy/export. Existing unknown
+references must remain untouched until explicitly replaced.
+
+The menu consumes provider-qualified stable keys and named source groups, not
+native row ordinals. This leaves a route for future custom Blazin' providers.
+Original native saves and CAF v2 currently encode retail references only; actual
+custom animation resources require an explicit future contract/runtime capability.
+Animation playback in the editor remains deferred.
+
 ## Texture-mod fighter pilot — 2026-11-09
 
 Owner requested recovering an existing texture-mod CAF, proving its stock body

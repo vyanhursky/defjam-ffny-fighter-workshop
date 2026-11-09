@@ -52,3 +52,9 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   preservation of retail finisher assignments, with an explicit companion
   runtime contract. Preserve beta profile workflows; keep source art, projects,
   captures and native evidence private. No new packaged release is implied.
+
+- Owner approved editable four-slot Blazin' assignments on 2026-11-09 for Story
+  CAFs and standalone CAF projects, using the complete original-game move pool.
+  Keep selection provider/identity based so future custom animation resources
+  can extend the menu; unsupported resource types remain refused until their
+  format/runtime capability exists. Source PR updates remain authorized.

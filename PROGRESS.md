@@ -370,3 +370,9 @@ companion recomp codex/workshop-caf-export into research/custom-fighter-mods.
 Open both PRs, preserve the native evidence above, and complete Windows, macOS
 and Linux CI. No merge or new release is requested. This supersedes the earlier
 no-push handoff for this feature. PR links and CI results follow when available.
+
+Workshop PR: https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/2.
+Native package CI now also executes the relocated frozen authoring helper with
+a synthetic selected runtime and a16x16 DXT5 portrait encode. This verifies
+bundled runpy/Pillow plugins and DDS support on each OS/CPU without game data;
+it remains separate from native CAF gameplay acceptance.

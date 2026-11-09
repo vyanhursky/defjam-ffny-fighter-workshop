@@ -57,6 +57,22 @@ Granular movesets, animation player, custom meshes/textures, custom animations,
 custom fight voices and fighter modpack authoring. Do not investigate the separate
 Custom Fighter R&D worktree as part of this beta.
 
+## Texture-mod fighter pilot — 2026-11-09
+
+Owner requested recovering an existing texture-mod CAF, proving its stock body
+and retail moveset in-game, then restoring its textures to match the HD fighter
+and portrait packs. The first outfit is the saved shirtless outfit. Work uses
+isolated source/data workspaces and preserves the released profile editor.
+
+The enabling roadmap feature is custom textures and fighter modpack authoring:
+hash-bound atlas assets, explicit UV/alpha-preserving mapping, preview and
+fighter-specific runtime ownership. Granular moves and custom animation are
+not required to reproduce the existing retail CAF style combination.
+
+Experimental read-only PS2 snapshot recovery is documented in
+[PS2 CAF recovery](ps2-caf-recovery.md). Only independently validated fighter
+fields are eligible for a new project; no Story-save conversion is implied.
+
 ## Approved next milestone — 2026-11-08
 
 Standalone portable fighter projects, conversion from existing CAFs and export

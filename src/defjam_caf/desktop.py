@@ -84,16 +84,18 @@ class Bridge(QObject):
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "export_mod", {"path": path, "runtime": runtime}
-            elif action == "choose_project_portrait":
+            elif action in {"choose_project_portrait", "choose_project_atlas"}:
                 import base64
-                path, _ = QFileDialog.getOpenFileName(self.window, "Import fighter portrait", "", "PNG image (*.png)")
+                atlas = action == "choose_project_atlas"
+                path, _ = QFileDialog.getOpenFileName(self.window, "Import 256x256 RGB atlas" if atlas else "Import fighter portrait", "", "PNG image (*.png)")
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                limit = 1024 * 1024 if atlas else 4 * 1024 * 1024
                 with Path(path).open("rb") as stream:
-                    raw = stream.read(4 * 1024 * 1024 + 1)
-                if len(raw) > 4 * 1024 * 1024:
-                    raise ValueError("Portrait PNG is too large")
-                action, args = "project_portrait", {"png": base64.b64encode(raw).decode("ascii")}
+                    raw = stream.read(limit + 1)
+                if len(raw) > limit:
+                    raise ValueError("Atlas PNG is too large" if atlas else "Portrait PNG is too large")
+                action, args = ("project_atlas", {"slot": args["slot"], "png": base64.b64encode(raw).decode("ascii")}) if atlas else ("project_portrait", {"png": base64.b64encode(raw).decode("ascii")})
             elif action == "choose_import":
                 if self.editor.discovery is None:
                     raise ValueError("Choose the destination data directory first")

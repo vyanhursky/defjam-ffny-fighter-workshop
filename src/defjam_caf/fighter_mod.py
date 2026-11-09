@@ -9,7 +9,7 @@ import tempfile
 import zipfile
 
 from .container import SaveError
-from .projects import validate, portrait_bytes, require
+from .projects import validate, portrait_bytes, atlas_bytes, require, SCHEMA2
 
 
 def run_contract(runtime, output, arguments):
@@ -71,11 +71,22 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
     with tempfile.TemporaryDirectory(prefix="caf-export-", dir=workspace) as temporary:
         root = Path(temporary) / pack_id
         root.mkdir()
-        recipe = (json.dumps(project["fighter"], sort_keys=True, indent=2) + "\n").encode()
+        import copy
+        fighter = copy.deepcopy(project["fighter"])
+        if project.get("textures", {}).get("atlases"):
+            folder = root / "atlases"
+            folder.mkdir()
+            fighter["atlases"] = {}
+            for slot, value in project["textures"]["atlases"].items():
+                png = atlas_bytes(value)
+                (folder / (slot + ".png")).write_bytes(png)
+                fighter["atlases"][slot] = {"path": "atlases/" + slot + ".png", "sha256": hashlib.sha256(png).hexdigest()}
+        recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
         (root / "fighter.json").write_bytes(recipe)
+        capability = "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
         manifest = {"schema": "fighter-registry-draft-1", "id": pack_id, "version": meta["version"],
                     "requires": {}, "resources": [{"id": "caf", "kind": "caf", "compatibility": {},
-                    "source": {"format": "caf-fighter-1", "selection": {"path": "fighter.json", "sha256": hashlib.sha256(recipe).hexdigest()}}}],
+                    "source": {"format": capability, "selection": {"path": "fighter.json", "sha256": hashlib.sha256(recipe).hexdigest()}}}],
                     "fighters": [{"id": fighter_id, "name": meta["name"], "inherits": meta["donor"],
                                   "components": {"caf": pack_id + "/caf"}}], "overrides": []}
         if "portrait" in project:
@@ -91,7 +102,10 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
             manifest["fighters"][0]["components"]["portrait"] = pack_id + "/portrait"
         (root / "fighters.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
         portrait_note = "Portraits/thumbnails use the project's PNG, converted through original UI templates." if "portrait" in project else "Portraits/thumbnails inherit the presentation donor."
-        (root / "README.md").write_text(f"# {meta['name']}\n\n{meta['description']}\n\nAuthor: {meta['author'] or 'Unspecified'}\nVersion: {meta['version']}\n\nRequires Custom Fighter runtime with caf-fighter-1 support.\nCAF appearance, training stats and retail style combination come from fighter.json.\nVoice, AI and inherited presentation use {meta['donor']}.\n{portrait_note}\nNo Story save or currency is included. The player's own game files supply the CAF parts.\n", encoding="utf-8")
+        extras_note = ("Version 2 requires the runtime's hash-checked fighter-caf-extras.bin support.\n"
+                       "Declared native atlases replace RGB only; original material alpha is retained.\n"
+                       "Saved finisher identities resolve against the player's original database.\n") if capability == "caf-fighter-2" else ""
+        (root / "README.md").write_text(f"# {meta['name']}\n\n{meta['description']}\n\nAuthor: {meta['author'] or 'Unspecified'}\nVersion: {meta['version']}\n\nRequires Custom Fighter runtime with {capability} support.\n{extras_note}CAF appearance, training stats and retail style combination come from fighter.json.\nVoice, AI and inherited presentation use {meta['donor']}.\n{portrait_note}\nNo Story save or currency is included. The player's own game files supply the CAF parts.\n", encoding="utf-8")
         (root / "LICENSE.txt").write_text(meta["license"] or "No additional license granted. Original game assets are supplied locally by the player.\n", encoding="utf-8")
         progress("Validating the complete fighter pack against your game files…")
         report = contract(runtime, ["validate", "--pack", str(root), "--game", str(game)], temporary, workspace)

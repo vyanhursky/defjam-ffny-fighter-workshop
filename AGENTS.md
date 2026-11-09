@@ -45,3 +45,10 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   feature branches and PRs: Workshop into develop/0.1, runtime into
   research/custom-fighter-mods, with Windows/macOS/Linux CI passing. No new
   packaged release or merge is authorized by that instruction.
+
+- Owner approved the texture-mod fighter pilot on 2026-11-09 and authorized
+  general-purpose Workshop feature PRs against the existing roadmap. This covers
+  experimental read-only PS2 snapshot recovery, portable CAF atlas import and
+  preservation of retail finisher assignments, with an explicit companion
+  runtime contract. Preserve beta profile workflows; keep source art, projects,
+  captures and native evidence private. No new packaged release is implied.

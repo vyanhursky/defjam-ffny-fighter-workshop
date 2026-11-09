@@ -34,6 +34,7 @@ class Editor:
         self.project = self.project_path = self.project_hash = None
         self.portrait_edit = None
         self.metadata_edit = None
+        self.texture_edit = None
         self._project_base_document = self._project_base = None
 
     def base(self):
@@ -51,23 +52,32 @@ class Editor:
         if self.metadata_edit is not None:
             document.update(copy.deepcopy(self.metadata_edit))
         fields = read_fields(self.current().payload)
-        document["fighter"] = {k: copy.deepcopy(fields[k]) for k in document["fighter"]}
+        document["fighter"].update({k: copy.deepcopy(fields[k]) for k in projects.FIGHTER_FIELDS})
         if self.portrait_edit is not None:
             document["portrait"] = self.portrait_edit
+        if self.texture_edit is not None:
+            document.update(schema=projects.SCHEMA2, textures=copy.deepcopy(self.texture_edit))
         return projects.validate(document)
 
     def create_project(self, path):
         fields = read_fields(self.current().payload)
-        document = projects.from_fields(fields, self.profile.name if self.profile else self.project["metadata"]["name"])
+        document = (projects.from_profile(self.current().payload, self.profile.name, self.cache.db if self.cache else None)
+                    if self.profile else projects.from_fields(fields, self.project["metadata"]["name"]))
         if self.project is not None:
             source = self.project_document()
             document["metadata"] = copy.deepcopy(source["metadata"])
             if "portrait" in source:
                 document["portrait"] = source["portrait"]
+            if "textures" in source:
+                document.update(schema=projects.SCHEMA2, textures=copy.deepcopy(source["textures"]))
+            if "finishers" in source["fighter"]:
+                document["schema"] = projects.SCHEMA2
+                document["fighter"]["finishers"] = source["fighter"]["finishers"][:]
         digest = projects.write(path, document)
         self.project, self.project_path, self.project_hash = document, Path(path), digest
         self.profile = None
         self.portrait_edit = self.metadata_edit = None
+        self.texture_edit = None
         self.edits, self.history = {}, []
         return self.snapshot()
 
@@ -76,6 +86,7 @@ class Editor:
         self.project, self.project_path, self.project_hash = document, Path(path), digest
         self.profile = None
         self.portrait_edit = self.metadata_edit = None
+        self.texture_edit = None
         self.edits, self.history = {}, []
         return self.snapshot()
 
@@ -111,6 +122,7 @@ class Editor:
             raise SaveError("Profile is unavailable; refresh the data directory")
         self.project = self.project_path = self.project_hash = None
         self.portrait_edit = self.metadata_edit = None
+        self.texture_edit = None
         self.edits, self.history = {}, []
         return self.snapshot()
 
@@ -156,6 +168,8 @@ class Editor:
             result.append("Project details changed")
         if self.portrait_edit is not None:
             result.append("Project portrait changed")
+        if self.texture_edit is not None:
+            result.append("Project texture atlases changed")
         for key, label in (("cash", "Cash"), ("development", "Development points")):
             if before[key] != after[key]:
                 result.append(f"{label}: {before[key]:,} → {after[key]:,}")
@@ -183,13 +197,15 @@ class Editor:
             project_view.update(copy.deepcopy(self.metadata_edit))
         result.update(project=project_view, project_path=str(self.project_path) if self.project_path else None,
                       portrait_available=self.portrait_edit is not None or bool(self.project and "portrait" in self.project))
+        textures = self.texture_edit if self.texture_edit is not None else (self.project or {}).get("textures", {})
+        result["atlas_slots"] = sorted(textures.get("atlases", {}))
         if self.discovery:
             result["profiles"] = [dict(name=p.name, has_fighter=read_fields(p.container.payload)["has_fighter"],
                                        legacy=p.directory_kind == "legacy") for p in self.discovery.profiles]
         if self.profile or self.project:
             result.update(selected=self.project["metadata"]["name"] if self.project else self.profile.name,
                           fields=read_fields(self.current().payload),
-                          changes=self.changes(), dirty=self.current().encode() != self.base().encode() or self.portrait_edit is not None or self.metadata_edit is not None,
+                          changes=self.changes(), dirty=self.current().encode() != self.base().encode() or self.portrait_edit is not None or self.metadata_edit is not None or self.texture_edit is not None,
                           undo=bool(self.history))
             if self.appearance:
                 fields = result["fields"]
@@ -216,10 +232,42 @@ class Editor:
                 fields["caf_values"][slot] = 0xffffffff
                 fields["caf_colors"][slot] = 0
         result = self.cache.compose(self.appearance.outfit(fields))
+        textures = self.texture_edit if self.texture_edit is not None else (self.project or {}).get("textures")
+        if textures and textures["atlases"]:
+            # Try-on/No clothes uses the original temporary outfit, never the
+            # final flattened artwork for a different appearance.
+            if textures["appearance_sha256"] == projects.appearance_hash(fields):
+                import base64, io
+                from PIL import Image
+                from .assets import image_uri
+                for atlas in "abcd":
+                    if atlas not in textures["atlases"]:
+                        continue
+                    native = Image.open(io.BytesIO(base64.b64decode(result["textures"][atlas].split(",", 1)[1]))).convert("RGBA")
+                    imported = Image.open(io.BytesIO(projects.atlas_bytes(textures["atlases"][atlas]))).convert("RGBA")
+                    imported.putalpha(native.getchannel("A"))
+                    result["textures"][atlas] = image_uri(imported)
+                result["notices"].append("Imported RGB atlases; original material alpha retained. Injury variants apply in-game; this preview shows the normal face.")
+            else:
+                result["notices"].append("Imported atlases belong to the saved outfit; this temporary appearance uses original textures.")
         result["preview_only"] = dict(changes=changes or {}, hide_clothes=hide_clothes)
         return result
 
     def request(self, action, args):
+        if action in ("project_atlas", "project_atlas_clear"):
+            if self.project is None:
+                raise SaveError("Create or open a fighter project first")
+            if action == "project_atlas_clear":
+                fields = read_fields(self.current().payload)
+                self.texture_edit = {"appearance_sha256": projects.appearance_hash(fields), "atlases": {}}
+            else:
+                raw = args["png"]
+                if raw.startswith("data:image/png;base64,"):
+                    raw = raw.split(",", 1)[1]
+                import base64
+                document = projects.with_atlas(self.project_document(), args["slot"], projects.atlas_bytes(raw))
+                self.texture_edit = document["textures"]
+            return self.snapshot()
         if action == "project_portrait":
             if self.project is None:
                 raise SaveError("Create or open a fighter project first")
@@ -254,6 +302,7 @@ class Editor:
             self.project_hash = projects.write(self.project_path, document, self.project_hash)
             self.project, self.edits, self.history = document, {}, []
             self.portrait_edit = self.metadata_edit = None
+            self.texture_edit = None
             return dict(snapshot=self.snapshot(), message="Saved fighter project and pack details")
         if action == "export_mod":
             from .fighter_mod import export_mod
@@ -286,6 +335,7 @@ class Editor:
         if action == "reset":
             self.edits, self.history = {}, []
             self.portrait_edit = self.metadata_edit = None
+            self.texture_edit = None
             return self.snapshot()
         if action == "save":
             if self.project is not None:
@@ -293,6 +343,7 @@ class Editor:
                 self.project_hash = projects.write(self.project_path, document, self.project_hash)
                 self.project, self.edits, self.history = document, {}, []
                 self.portrait_edit = self.metadata_edit = None
+                self.texture_edit = None
                 return dict(snapshot=self.snapshot(), message="Saved fighter project")
             backup = save_profile(self.profile, self.current(), self.workspace / "backups")
             return dict(snapshot=self.select_profile(self.profile.name), message="Saved profile. Backup: " + str(backup))
@@ -302,6 +353,7 @@ class Editor:
                 self.project_path = Path(args["path"])
                 self.project, self.edits, self.history = self.project_document(), {}, []
                 self.portrait_edit = self.metadata_edit = None
+                self.texture_edit = None
                 return dict(snapshot=self.snapshot(), message="Saved project copy")
             export_profile(self.profile, self.current(), Path(args["path"]))
             return dict(message="Exported complete profile to " + args["path"])

@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 import re
 import uuid
+import hashlib
+import struct
 
 from .container import Container, SaveError
 from .fields import STAT_KEYS, apply_fields, combine_styles, read_fields
@@ -13,7 +15,10 @@ from .profiles import PROFILE_SIZE
 from .storage import atomic_bytes, sha, writer_lock
 
 SCHEMA = "ffny-fighter-project-1"
-MAX_PROJECT = 6 * 1024 * 1024
+SCHEMA2 = "ffny-fighter-project-2"
+MAX_PROJECT = 16 * 1024 * 1024
+ATLAS_SLOTS = ("a", "b", "c", "d", "d1", "d2")
+FIGHTER_FIELDS = ("stats", "styles", "caf_values", "caf_colors")
 SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
 
@@ -33,9 +38,11 @@ def unique(pairs):
 
 def validate(document):
     require(type(document) is dict and {"schema", "identity", "metadata", "fighter"} <= set(document)
-            and set(document) <= {"schema", "identity", "metadata", "fighter", "portrait"},
+            and set(document) <= {"schema", "identity", "metadata", "fighter", "portrait", "textures"},
             "Unsupported fighter project fields")
-    require(document["schema"] == SCHEMA, "Unsupported fighter project version")
+    require(document["schema"] in (SCHEMA, SCHEMA2), "Unsupported fighter project version")
+    version2 = document["schema"] == SCHEMA2
+    require(version2 or "textures" not in document, "Texture assets require project version 2")
     identity, metadata, fighter = (document[k] for k in ("identity", "metadata", "fighter"))
     require(type(identity) is dict and set(identity) == {"pack", "fighter"}, "Invalid project identity")
     for value in identity.values():
@@ -50,18 +57,61 @@ def validate(document):
     require(bool(metadata["name"].strip()), "Give the fighter a display name")
     require(VERSION.fullmatch(metadata["version"]), "Pack version must be major.minor.patch")
     require(re.fullmatch(r"retail/[a-z0-9]+(?:-[a-z0-9]+)*", metadata["donor"]), "Choose a retail presentation donor")
-    require(type(fighter) is dict and set(fighter) == {"stats", "styles", "caf_values", "caf_colors"},
+    require(type(fighter) is dict and set(FIGHTER_FIELDS) <= set(fighter)
+            and set(fighter) <= set(FIGHTER_FIELDS) | ({"finishers"} if version2 else set()),
             "Projects contain fighter fields only")
     require(type(fighter["stats"]) is dict and set(fighter["stats"]) == set(STAT_KEYS), "Project needs all five training stats")
     require(type(fighter["styles"]) is list, "Project styles must be a list")
     combine_styles(fighter["styles"])
     # Reuse the editor's scalar/array checks without retaining any original save.
-    apply_fields(empty_container(), fighter)
+    apply_fields(empty_container(), {k: fighter[k] for k in FIGHTER_FIELDS})
+    if "finishers" in fighter:
+        require(type(fighter["finishers"]) is list and len(fighter["finishers"]) == 4
+                and all(type(v) is str and re.fullmatch("[0-9a-f]{8}", v) for v in fighter["finishers"]),
+                "Choose four retail finisher record identities")
     require(fighter["caf_values"][0] in range(6) and fighter["caf_values"][5] in range(1, 9),
             "Unsupported fighter body or face type")
     if "portrait" in document:
         portrait_bytes(document["portrait"])
+    if "textures" in document:
+        textures = document["textures"]
+        require(type(textures) is dict and set(textures) == {"appearance_sha256", "atlases"}, "Invalid project texture assets")
+        require(textures["appearance_sha256"] == appearance_hash(fighter),
+                "Appearance changed after atlas import; clear the texture atlases before importing the new outfit")
+        require(type(textures["atlases"]) is dict and set(textures["atlases"]) <= set(ATLAS_SLOTS), "Invalid project atlas slots")
+        for value in textures["atlases"].values():
+            atlas_bytes(value)
     return document
+
+
+def appearance_hash(fields):
+    return hashlib.sha256(json.dumps({k: fields[k] for k in ("caf_values", "caf_colors")},
+                                     sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def atlas_bytes(value):
+    from PIL import Image
+    require(type(value) is str and len(value) <= 1_400_000, "Atlas PNG is too large")
+    try:
+        raw = base64.b64decode(value, validate=True)
+        require(len(raw) <= 1024 * 1024, "Atlas PNG is too large")
+        with Image.open(io.BytesIO(raw)) as image:
+            require(image.format == "PNG" and image.size == (256, 256), "Import a native 256x256 PNG atlas")
+            image.verify()
+    except (ValueError, OSError) as exc:
+        raise SaveError("Invalid atlas PNG: " + str(exc)) from exc
+    return raw
+
+
+def with_atlas(document, slot, raw):
+    require(slot in ATLAS_SLOTS, "Choose atlas a, b, c, d, d1 or d2")
+    result = copy.deepcopy(validate(document))
+    value = base64.b64encode(raw).decode("ascii")
+    atlas_bytes(value)
+    result["schema"] = SCHEMA2
+    textures = result.setdefault("textures", {"appearance_sha256": appearance_hash(result["fighter"]), "atlases": {}})
+    textures["atlases"][slot] = value
+    return validate(result)
 
 
 def portrait_bytes(value):
@@ -98,8 +148,33 @@ def from_fields(fields, name, metadata=None):
     return validate(document)
 
 
+def from_profile(payload, name, database=None):
+    """Convert fighter fields while resolving saved retail finisher identities."""
+    document = from_fields(read_fields(payload), name)
+    values = struct.unpack_from("<4I", payload, 0x120)
+    if values == (0xFFFFFFFF,) * 4:
+        return document
+    require(database is not None, "Load original game assets to preserve saved finisher assignments")
+    require(0xFFFFFFFF not in values, "Partial saved finisher assignments are not yet supported")
+    try:
+        schema = database.shop.mapping(database.shop.word(12), b"SKMA")
+        require(schema.get(0x47D305FD ^ 0x6FC83815) == (4, 2), "Unsupported saved finisher schema")
+        identities = []
+        for value in values:
+            table, _, identity, offset, color = database.packed(value)
+            require(table == 0x47D305FD and color == 0 and database.shop.word(offset + 16) < 82,
+                    "Unsupported saved finisher assignment")
+            identities.append(f"{identity:08x}")
+    except (ValueError, KeyError, IndexError, struct.error) as exc:
+        raise SaveError("Unsupported saved finisher assignment: " + str(exc)) from exc
+    document["schema"] = SCHEMA2
+    document["fighter"]["finishers"] = identities
+    return validate(document)
+
+
 def container(document):
-    return apply_fields(empty_container(), validate(document)["fighter"])
+    fighter = validate(document)["fighter"]
+    return apply_fields(empty_container(), {k: fighter[k] for k in FIGHTER_FIELDS})
 
 
 def encoded(document):

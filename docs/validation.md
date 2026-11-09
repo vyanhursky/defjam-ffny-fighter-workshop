@@ -1,4 +1,4 @@
-# Beta validation — 2026-11-07
+# Beta validation â€” 2026-11-07
 
 The source repository contains invented fixtures and research notes. Actual
 saves, game assets, screenshots, memory observations and per-run receipts remain
@@ -75,7 +75,7 @@ and full game skinning are not decoded. The source T-pose remains exact and
 every pose is temporary. Native save acceptance above concerns profile fields;
 the new viewer controls are validated through pure-data and desktop checks.
 
-## macOS/Linux portability — 2026-11-07
+## macOS/Linux portability â€” 2026-11-07
 
 The Apple Silicon macOS source desktop and standalone ad-hoc-signed `.app` pass
 Qt WebChannel and WebGL 2 startup with Qt 6.8.3/Python 3.13. The package was
@@ -116,7 +116,7 @@ its actual fighter (`preview_ready: true`, WebGL 2, `frozen: true`) in 1.69 seco
 with the previously built private cache. That timing is a warm-cache startup,
 not a first-use conversion or native game performance measurement.
 
-## Installer default and app icon — 2026-11-07
+## Installer default and app icon â€” 2026-11-07
 
 Thirty-eight Python tests pass (two case-sensitive filesystem skips). The added
 cases cover the Mac installer's exact default path, absent installation, explicit
@@ -132,7 +132,7 @@ matches the reused source byte for byte. Checksum-verified ZIP relocation,
 strict deep signature verification and frozen WebGL/WebChannel startup pass,
 including icon_loaded=true. No native Windows/Linux run is claimed here.
 
-## Initial native CI run — 2026-11-07
+## Initial native CI run â€” 2026-11-07
 
 [Run 42444607060](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/actions/runs/42444607060)
 passed Linux x64 package/startup. Windows and Mac arm64 package creation and
@@ -143,7 +143,7 @@ virtual adapters while still requiring a real WebGL 2 context; it is not an
 application default and does not disable the sandbox. Receipts also name the
 actual renderer used. This does not qualify physical GPUs or native game load.
 
-## Native package CI qualification — 2026-11-07
+## Native package CI qualification â€” 2026-11-07
 
 [Corrected run 42445039193](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/actions/runs/42445039193)
 built and successfully started all four native packages after checksum-verified
@@ -168,3 +168,21 @@ validated locally on Apple Silicon, separately from these game-data-free jobs.
 The initial failed run above is preserved. The correction permits only the
 hosted software adapters in CI; the shipped app retains normal graphics defaults.
 Physical GPUs, Wayland and full native game acceptance remain separate work.
+
+
+## Native atlas/project v2 pilot — 2026-11-09
+
+86 Python tests and four Node pose checks pass on Windows (three platform skips).
+Invented fixtures cover populated PS2 finisher identity recovery, conflicting
+snapshots, bounded Zstandard allocation, asset integrity, stale appearance,
+editor clear/reset/copy, original alpha and version-specific package contracts.
+Nine real Qt/WebChannel steps verify atlas import/clear/reset, portrait capture,
+project save/copy/reopen and unchanged source inputs on marked disposable data.
+
+A private source-art pilot passed native CAF v2 compilation, selector/portrait,
+a complete fight/result/menu return, seven combat assertions, two Options-save
+generations and byte-identical guarded save restoration on Windows. RGB capture
+matches the torso/jeans/normal-face inputs; four saved finisher choices reach the
+native setup matrix. This does not qualify all injury variants, all four Blazin'
+cinematics, higher-resolution admission or other native platforms. No source art,
+profile, generated game code or captures enter the repository or packages.

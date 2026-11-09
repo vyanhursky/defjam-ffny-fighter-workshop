@@ -1,6 +1,48 @@
 # Progress and handoff
 
-## Status — 2026-11-07
+## Texture-mod fighter pilot — 2026-11-09
+
+Owner approved general-purpose roadmap work for native texture import and fighter
+modpack authoring. This source branch builds on merged Workshop PR2. Existing
+version 1 projects and full-profile workflows remain available; no release or
+merge is included in this change.
+
+Implemented project version 2: exact embedded 256×256 PNG atlases, appearance
+binding, RGB-only preview, staged import/clear/reset, saved retail finisher
+identities, and hash-bound CAF v2 export through the companion runtime compiler.
+Source-profile conversion now preserves all four verified finisher assignments
+instead of dropping them. Partial/unknown assignments are refused. The existing
+Project tab provides native atlas controls; D1/D2 injury variants are retained
+and exported but are not simulated in the current static preview.
+
+Added experimental read-only PCSX2 snapshot inspection/recovery. The observed
+layout is validated; SODB identities translate equipped items and finishers to
+the player's Xbox dump. Archive/output/window bounds, CRC, conflicting-copy and
+ambiguous-database refusal apply. No console Story-save conversion is implied.
+
+Validation: 86 Python tests pass, 3 platform skips; four Node pose tests pass.
+Nine real Qt/WebChannel atlas/portrait/persistence checks pass on marked disposable
+Windows data. The private pilot recovers body A/0, Kickboxing → Streetfighting →
+Wrestling (combined101), five training stats50, 16 matching equipped items and
+four finishers (native choices52,38,30,39). It exports and compiles through the
+companion CAF v2 runtime based on Recomp PR213 head81ce1d7.
+
+Native Windows selection/portrait and one complete match versus retail Crack
+pass seven combat/result assertions, two acknowledged Options-save generations,
+and byte-identical restoration of the copied save root. Five imported RGB
+atlases apply to the context-owned native visual. Captured torso/jeans/normal-face
+RGB matches source PNGs exactly; native alpha is retained. An initial conversion
+failure and incorrect Morton layout were detected, retained as failed evidence,
+and fixed before the passing run. Four finisher assignments are verified at
+native setup; playing every Blazin' cinematic is not claimed.
+
+HD image restoration remains pending at the owner's request after imagegen
+refused the face edit. Supplied textures are unchanged. Higher resolution,
+arbitrary meshes, granular moves and animation playback remain deferred.
+Exact assets, hashes, native logs and captures remain private. Cross-platform
+packaging CI and broader owner/game acceptance are separate gates.
+
+## Status â€” 2026-11-07
 
 Local beta source is published at
 https://github.com/vyanhursky/defjam-ffny-fighter-workshop on `develop/0.1`, the
@@ -26,7 +68,7 @@ temporary clothing visibility, explicit Equip, backups and full-profile import.
 The Windows package has been rebuilt and its new default pose/controls rendered
 successfully on copied profile data. The local test shortcut targets this build.
 
-- Mapped and implemented cash/development, five training stats0–50, five retail
+- Mapped and implemented cash/development, five training stats0â€“50, five retail
   styles and55 combinations with dependent bonus correction, and CAF appearance.
 - Full-profile export/import and duplication, atomic save with original backup,
   stale-source checks, kernel writer locks and preservation of unknown bytes.
@@ -56,7 +98,7 @@ successfully on copied profile data. The local test shortcut targets this build.
 ## Decisions and limits
 
 Existing Recomp profiles only, full-profile transfer and Story-preserving
-replication. New IDs conservatively use1–7 uppercase letters/digits. No fresh
+replication. New IDs conservatively use1â€“7 uppercase letters/digits. No fresh
 Story-profile creation. All mapped retail items; XML-only right-wrist resources
 have no proven valid retail-save encoding, so preserve rather than invent values.
 Neutral static face preview preserves features; animation/expression/lighting
@@ -96,7 +138,7 @@ Windows packaging in a restricted workspace needs the documented normal-shell
 `icacls` step: the Python build subprocess can lack the relabel privilege. Only
 the generated application folder is relabeled; no system policy is changed.
 
-## macOS/Linux compatibility — 2026-11-07
+## macOS/Linux compatibility â€” 2026-11-07
 
 Work is on `codex/macos-linux`, based on beta commit `84b3171`. No source push or
 packaged release has been performed by this porting session.
@@ -132,7 +174,7 @@ then qualify representative packaged workflows on Linux/Intel and test edited
 profiles in the game. Maintain the owner acceptance/release gate. Public docs
 contain no private data paths; local receipts and copied saves stay outside Git.
 
-## Installer data default and Recomp icon — 2026-11-07
+## Installer data default and Recomp icon â€” 2026-11-07
 
 Owner requested macOS discovery of the installer's default data directory and
 reuse of the Def Jam Recomp app icon. Normal Mac startup reads
@@ -158,7 +200,7 @@ matches the reused source byte for byte. Checksum-verified ZIP relocation,
 strict deep signature verification and frozen WebGL/WebChannel startup pass,
 including icon_loaded=true. No native Windows/Linux run is claimed here.
 
-## Native CI publication — 2026-11-07
+## Native CI publication â€” 2026-11-07
 
 Owner authorized source push and native Windows/macOS/Linux CI. The source is
 pushed on `codex/macos-linux`, PR #1 into `develop/0.1`. No release is tagged.
@@ -173,7 +215,7 @@ with --ignore-gpu-blocklist only in the offline CI smoke steps, retaining the
 actual WebGL 2 requirement and browser sandbox. Record the renderer in receipts.
 The native application keeps its ordinary graphics defaults.
 
-## Native CI results and handoff — 2026-11-07
+## Native CI results and handoff â€” 2026-11-07
 
 Source is pushed in PR #1 on `codex/macos-linux` into `develop/0.1`:
 https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/1
@@ -199,7 +241,7 @@ Next: use the PR's current-head check links and native package artifacts for
 review. No tagged release was created. Full owner acceptance, physical GPU and
 Wayland checks, and broader native game qualification remain distinct gates.
 
-## PR #1 merged — 2026-11-07
+## PR #1 merged â€” 2026-11-07
 
 Owner approved and PR #1 merged into `develop/0.1` at `5bbcccc`. The final PR
 head `3878375` passed all four native CI jobs in run 42445695324: Windows x64,
@@ -211,7 +253,7 @@ removed after synchronization. No tagged release was created. Next work remains
 owner acceptance and the broader native editor/game checks documented above;
 CI package/startup evidence does not replace those checks.
 
-## README screenshot approval — 2026-11-07
+## README screenshot approval â€” 2026-11-07
 
 Owner requested four examples for the develop/0.1 README, with candidate review
 before publishing: main window, stats/cash, fighting-style combinations and
@@ -224,7 +266,7 @@ The owner approved all four exact candidates. They are committed under
 docs/media with SHA-256 pins and an artwork exception in AGENTS.md; the main
 README shows the approved gallery. No original assets or saves are committed.
 
-## 0.1 Beta 1 release authorization and handoff — 2026-11-07
+## 0.1 Beta 1 release authorization and handoff â€” 2026-11-07
 
 Owner requested `v0.1.0-beta.1` with native binaries. Python package version is
 already 0.1.0b1; the human-readable tag is v0.1.0-beta.1. The release is a GitHub
@@ -243,7 +285,7 @@ native game acceptance, physical GPU and Wayland qualifications distinct from
 the native package/startup evidence. No fresh save creation or named-fighter
 moveset override is claimed.
 
-## Beta draft staging — 2026-11-07
+## Beta draft staging â€” 2026-11-07
 
 The approved gallery/release source is a7a7e354df78b5eab6ecabbcf0c03430d129e910;
 its native build run 42447467964 passed all four targets. Slow local artifact
@@ -267,7 +309,7 @@ unpublished drafts. The draft stayed unpublished. Resolve its numeric ID from
 the authenticated release list, allow retries only for an unpublished draft
 of the same source SHA, and verify all uploaded digests before publication.
 
-## 0.1 Beta 1 published — 2026-11-07
+## 0.1 Beta 1 published â€” 2026-11-07
 
 Published https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/tag/v0.1.0-beta.1
 as a prerelease, not Latest. Tag/application source: a7a7e354df78b5eab6ecabbcf0c03430d129e910.
@@ -288,9 +330,9 @@ Next: beta feedback using copied saves, then broader editor/game/GPU/Wayland
 qualification. No original saves, raw game assets or compiled game executable
 were published; the exact approved screenshots/icon retain their artwork exception.
 
-## Standalone projects and CAF mod export — development preview, 2026-11-08
+## Standalone projects and CAF mod export â€” development preview, 2026-11-08
 
-Owner approved roadmap steps1–3 with public Custom Fighter R&D and in-game
+Owner approved roadmap steps1â€“3 with public Custom Fighter R&D and in-game
 acceptance. Local branch codex/fighter-projects starts from develop/0.1 at834c2bb;
 the released Beta1 is unchanged. No push or new release was requested.
 
@@ -363,7 +405,7 @@ Ready for review as source-only local feature branches in persistent repositorie
 Windows/Linux gameplay and the matching runtime/launcher integration. No source push or
 release publication this turn.
 
-## PR publication and cross-platform CI — 2026-11-09
+## PR publication and cross-platform CI â€” 2026-11-09
 
 Owner authorized publishing codex/fighter-projects into develop/0.1 and the
 companion recomp codex/workshop-caf-export into research/custom-fighter-mods.

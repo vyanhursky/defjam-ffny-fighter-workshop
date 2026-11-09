@@ -51,10 +51,11 @@ function renderState(state){
   $('cash').disabled=$('development').disabled=Boolean(state.project)||!readyFighter();
   $('new-project').disabled=!readyFighter();
   $('portrait-status').textContent=state.portrait_available?'Project portrait selected':'Portraits currently inherit the presentation donor.';
+  $('atlas-status').textContent=state.atlas_slots?.length?'Imported: '+state.atlas_slots.join(', ').toUpperCase():'Using original CAF textures.';
   $('project-path').textContent=state.project_path||'Create a project to author a Custom Fighter Mod.';
   for(const key of ['name','author','version','description','license','donor']){const input=$('project-'+key);input.value=state.project?.metadata[key]||'';input.disabled=!state.project;}
   for(const key of ['pack','fighter']){$('project-'+key).value=state.project?.identity[key]||'';$('project-'+key).disabled=!state.project;}
-  for(const id of ['save-project-details','project-copy','export-mod','capture-portrait','import-portrait'])$(id).disabled=!state.project;
+  for(const id of ['save-project-details','project-copy','export-mod','capture-portrait','import-portrait','import-atlas','clear-atlases','atlas-slot'])$(id).disabled=!state.project;
   loadCategory().catch(fail);
   queuePreview(0);
 }
@@ -134,6 +135,8 @@ $('open-project').onclick=()=>{if(discard())act('choose_project',{},'Opening fig
 $('new-project').onclick=()=>act('choose_new_project',{},'Creating standalone fighter project…');
 $('capture-portrait').onclick=()=>{if(!window.__cafPreview?.ready||auditionKey||$('no-clothes').checked){fail(new Error('Finish or cancel try-on and show the full outfit before capturing its portrait.'));return;}const size=renderer.getSize(new THREE.Vector2()),ratio=renderer.getPixelRatio(),scale=Math.min(1,1024/Math.max(size.x,size.y));renderer.setPixelRatio(1);renderer.setSize(Math.round(size.x*scale),Math.round(size.y*scale),false);renderer.render(scene,camera);const png=renderer.domElement.toDataURL('image/png');renderer.setPixelRatio(ratio);renderer.setSize(size.x,size.y,false);renderer.render(scene,camera);act('project_portrait',{png});};
 $('import-portrait').onclick=()=>act('choose_project_portrait',{},'Importing portrait PNG…');
+$('import-atlas').onclick=()=>act('choose_project_atlas',{slot:$('atlas-slot').value},'Importing texture atlas…');
+$('clear-atlases').onclick=()=>act('project_atlas_clear',{},'Clearing imported atlases…');
 $('project-copy').onclick=()=>act('choose_project_copy',{},'Saving project copy…');
 $('save-project-details').onclick=()=>act('project_metadata',projectDetails(),'Saving project & details…');
 for(const key of ['name','author','version','description','license','donor','pack','fighter'])$('project-'+key).oninput=async()=>{try{const state=await call('project_metadata_draft',projectDetails());current=state;window.__cafState=state;$('save').disabled=!state.dirty;$('reset').disabled=!state.dirty;$('save-status').textContent=state.dirty?'● Unsaved changes':'● Saved project';$('save-status').classList.toggle('dirty',state.dirty);$('changes').replaceChildren(...state.changes.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));}catch(e){fail(e);}};

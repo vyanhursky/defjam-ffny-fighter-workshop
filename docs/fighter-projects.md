@@ -39,16 +39,47 @@ portrait only. Unsaved details and portraits participate in the close/discard
 check. Saving refuses external changes and Save As refuses collisions.
 
 The ZIP uses the existing `fighter-registry-draft-1` contract with a
-`caf-fighter-1` resource. It contains `fighters.json`, a hash-bound `fighter.json`,
+`caf-fighter-1` resource (or `caf-fighter-2` when version 2 extras are present). It contains `fighters.json`, a hash-bound `fighter.json`,
 a README and credits/license text, plus six native portrait rasters when a PNG
 is selected. The player's original files supply the CAF meshes and textures;
 the export contains no Story profile or compiled game executable. Portraits
 are converted through locally verified original UI templates. 
 
 Voice, AI and unmodified presentation inherit the selected retail donor.
-Individual move authoring, custom clothing/model/texture import and animation
-playback are later milestones. CAF export currently rejects unsupported
+Individual move authoring, custom clothing/model import and animation
+playback are later milestones. Native atlas import is described below. CAF export currently rejects unsupported
 appearance encodings and combinations with sourced non-portrait components.
+
+### Native atlas import and saved finishers (development)
+
+Project version 2 embeds native 256×256 PNG atlases and preserves the four saved
+retail Blazin' assignments as SODB record identities. Existing version 1 projects
+remain readable and keep their original fields. Creating a project from a save
+now resolves its finishers against the original game database; missing or
+unverified references are refused instead of silently discarded. PS2 snapshot
+recovery is an [experimental separate input path](ps2-caf-recovery.md).
+All four finisher slots must be concrete or all absent; partial assignments
+remain unsupported until their native semantics are verified.
+
+Under **Project & mod → Texture atlases**, choose an atlas and import its PNG.
+The preview uses its RGB while retaining the original material alpha. A–D are
+the four composed CAF atlases; D1/D2 are native facial injury variants. Import
+complete flattened atlases for the selected outfit. The project binds them to
+its appearance choices and colors: changing appearance requires clearing then
+reimporting the art. Training/style changes do not invalidate those bindings.
+Clear is staged, Reset restores saved art, and Save project/Save project as
+include all assets. Variant projects retain art and finishers with a new identity.
+
+The matching runtime must support `caf-fighter-2` and the hash-checked
+`fighter-caf-extras.bin` sidecar. Export includes declared PNGs and validates the
+complete pack through that runtime. The game creates independent owned native
+bitmaps for each CAF, preserves alpha, handles its Xbox Morton layout, and uses
+the original visual teardown. It does not enable a global content-hash texture
+replacement. Existing profile export/import and version 1 recipes are preserved.
+
+Current atlas admission is 1×/256×256. HD restoration, higher-resolution atlas
+admission, arbitrary custom meshes and animation playback remain later work.
+Source PNGs are stored unchanged; RGB integration is separate from art approval.
 Export validation is separate from in-game acceptance and does not install or
 activate the ZIP. Use the compatible research runtime's local mod workflow.
 

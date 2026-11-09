@@ -33,6 +33,13 @@ use approximate preview deformation, not the retail shop animation. Uncommitted
 try-ons are excluded from saves and exports. Equip stages an item; clothing
 visibility, pose and lighting always remain preview-only.
 
+## In development: standalone fighters
+
+The development source adds portable `.ffnyfighter` projects, pack metadata,
+portrait capture/import and validated CAF-to-Custom-Fighter-Mod ZIP export.
+This requires the companion Custom Fighter runtime extension and is not part
+of the Beta 1 downloads above. See [the project/export workflow](docs/fighter-projects.md).
+
 ## Screenshots
 
 Captured from the macOS app with a disposable DEMO profile and original assets

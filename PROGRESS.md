@@ -362,3 +362,11 @@ Custom Fighter runtime shipping/installation/profile/capacity gates still apply.
 Ready for review as source-only local feature branches in persistent repositories. Before a new release, qualify
 Windows/Linux and the matching runtime/launcher integration. No source push or
 release publication this turn.
+
+## PR publication and cross-platform CI — 2026-11-09
+
+Owner authorized publishing codex/fighter-projects into develop/0.1 and the
+companion recomp codex/workshop-caf-export into research/custom-fighter-mods.
+Open both PRs, preserve the native evidence above, and complete Windows, macOS
+and Linux CI. No merge or new release is requested. This supersedes the earlier
+no-push handoff for this feature. PR links and CI results follow when available.

@@ -41,4 +41,7 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   CAF-to-Custom-Fighter-Mod export and package metadata/presentation, reusing
   research/custom-fighter-mods and testing on that branch. This supersedes the
   original beta-only ban on runtime integration/R&D for this feature. Preserve
-  the released profile editor; no new release or source push is requested.
+  the released profile editor. On 2026-11-09 the owner authorized pushing both
+  feature branches and PRs: Workshop into develop/0.1, runtime into
+  research/custom-fighter-mods, with Windows/macOS/Linux CI passing. No new
+  packaged release or merge is authorized by that instruction.

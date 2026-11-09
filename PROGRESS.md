@@ -287,3 +287,103 @@ and uploads had passed, and publication waited for corrected digest verification
 Next: beta feedback using copied saves, then broader editor/game/GPU/Wayland
 qualification. No original saves, raw game assets or compiled game executable
 were published; the exact approved screenshots/icon retain their artwork exception.
+
+## Standalone projects and CAF mod export — development preview, 2026-11-08
+
+Owner approved roadmap steps1–3 with public Custom Fighter R&D and in-game
+acceptance. Local branch codex/fighter-projects starts from develop/0.1 at834c2bb;
+the released Beta1 is unchanged. No push or new release was requested.
+
+Implemented: versioned fighter-only .ffnyfighter projects with appearance,
+five training stats and retail styles; open/edit/save/Save As independent of
+the source profile; stale-save/collision protection; no career/currency/profile
+bytes. Creating a variant preserves credits/portrait and generates a fresh pack
+identity; Save As preserves identity. Metadata and PNG portrait drafts participate
+in discard/close protection. Qt adds Project & mod controls, current-view capture/
+import and validated ZIP export through the compatible runtime's shared authoring/
+native menu compiler. Frozen apps use bundled Python in a child process for the
+explicitly selected development checkout. Exports never run code from a mod pack,
+write a Story save, auto-install or publish the pack.
+
+Runtime companion codex/workshop-caf-export starts from public
+research/custom-fighter-mods at807fd41, toolkit4801dc1. It adds caf-fighter-1,
+native CAF assembly/participant contexts, combat stats, original retail style
+combinations, explicit retail voice-template inheritance and native portrait
+retiling. Existing registry/package/menu/profile-store contracts are reused.
+No game executable, original assets/saves/generated code/captures enter source.
+Stable Beta1 does not provide this extension. Workflow: docs/fighter-projects.md.
+
+Workshop checks: **61 Python tests passed, two filesystem skips**. Real macOS Qt
+workflow passed12 steps covering project editing/reopen, metadata, portrait
+capture/save, unsaved details/reset and complete ZIP export. Final frozen Mac
+build starts in1.01s with two copied profiles, WebChannel/WebGL preview and icon.
+Its bundled helper validates a complete portrait-bearing pack against the updated
+compiler. Earlier bundled PNG conversion also passes. Node is unavailable on
+PATH; pose source is unchanged. Windows/Linux in-game acceptance is pending; hosted package/startup results follow below.
+
+Runtime native build passes143 manual-address checks. Fighter fixtures initially
+passed1437; after adding CAF teardown cleanup, an aggregate had1432 passes/five
+fixture compile errors. The updated existing fixture verifies cleanup after
+resource destruction and all five cases pass. CAF/portrait/authoring API checks
+pass14. Final stock quick regression passes **5/5** in seven minutes:
+logs/regress-20261108-230945.txt. It includes2367 unit passes,74 skips and one
+slow-test deselection; three matching golden frames; and120 seconds of stock
+combat at median120/min113 presents per two seconds. The final aggregate also
+accepts the updated teardown fixture.
+
+**Native two-CAF acceptance passes** on Apple Silicon:
+run-20261108-225834.log.err, caf-dual-audio-probe.txt. Both exported recipes
+construct/assemble, exact menu identities100/101 and cores94/109 are verified,
+and all **7 combat/result checks** pass. Both fighters move/attack/take damage;
+a decisive result reaches the native summaries, Options writes/closes5404bytes,
+and one profile-store generation commits. The route returns to Battle.96
+2-second frame samples: min77/median120/max121; zero native fault signatures.
+The complete disposable save root restores identically. An independent audit
+also matches all21 original save-file hashes. This is a two-participant slice,
+not qualification of every combination/venue/platform.
+
+Retained failures: debug cp_def XML overwrote an assembled CAF and crashed;
+body-only initialization stalled motion at step31; the preview-only1.5MiB arena
+corrupted the second CAF's palette; the native Battle lookup required a Story
+profile for the CPU; native CAF audio rows caused an SCEl stream-chunk loop.
+The fixes retain full native initialization, normal match allocators, direct
+live participant/context binding and declared retail speech templates. Earlier
+input-selection mistakes also remain failed commands; separate actual-pair
+checks accept a prior CAF-versus-retail combat/result/save run. Exact evidence,
+ABIs and failed runs are in the runtime companion's R&D report.
+
+Limitations: original retail style combinations only; unsupported appearance
+encodings refuse export. CAF generation currently combines with sourced portraits
+but refuses other sourced fighter components. PNG portraits/metadata are included;
+individual move/model/texture authoring and animation playback are later work.
+Export compilation does not claim game acceptance or activate a mod. Existing
+Custom Fighter runtime shipping/installation/profile/capacity gates still apply.
+
+Ready for review as source-only local feature branches in persistent repositories. Before a new release, qualify
+Windows/Linux gameplay and the matching runtime/launcher integration. No source push or
+release publication this turn.
+
+## PR publication and cross-platform CI — 2026-11-09
+
+Owner authorized publishing codex/fighter-projects into develop/0.1 and the
+companion recomp codex/workshop-caf-export into research/custom-fighter-mods.
+Open both PRs, preserve the native evidence above, and complete Windows, macOS
+and Linux CI. No merge or new release is requested. This supersedes the earlier
+no-push handoff for this feature. Workshop PR: https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/2.
+Companion runtime PR: https://github.com/vyanhursky/DefJamFFNY-recomp/pull/213.
+
+Workshop CI run42640408538 passes all four native package targets at8a8e0ab:
+Windows x64, macOS arm64, macOS x64 and Linux x64. Each runs Python/pose tests,
+builds the game-free package, relocates it through a path with spaces/non-ASCII,
+and verifies frozen WebChannel/WebGL/icon startup plus the synthetic authoring
+subprocess and DXT5 portrait encoder.
+https://github.com/vyanhursky/defjam-ffny-fighter-workshop/actions/runs/42640408538
+
+The runtime PR integrates current research fixes; its hosted CI is still being
+qualified. The original in-game evidence above remains macOS-only and predates
+that base integration. Hosted game-free checks do not replace gameplay tests.
+
+Native package CI now also executes the relocated frozen authoring helper with
+a synthetic selected runtime and a16x16 DXT5 portrait encode. This verifies
+bundled runpy/Pillow plugins and DDS support on each OS/CPU without game data;
+it remains separate from native CAF gameplay acceptance.

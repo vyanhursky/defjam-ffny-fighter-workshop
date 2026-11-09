@@ -36,3 +36,12 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   Publish only native workshop packages from the tagged source's green CI,
   with checksums and provenance. Never include original saves, extracted assets,
   caches or any compiled game executable. Future releases require instruction.
+
+- Owner approved roadmap steps 1–3 on 2026-11-08: standalone fighter projects,
+  CAF-to-Custom-Fighter-Mod export and package metadata/presentation, reusing
+  research/custom-fighter-mods and testing on that branch. This supersedes the
+  original beta-only ban on runtime integration/R&D for this feature. Preserve
+  the released profile editor. On 2026-11-09 the owner authorized pushing both
+  feature branches and PRs: Workshop into develop/0.1, runtime into
+  research/custom-fighter-mods, with Windows/macOS/Linux CI passing. No new
+  packaged release or merge is authorized by that instruction.

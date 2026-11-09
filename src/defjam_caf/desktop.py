@@ -68,6 +68,32 @@ class Bridge(QObject):
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "export", {"path": path}
+            elif action in {"choose_new_project", "choose_project", "choose_project_copy"}:
+                opening = action == "choose_project"
+                dialog = QFileDialog.getOpenFileName if opening else QFileDialog.getSaveFileName
+                path, _ = dialog(self.window, "Open fighter project" if opening else "Save standalone fighter project",
+                                 "" if opening else "fighter.ffnyfighter", "Fighter projects (*.ffnyfighter)")
+                if not path:
+                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                action, args = ("open_project" if opening else "export" if action == "choose_project_copy" else "new_project"), {"path": path}
+            elif action == "choose_mod_export":
+                runtime = QFileDialog.getExistingDirectory(self.window, "Select Custom Fighter runtime source checkout")
+                if not runtime:
+                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                path, _ = QFileDialog.getSaveFileName(self.window, "Export validated Custom Fighter Mod", "fighter-mod.zip", "Fighter mod (*.zip)")
+                if not path:
+                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                action, args = "export_mod", {"path": path, "runtime": runtime}
+            elif action == "choose_project_portrait":
+                import base64
+                path, _ = QFileDialog.getOpenFileName(self.window, "Import fighter portrait", "", "PNG image (*.png)")
+                if not path:
+                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                with Path(path).open("rb") as stream:
+                    raw = stream.read(4 * 1024 * 1024 + 1)
+                if len(raw) > 4 * 1024 * 1024:
+                    raise ValueError("Portrait PNG is too large")
+                action, args = "project_portrait", {"png": base64.b64encode(raw).decode("ascii")}
             elif action == "choose_import":
                 if self.editor.discovery is None:
                     raise ValueError("Choose the destination data directory first")
@@ -123,7 +149,7 @@ class Window(QMainWindow):
             QMessageBox.information(self, "Operation in progress", "Please wait for the current operation to finish.")
             event.ignore()
             return
-        if self.bridge.editor.profile and self.bridge.editor.changes():
+        if (self.bridge.editor.profile or self.bridge.editor.project) and self.bridge.editor.changes():
             answer = QMessageBox.question(self, "Unsaved changes", "Discard your unsaved fighter changes and close?")
             if answer != QMessageBox.StandardButton.Yes:
                 event.ignore()

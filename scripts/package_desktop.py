@@ -88,6 +88,8 @@ def main(argv=None):
                    "--add-data", f"{root / 'src/defjam_caf/resources'}:defjam_caf/resources",
                    "--add-data", f"{root / 'src/defjam_caf/_vendor/LICENSE'}:defjam_caf/_vendor",
                    "--add-data", f"{docs}:documentation"]
+        for module in ("PIL.ImageOps", "runpy", "configparser", "urllib.request", "urllib.error", "urllib.parse", "stat", "lzma"):
+            command += ["--hidden-import", module]
         icons = root / "src/defjam_caf/resources/branding"
         if sys.platform == "darwin":
             command += ["--osx-bundle-identifier", BUNDLE_ID, "--icon", str(icons / "defjam.icns")]

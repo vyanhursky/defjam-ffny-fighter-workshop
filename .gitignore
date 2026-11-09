@@ -17,6 +17,7 @@ local.json
 *.glb
 *.mad
 *.djprofile
+*.ffnyfighter
 pip-build-*/
 pip-ephem-*/
 pip-install-*/

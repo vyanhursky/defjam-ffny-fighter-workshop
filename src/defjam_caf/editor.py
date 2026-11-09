@@ -8,6 +8,7 @@ from .container import SaveError
 from .fields import apply_fields, read_fields, STYLE_NAMES, CASH_LIMIT, DEV_LIMIT
 from .profiles import discover
 from .storage import save_profile, export_profile, duplicate, read_archive, install_files
+from . import projects
 
 
 class Editor:
@@ -30,6 +31,53 @@ class Editor:
         self.cache = None
         self.appearance = None
         self.preview_error = None
+        self.project = self.project_path = self.project_hash = None
+        self.portrait_edit = None
+        self.metadata_edit = None
+        self._project_base_document = self._project_base = None
+
+    def base(self):
+        if self.project is not None:
+            if self._project_base_document is not self.project:
+                self._project_base = projects.container(self.project)
+                self._project_base_document = self.project
+            return self._project_base
+        if self.profile is None:
+            raise SaveError("Choose a profile or open a fighter project first")
+        return self.profile.container
+
+    def project_document(self):
+        document = copy.deepcopy(self.project)
+        if self.metadata_edit is not None:
+            document.update(copy.deepcopy(self.metadata_edit))
+        fields = read_fields(self.current().payload)
+        document["fighter"] = {k: copy.deepcopy(fields[k]) for k in document["fighter"]}
+        if self.portrait_edit is not None:
+            document["portrait"] = self.portrait_edit
+        return projects.validate(document)
+
+    def create_project(self, path):
+        fields = read_fields(self.current().payload)
+        document = projects.from_fields(fields, self.profile.name if self.profile else self.project["metadata"]["name"])
+        if self.project is not None:
+            source = self.project_document()
+            document["metadata"] = copy.deepcopy(source["metadata"])
+            if "portrait" in source:
+                document["portrait"] = source["portrait"]
+        digest = projects.write(path, document)
+        self.project, self.project_path, self.project_hash = document, Path(path), digest
+        self.profile = None
+        self.portrait_edit = self.metadata_edit = None
+        self.edits, self.history = {}, []
+        return self.snapshot()
+
+    def open_project(self, path):
+        document, digest = projects.read(path)
+        self.project, self.project_path, self.project_hash = document, Path(path), digest
+        self.profile = None
+        self.portrait_edit = self.metadata_edit = None
+        self.edits, self.history = {}, []
+        return self.snapshot()
 
     def open_data(self, data):
         data = Path(data).expanduser().resolve()
@@ -47,6 +95,8 @@ class Editor:
             self.preview_error = "Choose the Recomp data directory containing extracted game assets for the 3D preview."
         candidates = [p for p in result.profiles if read_fields(p.container.payload)["has_fighter"]]
         chosen = max(candidates or result.profiles, key=lambda p: p.path.stat().st_mtime, default=None)
+        if self.project is not None:
+            return self.snapshot()
         if chosen:
             self.select_profile(chosen.name)
         else:
@@ -59,15 +109,17 @@ class Editor:
         self.profile = next((p for p in self.discovery.profiles if p.name == name), None)
         if self.profile is None:
             raise SaveError("Profile is unavailable; refresh the data directory")
+        self.project = self.project_path = self.project_hash = None
+        self.portrait_edit = self.metadata_edit = None
         self.edits, self.history = {}, []
         return self.snapshot()
 
     def current(self):
-        if self.profile is None:
-            raise SaveError("Choose a profile first")
-        return apply_fields(self.profile.container, self.edits)
+        return apply_fields(self.base(), self.edits)
 
     def stage(self, changes):
+        if self.project is not None and set(changes) & {"cash", "development"}:
+            raise SaveError("Fighter projects have no Story currency")
         if not read_fields(self.current().payload)["has_fighter"]:
             raise SaveError("This profile has no Story fighter. Create one in the game first")
         previous = copy.deepcopy(self.edits)
@@ -75,7 +127,7 @@ class Editor:
         if "stats" in changes:
             combined["stats"] = dict(combined.get("stats", {}), **changes["stats"])
         combined.update({k: v for k, v in changes.items() if k != "stats"})
-        candidate = apply_fields(self.profile.container, combined)
+        candidate = apply_fields(self.base(), combined)
         if candidate.payload == self.current().payload:
             return self.snapshot()
         self.history.append(previous)
@@ -96,10 +148,14 @@ class Editor:
         return self.stage(edited)
 
     def changes(self):
-        if self.profile is None:
+        if self.profile is None and self.project is None:
             return []
-        before, after = read_fields(self.profile.container.payload), read_fields(self.current().payload)
+        before, after = read_fields(self.base().payload), read_fields(self.current().payload)
         result = []
+        if self.metadata_edit is not None:
+            result.append("Project details changed")
+        if self.portrait_edit is not None:
+            result.append("Project portrait changed")
         for key, label in (("cash", "Cash"), ("development", "Development points")):
             if before[key] != after[key]:
                 result.append(f"{label}: {before[key]:,} → {after[key]:,}")
@@ -122,12 +178,18 @@ class Editor:
                       style_names=STYLE_NAMES, limits=dict(cash=CASH_LIMIT, development=DEV_LIMIT),
                       preview_error=self.preview_error, preview_available=self.appearance is not None,
                       groups=[], skins=[], issues=self.discovery.issues if self.discovery else [])
+        project_view = copy.deepcopy(self.project)
+        if project_view is not None and self.metadata_edit is not None:
+            project_view.update(copy.deepcopy(self.metadata_edit))
+        result.update(project=project_view, project_path=str(self.project_path) if self.project_path else None,
+                      portrait_available=self.portrait_edit is not None or bool(self.project and "portrait" in self.project))
         if self.discovery:
             result["profiles"] = [dict(name=p.name, has_fighter=read_fields(p.container.payload)["has_fighter"],
                                        legacy=p.directory_kind == "legacy") for p in self.discovery.profiles]
-        if self.profile:
-            result.update(selected=self.profile.name, fields=read_fields(self.current().payload),
-                          changes=self.changes(), dirty=self.current().encode() != self.profile.container.encode(),
+        if self.profile or self.project:
+            result.update(selected=self.project["metadata"]["name"] if self.project else self.profile.name,
+                          fields=read_fields(self.current().payload),
+                          changes=self.changes(), dirty=self.current().encode() != self.base().encode() or self.portrait_edit is not None or self.metadata_edit is not None,
                           undo=bool(self.history))
             if self.appearance:
                 fields = result["fields"]
@@ -158,6 +220,48 @@ class Editor:
         return result
 
     def request(self, action, args):
+        if action == "project_portrait":
+            if self.project is None:
+                raise SaveError("Create or open a fighter project first")
+            raw = args["png"]
+            if raw.startswith("data:image/png;base64,"):
+                raw = raw.split(",", 1)[1]
+            projects.portrait_bytes(raw)
+            self.portrait_edit = raw
+            return self.snapshot()
+        if action == "new_project":
+            return self.create_project(args["path"])
+        if action == "open_project":
+            return self.open_project(args["path"])
+        if action == "project_metadata_draft":
+            if self.project is None:
+                raise SaveError("Create or open a fighter project first")
+            # Preserve incomplete form values; validate only when saving/exporting.
+            if set(args) != {"metadata", "identity"} or not all(isinstance(args[k], dict) for k in args):
+                raise SaveError("Invalid project details")
+            self.metadata_edit = copy.deepcopy(args)
+            if all(self.project.get(k) == v for k, v in args.items()):
+                self.metadata_edit = None
+            return self.snapshot()
+        if action == "project_metadata":
+            if self.project is None:
+                raise SaveError("Create or open a fighter project first")
+            document = self.project_document()
+            document["metadata"].update(args["metadata"])
+            if "identity" in args:
+                document["identity"] = args["identity"]
+            projects.validate(document)
+            self.project_hash = projects.write(self.project_path, document, self.project_hash)
+            self.project, self.edits, self.history = document, {}, []
+            self.portrait_edit = self.metadata_edit = None
+            return dict(snapshot=self.snapshot(), message="Saved fighter project and pack details")
+        if action == "export_mod":
+            from .fighter_mod import export_mod
+            if self.project is None:
+                raise SaveError("Create or open a fighter project before exporting a mod")
+            report = export_mod(self.project_document(), args["path"], args["runtime"], self.data,
+                                self.workspace / "fighter-exports", progress=self.progress)
+            return dict(message="Validated Custom Fighter Mod exported to " + args["path"], report=report)
         if action == "open_data":
             return self.open_data(args["path"])
         if action == "snapshot":
@@ -181,14 +285,29 @@ class Editor:
             return self.snapshot()
         if action == "reset":
             self.edits, self.history = {}, []
+            self.portrait_edit = self.metadata_edit = None
             return self.snapshot()
         if action == "save":
+            if self.project is not None:
+                document = self.project_document()
+                self.project_hash = projects.write(self.project_path, document, self.project_hash)
+                self.project, self.edits, self.history = document, {}, []
+                self.portrait_edit = self.metadata_edit = None
+                return dict(snapshot=self.snapshot(), message="Saved fighter project")
             backup = save_profile(self.profile, self.current(), self.workspace / "backups")
             return dict(snapshot=self.select_profile(self.profile.name), message="Saved profile. Backup: " + str(backup))
         if action == "export":
+            if self.project is not None:
+                self.project_hash = projects.write(args["path"], self.project_document())
+                self.project_path = Path(args["path"])
+                self.project, self.edits, self.history = self.project_document(), {}, []
+                self.portrait_edit = self.metadata_edit = None
+                return dict(snapshot=self.snapshot(), message="Saved project copy")
             export_profile(self.profile, self.current(), Path(args["path"]))
             return dict(message="Exported complete profile to " + args["path"])
         if action == "duplicate":
+            if self.project is not None:
+                raise SaveError("Use Save project as to copy a standalone fighter")
             path = duplicate(self.profile, self.current(), args["name"])
             return dict(snapshot=self.select_profile(args["name"]), message="Created profile " + args["name"])
         if action == "import":

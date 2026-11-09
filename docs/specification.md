@@ -56,3 +56,14 @@ the referenced viewer are not required, but faithful loading of existing faces i
 Granular movesets, animation player, custom meshes/textures, custom animations,
 custom fight voices and fighter modpack authoring. Do not investigate the separate
 Custom Fighter R&D worktree as part of this beta.
+
+## Approved next milestone — 2026-11-08
+
+Standalone portable fighter projects, conversion from existing CAFs and export
+to the public Custom Fighter runtime contract, including stable pack/fighter
+identity, names, author/version/description/credits and supported presentation.
+Reuse the existing runtime/compiler and validate the generated pack there.
+Test actual native selection/combat on research/custom-fighter-mods using
+disposable saves. Projects exclude Story progression and currency; existing
+profile export remains available. Required runtime extensions must be explicit,
+with their actual tested source recorded. No merge, push or release is implied.

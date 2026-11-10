@@ -2,3 +2,5 @@
 
 .retail-main{grid-template-columns:240px minmax(420px,1fr) minmax(340px,38vw)}.retail-right{border-left:0;border-right:1px solid var(--line)}.retail-main .fighter-stage{min-width:0}#busy{inset:121px 0 29px 240px}#toast{left:260px;right:calc(38vw + 20px)}
 @media(max-width:1200px){.retail-main{grid-template-columns:210px minmax(420px,1fr) minmax(340px,1fr)}.retail-left,.retail-right{padding:16px}#busy{left:210px}#toast{left:230px;right:360px}}
+
+.retail-workflow{margin-bottom:18px;padding:12px;border:1px solid var(--line);border-radius:6px}.retail-workflow summary{cursor:pointer;color:var(--accent);font-size:12px;line-height:1.5}.retail-workflow ol{padding-left:20px;font-size:12px;line-height:1.6}.retail-workflow li{margin:9px 0}

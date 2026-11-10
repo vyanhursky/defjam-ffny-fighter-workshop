@@ -1,5 +1,22 @@
 # Progress and handoff
 
+## Retail workflow documentation — 2026-11-10
+
+Owner requested the tested retail workflow be documented in the Workshop.
+Expanded docs/retail-overrides-outfits.md into an exact UI walkthrough covering
+replacement versus extra outfit, target/body import order, A001 PNG import,
+preview, project save/export, normal game installation, selection/battle checks
+and later editing. Pack recovery explicitly requires extracting the ZIP and
+selecting the folder containing fighters.json. Document the three-outfit total,
+shared combat identity, separate 2D portraits and testing one pack at a time.
+The retail studio includes an expandable offline workflow guide in its center
+panel. Corrected stale statements in the general retail guide that described
+all extra outfits as deferred. This is documentation/help only; gameplay
+qualification remains the previously recorded Pockets evidence below.
+Real Qt/WebChannel verification passes with the guide expanded, the existing
+3D preview rendered and no horizontal overflow at 1440×900. Private receipt:
+logs/retail-help-ui/receipt.json. Update the existing Workshop PR #8.
+
 ## Retail appearance overrides and extra outfits — 2026-11-10
 
 Owner requested two normal package workflows using Pockets with red pants:

@@ -5,9 +5,14 @@ workspace preserves the current profile/CAF session and never writes Story saves
 Select the Recomp data directory and a matching development runtime checkout.
 The runtime verifies the original database and supplies the 75-fighter catalog.
 
+For replacing an existing retail appearance or adding an outfit to its original
+clothing selector, follow the [retail override/outfit walkthrough](retail-overrides-outfits.md).
+The steps below describe a new standalone fighter.
+
 1. Create a fighter from a retail donor, open a portable `.ffnyfighter` project,
    or import one fighter from an ordinary pack folder. Imported packs must have
-   no dependencies or global overrides. Import follows hash-bound JSON references
+   no dependencies. A single-target appearance override is also supported;
+   multi-target/global override packs remain refused. Import follows hash-bound JSON references
    and embeds the selected resource files; it does not install or enable a pack.
 2. Choose the **combat donor** for the original moveset and inherited native
    health, speed, toughness and charisma. These are 0–100 retail values, distinct
@@ -46,12 +51,14 @@ The runtime verifies the original database and supplies the 75-fighter catalog.
    resources and assets, Story saves, private source paths and game executables.
    Native gameplay, resource cleanup and art approval remain separate checks.
 
-Retail projects use `ffny-retail-fighter-project-1`. Existing CAF project versions
+Standalone retail projects use `ffny-retail-fighter-project-1`; replacement and
+extra-outfit projects use version 2 with a deployment purpose/target. Existing CAF project versions
 and profile workflows keep their existing formats. This milestone implements
 retail/owned fighter modpack authoring and texture import. Generic Blender/GLB
-mesh reimport, sculpting, animation authoring/playback and arbitrary retail
-multi-outfit collections remain deferred. A second outfit for the private pilot
-is a later task, not a second roster identity created implicitly here.
+mesh reimport, sculpting and animation authoring/playback remain deferred in
+the retail studio. An extra-outfit project adds one appearance to an existing
+retail fighter, within the three-outfit total; it does not create another public
+roster identity.
 
 Original and generated artwork, imported projects and packs, decoded previews,
 saves and captures remain private. This development feature does not authorize

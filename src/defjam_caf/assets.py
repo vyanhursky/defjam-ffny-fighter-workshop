@@ -279,7 +279,8 @@ class AssetCache:
                     if atlas not in {"cp_a", "cp_b", "cp_c", "cp_d"}:
                         notices.append("Unsupported material: " + mesh["name"])
                         continue
-                    meshes.append(dict(mesh, slot=slot, atlas=atlas[-1]))
+                    meshes.append(dict(mesh, slot=slot, atlas=atlas[-1], source_model=geometry['name'].lower().removesuffix('.o'),
+                                       source_model_sha256=geometry['source_sha256']))
             if not item["styles"]:
                 continue
             resource = self.catalog["resources"][item["styles"][selected["style"]]["variants"][selected["color"]].lower()]

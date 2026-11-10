@@ -16,6 +16,8 @@ class Appearance:
         self.options = {str(i): [] for i in range(12, 38)}
         self.by_key = {}
         self._make_options()
+        from .faces import catalog
+        self.face_options = catalog(cache)
 
     def find(self, slot, model, resource, palette="default"):
         model = model.upper() if model else None
@@ -215,7 +217,8 @@ class Appearance:
         return result
 
     def change(self, fields, changes):
-        values, colors = fields["caf_values"][:], fields["caf_colors"][:]
+        from .faces import change
+        values, colors = change(fields,changes,self.face_options)
         if "build" in changes:
             if changes["build"] not in "ABCDEF" or len(changes["build"]) != 1:
                 raise SaveError("Invalid body build")

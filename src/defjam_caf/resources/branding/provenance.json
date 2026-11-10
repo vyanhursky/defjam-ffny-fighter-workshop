@@ -2,7 +2,7 @@
   "source_repository": "https://github.com/vyanhursky/DefJamFFNY-recomp",
   "source_commit": "ae1191d5f4e6632ccd917118ea0c4d2b22120f6f",
   "authorization": "Owner requested reuse of the Def Jam Recomp icon on 2026-11-07.",
-  "license": "Game artwork remains property of its rights holders; not covered by the project MIT license.",
+  "license": "Game artwork remains property of its rights holders; not covered by the project software license.",
   "files": {
     "defjam.icns": {
       "source_path": "branding/icon/macos/defjam.icns",

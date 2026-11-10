@@ -92,17 +92,46 @@ def test_preview_uses_imported_rgb_with_exact_original_material_alpha(tmp_path):
     assert projects.atlas_bytes(editor.project['textures']['atlases']['a']) == png()
 
 
-def test_stale_assets_can_be_cleared_after_outfit_edit(tmp_path):
+def test_imported_atlases_survive_appearance_edits_undo_save_and_reopen(tmp_path):
     document = projects.with_atlas(projects.from_fields(fields()[0], 'Example'), 'a', png())
     path = tmp_path / 'fighter.ffnyfighter'; projects.write(path, document)
     editor = Editor(tmp_path / 'work'); editor.open_project(path)
     values = document['fighter']['caf_values'][:]; values[0] = 1
     editor.stage({'caf_values': values})
-    with pytest.raises(SaveError, match='Appearance changed'):
-        editor.request('save', {})
+    changed=editor.project_document()
+    assert projects.atlas_bytes(changed['textures']['atlases']['a'])==png()
+    assert changed['textures']['appearance_sha256']==projects.appearance_hash(changed['fighter'])
+    editor.request('undo', {})
+    assert editor.project_document()==document
+    editor.stage({'caf_values':values});editor.request('save',{})
+    editor.open_project(path)
+    assert projects.atlas_bytes(editor.project['textures']['atlases']['a'])==png()
     editor.request('project_atlas_clear', {})
     editor.request('save', {})
     assert projects.read(path)[0]['fighter']['caf_values'][0] == 1
+
+
+@pytest.mark.parametrize('slot,value',[(0,5),(5,8),(6,7),(8,4),(9,6),(29,0x12345)])
+def test_preview_and_save_keep_imported_rgb_after_body_face_and_tattoo_changes(tmp_path,slot,value):
+    from types import SimpleNamespace
+    document=projects.with_atlas(projects.from_fields(fields()[0],'Example'),'a',png())
+    path=tmp_path/'face.ffnyfighter';projects.write(path,document)
+    editor=Editor(tmp_path/'work');editor.open_project(path)
+    native='data:image/png;base64,'+base64.b64encode(png(color=(1,2,3,219))).decode()
+    # Exercise generic staging without a source asset catalog; real menu
+    # acceptance uses the actual Appearance.change pipeline separately.
+    values=document['fighter']['caf_values'][:];values[slot]=value
+    editor.stage({'caf_values':values})
+    editor.appearance=SimpleNamespace(outfit=lambda f:f)
+    editor.cache=SimpleNamespace(compose=lambda _:dict(textures={'a':native},notices=[]))
+    preview=editor.preview()
+    result=Image.open(io.BytesIO(base64.b64decode(preview['textures']['a'].split(',')[1])))
+    assert result.getpixel((128,128))==(200,80,30,219)
+    assert projects.atlas_bytes(editor.project_document()['textures']['atlases']['a'])==png()
+    assert path.read_bytes()==projects.encoded(document)
+    editor.appearance=None;editor.request('save',{});editor.open_project(path)
+    assert editor.project['fighter']['caf_values'][slot]==value
+    assert projects.atlas_bytes(editor.project['textures']['atlases']['a'])==png()
 
 
 def test_profile_conversion_resolves_finishers_and_never_silently_discards_them():

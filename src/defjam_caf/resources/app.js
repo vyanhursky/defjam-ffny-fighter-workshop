@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {poseMesh} from './poses.mjs';
+import {blendFace,faceDraft as makeFaceDraft} from './face-preview.mjs';
+import {performanceEditor} from './performance.mjs';
 
 const $ = id => document.getElementById(id);
 $('retail-editor').onclick=()=>call('open_retail_editor');
 let bridge, current=null, serial=0, busyCount=0, options=[], selectionKey=null, previewEpoch=0;
 let auditionKey=null, categoryEpoch=0, previewTimer=null, sceneData=null, atlasTextures=[];
+let faceDraft=null,faceFrame=null,faceSceneEpoch=-1;
 const pending=new Map();
 function toast(message,error=false){$('toast').textContent=message;$('toast').classList.toggle('error',error);$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,error?12000:6500);}
 function call(action,args={},label=null){
@@ -20,6 +23,8 @@ function discard(){return !current?.dirty||confirm('Discard unsaved changes to t
 function projectDetails(){const metadata={};for(const key of ['name','author','version','description','license','donor'])metadata[key]=$('project-'+key).value;return {metadata,identity:{pack:$('project-pack').value,fighter:$('project-fighter').value}};}
 function readyFighter(){return Boolean(current?.fields?.has_fighter);}
 function renderState(state){
+  faceDraft=null;if(faceFrame!==null)cancelAnimationFrame(faceFrame);faceFrame=null;
+  window.__cafFacePreview=null;
   auditionKey=null;
   current=state;window.__cafState=state;
   $('data-path').textContent=state.data||'Choose your Recomp data directory to begin';
@@ -66,8 +71,79 @@ function renderState(state){
   $('outfit-status').textContent=state.project?'Stats, fighting styles and Blazin’ moves are shared. Appearance, textures and portraits belong to the selected outfit.':'Create or open a fighter project to add outfits.';
   renderBlazin(state);
   renderUIArt(state);
+  renderFacePresets(state);
+  renderMovesets(state);
+  performanceUI.render(state);
   loadCategory().catch(fail);
   queuePreview(0);
+}
+function renderMovesets(state){
+  const data=state.retail_movesets||{};
+  makeOptions($('retail-moveset'),(data.options||[]).map(row=>({value:row.key,label:row.label})),data.selected||data.options?.[0]?.key);
+  $('moveset-mode').value=data.selected?'retail':'caf';
+  $('moveset-status').textContent=data.error||'Retail names identify the full original moveset, including fighter-specific attacks.';
+  updateMovesetMode();
+}
+function updateMovesetMode(){
+  const retail=$('moveset-mode').value==='retail';
+  $('caf-style-controls').hidden=retail;$('retail-style-controls').hidden=!retail;
+  $('apply-styles').disabled=!readyFighter()||(retail&&!current?.retail_movesets?.options?.length);
+  if(retail)$('moveset-status').textContent='Retail movesets require the companion CAF v5 runtime. Story career styles and training are preserved.';
+  const row=current?.retail_movesets?.options.find(row=>row.key===$('retail-moveset').value);
+  $('moveset').textContent=retail?(row?row.label+' · retail moveset':'Unavailable original moveset'):current?.fields?.styles.map(i=>current.style_names[i]).join(' + ')||'No fighting style assigned.';
+}
+function renderFaceSculpt(state){
+  const data=state.face_sculpt||{},root=$('face-sliders');root.replaceChildren();
+  for(const row of data.controls||[]){
+    const label=document.createElement('label');label.textContent=row.label;
+    const slider=document.createElement('input');slider.id='sculpt-'+row.id;slider.type='range';slider.min=-1;slider.max=1;slider.step=.01;slider.value=data.sliders?.[row.id]||0;slider.disabled=!data.available||data.imported;
+    const output=document.createElement('output');output.textContent=Number(slider.value).toFixed(2);slider.oninput=()=>{
+      output.textContent=Number(slider.value).toFixed(2);
+      faceDraft=makeFaceDraft(data.controls,data.sliders||{},faceSliderValues());updateFacePreviewStatus();
+      if(faceFrame===null)faceFrame=requestAnimationFrame(()=>{faceFrame=null;applyFacePreview();});
+    };
+    label.append(slider,output);root.append(label);
+  }
+  for(const id of ['apply-face-sliders','export-face','import-face','clear-face'])$(id).disabled=!data.available;
+  $('apply-face-sliders').disabled=!data.available||data.imported;
+  $('clear-face').disabled=!data.available||!data.present;
+  updateFacePreviewStatus();
+  $('face-sculpt-status').textContent=!data.available?'Create a standalone fighter project to use face sculpting. Story CAFs use the preset controls above.':data.imported?'Imported sculpt staged in this outfit.':data.present?'Slider sculpt staged in this outfit.':'Original head presets; no sculpt.';
+}
+function faceSliderValues(){return Object.fromEntries((current?.face_sculpt?.controls||[]).map(({id})=>[id,Number($('sculpt-'+id).value)]));}
+function updateFacePreviewStatus(){
+  const data=current?.face_sculpt||{};
+  $('revert-face-preview').disabled=!faceDraft;
+  $('export-face').disabled=!data.available||Boolean(faceDraft);
+  $('face-preview-status').textContent=!data.available?'Create a standalone project to preview face proportions.':data.imported?'Imported sculpt: clear it under Expert to enable sliders.':faceDraft?'Preview only · Apply face proportions adds these changes to Pending Changes.':'Drag a slider to preview immediately. Apply adds the preview to Pending Changes; Save project writes it.';
+}
+function applyFacePreview(repose=true){
+  if(!sceneData?.face_preview||faceSceneEpoch!==previewEpoch)return;
+  const values=faceDraft||current?.face_sculpt?.sliders||{};
+  const rows=new Map(sceneData.face_preview.meshes.map(row=>[row.rm,row]));
+  const head=model.children.filter(mesh=>String(mesh.userData.source.slot)==='2');
+  for(const mesh of head){const row=rows.get(mesh.userData.source.rm);if(row)mesh.userData.source.positions=blendFace(row,values);}
+  if(repose)applyPose(head);
+  window.__cafFacePreview={values:{...values},temporary:Boolean(faceDraft),head:head.map(mesh=>({rm:mesh.userData.source.rm,positions:Array.from(mesh.geometry.getAttribute('position').array)}))};
+}
+function revertFacePreview(){
+  faceDraft=null;if(faceFrame!==null)cancelAnimationFrame(faceFrame);faceFrame=null;
+  renderFaceSculpt(current);applyFacePreview();
+}
+function renderFacePresets(state){
+  renderFaceSculpt(state);
+  const root=$('face-presets');root.replaceChildren();
+  for(const row of state.face_presets||[]){
+    const label=document.createElement('label');label.textContent=row.label;
+    const select=document.createElement('select');select.id='face-'+row.id;
+    makeOptions(select,row.options,row.value);
+    if(!row.options.some(option=>option.value===row.value)){
+      const preserved=new Option('Unavailable saved preset · preserved',String(row.value));preserved.disabled=true;select.prepend(preserved);select.value=String(row.value);
+    }
+    select.disabled=!readyFighter()||!row.options.length;
+    select.onchange=()=>act('appearance',{changes:{[row.id]:Number(select.value)}},'Updating face…');
+    label.append(select);root.append(label);
+  }
 }
 function renderBlazin(state){
   const catalog=state.blazin,rows=catalog?.options||[],sources=[...new Set(rows.map(row=>row.source))];
@@ -114,7 +190,7 @@ $('viewport').append(renderer.domElement);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.075;controls.minDistance=.2;controls.maxDistance=100;
 const fill=new THREE.HemisphereLight(0xe5edd6,0x3c4538,2.1);scene.add(fill);const key=new THREE.DirectionalLight(0xffedcc,3.5);key.position.set(3,5,5);scene.add(key);const rim=new THREE.DirectionalLight(0xaac7b7,2.5);rim.position.set(-4,3,-3);scene.add(rim);
 let model=new THREE.Group(),bounds=null,baseline=null;scene.add(model);
-function dispose(){for(const child of model.children){child.geometry?.dispose();child.material?.dispose();}for(const texture of atlasTextures)texture.dispose();atlasTextures=[];scene.remove(model);model=new THREE.Group();scene.add(model);}
+function dispose(){performanceUI.stop();for(const child of model.children){child.geometry?.dispose();child.material?.dispose();child.skeleton?.dispose();}for(const texture of atlasTextures)texture.dispose();atlasTextures=[];scene.remove(model);model=new THREE.Group();scene.add(model);}
 function frame(view='fit'){
   if(!bounds)return;const [lo,hi]=bounds;const center=new THREE.Vector3(...lo).add(new THREE.Vector3(...hi)).multiplyScalar(.5),height=hi[1]-lo[1];let target=center,distance=height*1.98;
   if(view==='face'){target=new THREE.Vector3(center.x,hi[1]-height*.12,center.z);distance=height*.61;}
@@ -125,13 +201,13 @@ async function renderScene(data,keepCamera,epoch){
   await Promise.all(Object.entries(data.textures).map(async([name,url])=>{const tex=await loader.loadAsync(url);tex.colorSpace=THREE.SRGBColorSpace;tex.flipY=false;tex.wrapS=tex.wrapT=THREE.ClampToEdgeWrapping;tex.magFilter=THREE.LinearFilter;tex.minFilter=THREE.LinearMipmapLinearFilter;tex.anisotropy=renderer.capabilities.getMaxAnisotropy();textures[name]=tex;}));
   if(epoch!==previewEpoch){for(const texture of Object.values(textures))texture.dispose();return false;}
   dispose();
-  atlasTextures=Object.values(textures);sceneData=data;
+  atlasTextures=Object.values(textures);sceneData=data;faceSceneEpoch=epoch;
   for(const part of data.meshes){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(part.positions.flat(),3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(part.normals.flat(),3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(part.uv.flat(),2));geometry.setIndex(part.indices);const material=materialFor(textures[part.atlas],part.transparent);const mesh=new THREE.Mesh(geometry,material);mesh.userData={atlas:part.atlas,transparent:part.transparent,source:part};model.add(mesh);}
-  bounds=data.bounds;applyPose();if(!keepCamera)frame();$('empty').hidden=true;$('empty').style.display='none';window.__cafPreview={meshes:data.meshes.length,bounds:data.bounds,ready:true,part:auditionKey,hideClothes:$('no-clothes').checked};updateViewState();return true;
+  bounds=data.bounds;applyFacePreview(false);applyPose();if(!keepCamera)frame();$('empty').hidden=true;$('empty').style.display='none';window.__cafPreview={meshes:data.meshes.length,bounds:data.bounds,ready:true,part:auditionKey,hideClothes:$('no-clothes').checked};updateViewState();return true;
 }
 function materialFor(texture,transparent){const config={map:texture,transparent:Boolean(transparent),side:THREE.FrontSide};return $('lighting').value!=='flat'?new THREE.MeshStandardMaterial({...config,roughness:.85,metalness:0}):new THREE.MeshBasicMaterial(config);}
-function updateViewState(){const box=new THREE.Box3().setFromObject(model);window.__cafView={pose:$('pose').value,lighting:$('lighting').value,hideClothes:$('no-clothes').checked,materials:[...new Set(model.children.map(m=>m.material.type))],bounds:box.isEmpty()?null:[box.min.toArray(),box.max.toArray()]};$('preview-note').textContent=[$('pose').value==='tpose'?'Source T-pose':'Approximate preview pose · retail shop animation is not decoded',...(sceneData?.notices||[])].join(' · ');}
-function applyPose(){if(!sceneData)return;for(const mesh of model.children){const posed=poseMesh(mesh.userData.source,$('pose').value,sceneData.arm_pivots);mesh.geometry.setAttribute('position',new THREE.Float32BufferAttribute(posed.positions.flat(),3));mesh.geometry.setAttribute('normal',new THREE.Float32BufferAttribute(posed.normals.flat(),3));mesh.geometry.computeBoundingBox();mesh.geometry.computeBoundingSphere();}updateViewState();}
+function updateViewState(){const box=new THREE.Box3().setFromObject(model);window.__cafView={pose:$('pose').value,lighting:$('lighting').value,hideClothes:$('no-clothes').checked,materials:[...new Set(model.children.map(m=>m.material.type))],bounds:box.isEmpty()?null:[box.min.toArray(),box.max.toArray()]};$('preview-note').textContent=[performanceUI.active()?'Decoded source body/root animation · playback limits in Animation':$('pose').value==='tpose'?'Source T-pose':'Approximate static preview pose',...(sceneData?.notices||[])].join(' · ');}
+function applyPose(meshes=model.children){if(!sceneData)return;for(const mesh of meshes){const posed=poseMesh(mesh.userData.source,performanceUI.active()?'tpose':$('pose').value,sceneData.arm_pivots);mesh.geometry.setAttribute('position',new THREE.Float32BufferAttribute(posed.positions.flat(),3));mesh.geometry.setAttribute('normal',new THREE.Float32BufferAttribute(posed.normals.flat(),3));mesh.geometry.computeBoundingBox();mesh.geometry.computeBoundingSphere();}updateViewState();}
 function applyLighting(){
   const name=$('lighting').value,settings={studio:[0xe5edd6,0x3c4538,0xffedcc,0xaac7b7,2.1,3.5,2.5,1.2],warm:[0xffe5bf,0x423126,0xffcf9a,0xffbb77,1.8,3,1.5,1.05],cool:[0xc7e4ff,0x242c44,0xb5d5ff,0xa288ff,1.2,3.4,3.5,1.15],flat:[0xffffff,0x000000,0xffffff,0xffffff,0,0,0,1]}[name];
   fill.color.setHex(settings[0]);fill.groundColor.setHex(settings[1]);key.color.setHex(settings[2]);rim.color.setHex(settings[3]);fill.intensity=settings[4];key.intensity=settings[5];rim.intensity=settings[6];renderer.toneMappingExposure=settings[7];renderer.toneMapping=name==='flat'?THREE.NoToneMapping:THREE.ACESFilmicToneMapping;
@@ -146,7 +222,8 @@ async function updatePreview(epoch){
   catch(e){if(epoch===previewEpoch){dispose();$('empty').hidden=false;$('empty').style.display='flex';$('empty').querySelector('h3').textContent='Preview needs attention';$('empty').querySelector('p').textContent=e.message;window.__cafPreview={ready:false,error:e.message};fail(e);}}
 }
 new ResizeObserver(()=>{const box=$('viewport');renderer.setSize(box.clientWidth,box.clientHeight,false);camera.aspect=box.clientWidth/Math.max(1,box.clientHeight);camera.updateProjectionMatrix();}).observe($('viewport'));
-renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
+const performanceUI=performanceEditor({$,call,act,fail,state:()=>current,parts:()=>sceneData?.meshes||[],meshes:()=>[...model.children],repose:()=>applyPose()});
+renderer.setAnimationLoop(now=>{performanceUI.tick(now);controls.update();renderer.render(scene,camera);});
 
 let uiArtEpoch=0;
 async function previewUIArt(){
@@ -186,7 +263,7 @@ $('duplicate').onclick=()=>act('choose_duplicate',{},'Duplicating profile…');
 $('save').onclick=()=>{if(current.project){act('save',{},'Saving fighter project…');return;}if(confirm('Save these changes to '+current.selected+'?\n\n'+current.changes.join('\n')+'\n\nA backup will be created first. Close the game before saving.'))act('save',{},'Saving profile and backup…');};
 $('open-project').onclick=()=>{if(discard())act('choose_project',{},'Opening fighter project…');};
 $('new-project').onclick=()=>act('choose_new_project',{},'Creating standalone fighter project…');
-$('capture-portrait').onclick=()=>{if(!window.__cafPreview?.ready||auditionKey||$('no-clothes').checked){fail(new Error('Finish or cancel try-on and show the full outfit before capturing its portrait.'));return;}const size=renderer.getSize(new THREE.Vector2()),ratio=renderer.getPixelRatio(),scale=Math.min(1,1024/Math.max(size.x,size.y));renderer.setPixelRatio(1);renderer.setSize(Math.round(size.x*scale),Math.round(size.y*scale),false);renderer.render(scene,camera);const png=renderer.domElement.toDataURL('image/png');renderer.setPixelRatio(ratio);renderer.setSize(size.x,size.y,false);renderer.render(scene,camera);act('project_portrait',{png});};
+$('capture-portrait').onclick=()=>{if(faceDraft){fail(new Error('Apply or revert the face preview before capturing its portrait.'));return;}if(!window.__cafPreview?.ready||auditionKey||$('no-clothes').checked){fail(new Error('Finish or cancel try-on and show the full outfit before capturing its portrait.'));return;}const size=renderer.getSize(new THREE.Vector2()),ratio=renderer.getPixelRatio(),scale=Math.min(1,1024/Math.max(size.x,size.y));renderer.setPixelRatio(1);renderer.setSize(Math.round(size.x*scale),Math.round(size.y*scale),false);renderer.render(scene,camera);const png=renderer.domElement.toDataURL('image/png');renderer.setPixelRatio(ratio);renderer.setSize(size.x,size.y,false);renderer.render(scene,camera);act('project_portrait',{png});};
 $('import-portrait').onclick=()=>act('choose_project_portrait',{},'Importing portrait PNG…');
 $('import-atlas').onclick=()=>act('choose_project_atlas',{slot:$('atlas-slot').value},'Importing texture atlas…');
 $('clear-atlases').onclick=()=>act('project_atlas_clear',{},'Clearing imported atlases…');
@@ -198,18 +275,24 @@ $('project-copy').onclick=()=>act('choose_project_copy',{},'Saving project copy�
 $('save-project-details').onclick=()=>act('project_metadata',projectDetails(),'Saving project & details…');
 for(const key of ['name','author','version','description','license','donor','pack','fighter'])$('project-'+key).oninput=async()=>{try{const state=await call('project_metadata_draft',projectDetails());current=state;window.__cafState=state;$('save').disabled=!state.dirty;$('reset').disabled=!state.dirty;$('save-status').textContent=state.dirty?'● Unsaved changes':'● Saved project';$('save-status').classList.toggle('dirty',state.dirty);$('changes').replaceChildren(...state.changes.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));}catch(e){fail(e);}};
 $('export-mod').onclick=()=>act('choose_mod_export',{},'Validating and exporting fighter mod…');
-$('undo').onclick=()=>act('undo');$('reset').onclick=()=>{if(confirm('Reset all unsaved fighter changes?'))act('reset');};
+$('export-face').onclick=()=>act('choose_face_export',{},'Exporting head template…');
+  $('import-face').onclick=()=>act('choose_face_import',{},'Validating head sculpt…');
+  $('clear-face').onclick=()=>act('face_clear');
+  $('apply-face-sliders').onclick=()=>act('face_sliders',{values:faceSliderValues()},'Staging face proportions…');
+  $('revert-face-preview').onclick=revertFacePreview;
+  $('undo').onclick=()=>act('undo');$('reset').onclick=()=>{if(confirm('Reset all unsaved fighter changes?'))act('reset');};
 $('build').onchange=()=>act('appearance',{changes:{build:$('build').value}});
 $('skin').onchange=()=>act('appearance',{changes:{skin:Number($('skin').value)}});
 $('category').onchange=()=>{auditionKey=null;$('search').value='';loadCategory().catch(fail);queuePreview();};$('search').oninput=()=>{wardrobe();tryOn();};
 $('garment').onchange=()=>{renderColors();tryOn();};$('color').onchange=()=>{renderFittings();tryOn();};$('fitting').onchange=tryOn;
 $('equip').onclick=()=>{const selected=garmentOptions().find(o=>o.color_name===$('color').value&&o.fitting===$('fitting').value);if(selected)act('appearance',{changes:{part:selected.key}});};
 for(const id of ['cash','development'])$(id).onchange=()=>{const value=Number($(id).value);if(!Number.isInteger(value)||value<0||value>current.limits[id]){fail(new Error(`${id} must be between 0 and ${current.limits[id].toLocaleString()}.`));return;}act('stage',{edits:{[id]:value}});};
-$('apply-styles').onclick=()=>{const styles=[0,1,2].map(i=>Number($(`style-${i}`).value));if(styles[1]===-1&&styles[2]!==-1){fail(new Error('Choose a second style before adding a third.'));return;}act('stage',{edits:{styles:styles.filter(s=>s!==-1)}});};
+  $('moveset-mode').onchange=updateMovesetMode;$('retail-moveset').onchange=updateMovesetMode;
+  $('apply-styles').onclick=()=>{if($('moveset-mode').value==='retail'){act('fighting_style',{mode:'retail',fighter:$('retail-moveset').value});return;}const styles=[0,1,2].map(i=>Number($(`style-${i}`).value));if(styles[1]===-1&&styles[2]!==-1){fail(new Error('Choose a second style before adding a third.'));return;}act('fighting_style',{mode:'caf',styles:styles.filter(s=>s!==-1)});};
 $('apply-blazin').onclick=()=>{const moves=[0,1,2,3].map(i=>$(`blazin-${i}`).value);if(moves.some(key=>!key)){fail(new Error('Choose a move for all four Blazin’ slots.'));return;}act('blazin',{moves});};
 $('inherit-blazin').onclick=()=>act('blazin_inherit');
 for(const id of ['front','back','face','fit'])$(id).onclick=()=>frame(id);
-$('pose').onchange=applyPose;$('lighting').onchange=applyLighting;$('no-clothes').onchange=()=>{queuePreview(0);updateViewState();};
+$('pose').onchange=()=>{performanceUI.stop();applyPose();};$('lighting').onchange=applyLighting;$('no-clothes').onchange=()=>{queuePreview(0);updateViewState();};
 applyLighting();
 
 new QWebChannel(qt.webChannelTransport,channel=>{

@@ -71,6 +71,7 @@ class Bridge(QObject):
                     if operation=='import':
                         manifest=json.loads((Path(path)/'fighters.json').read_text(encoding='utf-8-sig'))
                         labels=[f['id']+' · '+f['name'] for f in manifest['fighters']]
+                        if not labels:labels=[r['target']+' · Retail appearance override' for r in manifest.get('overrides',[])]
                         label,ok=QInputDialog.getItem(self.window,'Import fighter','Choose one fighter',labels,0,False)
                         if not ok:return self.response.emit(json.dumps(dict(id=ident,result=None)))
                         action,args='retail_import',{'folder':path,'fighter':label.split(' · ',1)[0]}
@@ -121,6 +122,17 @@ class Bridge(QObject):
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = ("open_project" if opening else "export" if action == "choose_project_copy" else "new_project"), {"path": path}
+            elif action == 'choose_performance_tools':
+                runtime = QFileDialog.getExistingDirectory(self.window, 'Select compatible Custom Fighter runtime source checkout')
+                if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                action,args='performance_connect',dict(runtime=runtime)
+            elif action == 'choose_voice_clip':
+                import base64
+                path,_=QFileDialog.getOpenFileName(self.window,'Import mono PCM16 voice clip','','WAV audio (*.wav)')
+                if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                with Path(path).open('rb') as stream:audio=stream.read(8*1024**2+1)
+                if len(audio)>8*1024**2:raise ValueError('Voice clip exceeds 8 MiB')
+                action,args='performance_clip',dict(target=args['target'],wav=base64.b64encode(audio).decode('ascii'))
             elif action == "choose_mod_export":
                 runtime = QFileDialog.getExistingDirectory(self.window, "Select Custom Fighter runtime source checkout")
                 if not runtime:
@@ -129,6 +141,14 @@ class Bridge(QObject):
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "export_mod", {"path": path, "runtime": runtime}
+            elif action in ('choose_face_export','choose_face_import'):
+                opening = action == 'choose_face_import'
+                dialog = QFileDialog.getOpenFileName if opening else QFileDialog.getSaveFileName
+                path, _ = dialog(self.window, 'Import sculpted head' if opening else 'Export head template',
+                                 '' if opening else 'head-template.obj', 'Wavefront head (*.obj)')
+                if not path:
+                    return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                action,args = ('face_import' if opening else 'face_export'),dict(path=path)
             elif action=='choose_ui_retail':
                 runtime=QFileDialog.getExistingDirectory(self.window,'Select Custom Fighter runtime for retail UI references')
                 if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))

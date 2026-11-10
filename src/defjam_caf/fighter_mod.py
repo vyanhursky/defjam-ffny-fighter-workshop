@@ -9,7 +9,7 @@ import tempfile
 import zipfile
 
 from .container import SaveError
-from .projects import validate, portrait_bytes, atlas_bytes, require, SCHEMA2, SCHEMA3, SCHEMA4
+from .projects import validate, portrait_bytes, atlas_bytes, require, SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5, SCHEMA6, SCHEMA7
 
 
 def run_contract(runtime, output, arguments):
@@ -56,7 +56,7 @@ def contract(runtime, arguments, temporary, workspace):
     return report
 
 
-def export_mod(project, destination, runtime, data, workspace, progress=lambda _: None):
+def export_mod(project, destination, runtime, data, workspace, progress=lambda _: None, asset_cache=None):
     validate(project)
     destination, runtime, workspace = Path(destination), Path(runtime).resolve(), Path(workspace)
     require(data is not None, "Open your Recomp data directory before exporting a fighter mod")
@@ -73,8 +73,31 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         root.mkdir()
         import copy
         fighter = copy.deepcopy(project["fighter"])
+        performance = project.get('performance',{})
+        if performance.get('voice'):
+            fighter['voice_donor']=performance['voice']['preset']
         from . import outfits
         views = [(row, outfits.view(project, row["id"])) for row in outfits.entries(project)]
+        face_cache = None
+        if any('face_sculpt' in view for _,view in views):
+            from .assets import build_cache
+            from .appearance import Appearance
+            face_cache = asset_cache if asset_cache is not None else build_cache(game,workspace.parent,progress)
+            face_appearance = Appearance(face_cache)
+        def write_face(view, relative):
+            if 'face_sculpt' not in view:
+                return None
+            from . import face_geometry
+            reference = face_geometry.template(face_cache,face_appearance,view['fighter'])
+            sculpt = face_geometry.validate(view['face_sculpt'],view['fighter'],reference)
+            value = dict(schema='caf-face-coordinates-1',template_sha256=reference['sha256'],basis=reference['basis'],
+                meshes=[dict(rm=m['rm'],positions=m['positions'],deltas=d['deltas']) for m,d in zip(reference['meshes'],sculpt['meshes'])])
+            raw = (json.dumps(value,sort_keys=True)+'\n').encode()
+            target=root/relative;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
+            return dict(path=relative,sha256=hashlib.sha256(raw).hexdigest())
+        face = write_face(views[0][1], 'face.json')
+        if face:
+            fighter['face'] = face
         def write_atlases(view, relative):
             result = {}
             if not view.get("textures", {}).get("atlases"):
@@ -89,8 +112,8 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         default_atlases = write_atlases(views[0][1], "atlases")
         if default_atlases:
             fighter["atlases"] = default_atlases
-        if project["schema"] in (SCHEMA3,SCHEMA4):
-            fighter["outfit_name"] = project["outfit_name"]
+        if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7):
+            fighter["outfit_name"] = project.get("outfit_name", "Outfit 1")
             fighter["outfits"] = []
             for row, view in views[1:]:
                 entry = dict(id=row["id"], name=row["name"],
@@ -98,17 +121,27 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
                 atlases = write_atlases(view, "outfits/" + row["id"] + "/atlases")
                 if atlases:
                     entry["atlases"] = atlases
+                face = write_face(view, 'outfits/' + row['id'] + '/face.json')
+                if face:
+                    entry['face'] = face
                 fighter["outfits"].append(entry)
         recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
         (root / "fighter.json").write_bytes(recipe)
-        capability = "caf-fighter-3" if project["schema"] in (SCHEMA3,SCHEMA4) else "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
+        capability = "caf-fighter-6" if performance else "caf-fighter-5" if 'retail_moveset' in fighter else "caf-fighter-4" if face_cache is not None else "caf-fighter-3" if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7) else "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
         manifest = {"schema": "fighter-registry-draft-1", "id": pack_id, "version": meta["version"],
                     "requires": {}, "resources": [{"id": "caf", "kind": "caf", "compatibility": {},
                     "source": {"format": capability, "selection": {"path": "fighter.json", "sha256": hashlib.sha256(recipe).hexdigest()}}}],
                     "fighters": [{"id": fighter_id, "name": meta["name"], "inherits": meta["donor"],
                                   "components": {"caf": pack_id + "/caf"}}], "overrides": []}
+        if performance:
+            request=Path(temporary)/'performance.json'
+            request.write_text(json.dumps(dict(settings=performance,pack=pack_id,donor=meta['donor'])),encoding='utf-8')
+            generated=contract(runtime,['workshop-export','--game',str(game),'--workshop-request',str(request),
+                '--workshop-out',str(root/'performance')],temporary,workspace)
+            manifest['resources'].extend(generated['resources'])
+            manifest['fighters'][0]['components'].update(generated['components'])
         for row, view in views:
-            role_art=project['schema']==SCHEMA4 and any('ui_art' in node for node in [project,*project.get('outfits',[])])
+            role_art=project['schema'] in (SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7) and any('ui_art' in node for node in [project,*project.get('outfits',[])])
             if "portrait" not in view and not role_art:
                 continue
             is_default = row["id"] == outfits.DEFAULT
@@ -145,7 +178,7 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
             manifest["resources"].append({"id": portrait_id, "kind": "portrait", "compatibility": {}, "source": source})
             if is_default:
                 manifest["fighters"][0]["components"]["portrait"] = pack_id + "/" + portrait_id
-            if project["schema"] in (SCHEMA3,SCHEMA4):
+            if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7):
                 fighter.setdefault("portraits", {})[row["id"]] = pack_id + "/" + portrait_id
         # Outfit portrait references are part of the hash-bound CAF recipe.
         recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
@@ -158,9 +191,15 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         extras_note = ("Atlas and finisher overrides require the runtime's hash-checked fighter-caf-extras.bin support.\n"
                        "Declared native atlases replace RGB only; original material alpha is retained.\n"
                        "Saved finisher identities resolve against the player's original database.\n") if capability != "caf-fighter-1" else ""
-        if capability == "caf-fighter-3":
+        if capability in ("caf-fighter-3", "caf-fighter-4", "caf-fighter-5", "caf-fighter-6"):
             extras_note += "One roster entry exposes up to three outfits through the native clothing selector.\nCombat settings are shared; appearance, atlases and portraits are outfit-specific.\n"
-        (root / "README.md").write_text(f"# {meta['name']}\n\n{meta['description']}\n\nAuthor: {meta['author'] or 'Unspecified'}\nVersion: {meta['version']}\n\nRequires Custom Fighter runtime with {capability} support.\n{extras_note}CAF appearance, training stats and retail style combination come from fighter.json.\nVoice, AI and inherited presentation use {meta['donor']}.\n{portrait_note}\nNo Story save or currency is included. The player's own game files supply the CAF parts.\n", encoding="utf-8")
+        if face_cache is not None:
+            extras_note += 'Experimental template sculpt: bounded head positions only; original rig, UVs and normals retained. Native startup verifies the assembled head before applying it.\n'
+        if 'retail_moveset' in fighter:
+            extras_note += 'Retail moveset: '+fighter['retail_moveset']+'. Appearance and training remain authored by this CAF recipe.\n'
+        if performance:
+            extras_note += 'Performance overrides (shared by all outfits): '+', '.join(performance)+'. Voice clips and AI edits are included as typed resources.\n'
+        (root / "README.md").write_text(f"# {meta['name']}\n\n{meta['description']}\n\nAuthor: {meta['author'] or 'Unspecified'}\nVersion: {meta['version']}\n\nRequires Custom Fighter runtime with {capability} support.\n{extras_note}CAF appearance, training stats and retail style combination come from fighter.json.\nUnchanged voice, AI and presentation settings inherit {meta['donor']}.\n{portrait_note}\nNo Story save or currency is included. The player's own game files supply the CAF parts.\n", encoding="utf-8")
         (root / "LICENSE.txt").write_text(meta["license"] or "No additional license granted. Original game assets are supplied locally by the player.\n", encoding="utf-8")
         progress("Validating the complete fighter pack against your game files…")
         report = contract(runtime, ["validate", "--pack", str(root), "--game", str(game)], temporary, workspace)

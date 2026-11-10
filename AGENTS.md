@@ -1,5 +1,24 @@
 # defjam-ffny-fighter-workshop
 
+- Owner approved GPLv3-only licensing of the Workshop and merging all pending
+  Workshop/runtime PRs on 2026-11-10. Preserve Vlad Yanhursky's copyright,
+  third-party licenses and game-art exclusions. Earlier MIT versions retain
+  their original terms. This supersedes earlier source-only/no-merge limits;
+  no new packaged release or asset publication is requested.
+
+- Owner approved retail appearance overrides and additional selectable retail
+  outfits on 2026-11-10, including normal ZIP installation and native Pockets
+  selection/battle tests. Preserve originals and shared retail combat identity;
+  keep artwork, projects and captures private. Source-only feature PRs remain
+  authorized; no release or merge is implied.
+
+- Owner approved voice overrides, original entrance/victory selection, source
+  animation playback and AI personality authoring on 2026-11-10. Target exportable
+  projects first and preserve Story-save workflows. Use versioned portable
+  resources and the matching runtime; never store these fields in unknown save
+  bytes. The owner deferred broad regressions until joint testing after more
+  features. Focused codec, desktop and compiler checks remain appropriate.
+
 Read PROGRESS.md and docs/specification.md first. This is a separate, local-first
 desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
 
@@ -26,7 +45,7 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   files under `src/defjam_caf/resources/branding/` (`defjam.icns`, `defjam.ico`,
   `defjam.png`). Their source paths/commit and SHA-256 hashes are recorded in
   `provenance.json` there. This is an icon-only exception, not general permission
-  to track game assets. The MIT license does not cover that artwork.
+  to track game assets. The project software license does not cover that artwork.
 
 - Owner-approved README screenshot exception (2026-11-07): the four exact
   `docs/media/workshop-*.png` files listed in `docs/media/SHA256SUMS` were reviewed
@@ -71,3 +90,17 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   outfit overrides belong to roadmap modpack authoring; preserve original-profile
   workflows. Use Pockets placeholders after the requested imagegen refusal.
   Source-only Workshop/runtime PR updates are authorized; no release or art publication.
+
+- Owner approved facial authoring on 2026-11-09: original facial presets for
+  Story CAFs and standalone fighters, experimental proportion controls and
+  prioritized template mesh import research/implementation. Store sculpts in
+  versioned projects and the companion runtime, never unknown Story save bytes.
+  Preserve topology/UV/rig contracts and report native qualification limits.
+  Source-only roadmap feature PRs remain authorized.
+
+- Owner approved retail fighter movesets on 2026-11-10 for projects and direct
+  Story-save editing, explicitly including companion runtime compatibility.
+  Keep the CAF's appearance, career/training and four Blazin' assignments;
+  select complete original motion cores by stable retail identity. Preserve
+  the original CAF combination and old formats. Document native qualification
+  separately from editor/codec tests; no release or merge is authorized.

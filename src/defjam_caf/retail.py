@@ -18,6 +18,7 @@ from . import projects, ui_art
 from .container import SaveError
 
 SCHEMA = 'ffny-retail-fighter-project-1'
+SCHEMA2 = 'ffny-retail-fighter-project-2'
 MAX_ASSET = 64 * 1024**2
 MAX_TOTAL = 64 * 1024**2
 MAX_TEXTURE = 16 * 1024**2
@@ -84,8 +85,16 @@ def descriptors(value):
 
 
 def validate(document):
-    projects.require(type(document) is dict and set(document) == {'schema','identity','metadata','definition','resources','assets','ui_art','textures'}
-                     and document['schema'] == SCHEMA, 'Unsupported retail fighter project fields')
+    version2=type(document) is dict and document.get('schema')==SCHEMA2
+    projects.require(type(document) is dict and set(document) == {'schema','identity','metadata','definition','resources','assets','ui_art','textures'}|({'deployment'} if version2 else set())
+                     and document['schema'] in (SCHEMA,SCHEMA2), 'Unsupported retail fighter project fields')
+    if version2:
+        deployment=document['deployment']
+        projects.require(type(deployment) is dict and set(deployment)=={'mode','target'} and deployment['mode'] in ('add','override','outfit')
+            and type(deployment['target']) is str and re.fullmatch(r'retail/[a-z0-9]+(?:-[a-z0-9]+)*',deployment['target']), 'Choose a retail deployment target')
+        if deployment['mode']!='add':
+            projects.require(document['definition']['inherits']==deployment['target'],'Retail overrides/outfits retain their target combat donor')
+            projects.require(set(document['definition']['components'])<= {'appearance','portrait'},'Retail appearance workflows retain target combat, stats and voice')
     # Share identity/metadata validation without inventing a second policy.
     dummy = projects.from_fields({'has_fighter':True, 'stats':dict.fromkeys(('health','upper','lower','speed','toughness'),0),
         'styles':[0], 'caf_values':[0,0,0,0,0,1]+[0]*6+[0xffffffff]*26, 'caf_colors':[0]*38}, document['metadata']['name'])
@@ -140,12 +149,23 @@ def import_pack(folder, fighter_id):
     folder=Path(folder).resolve();path=folder/'fighters.json'
     projects.require(path.stat().st_size<=8*1024**2,'Pack manifest exceeds 8 MiB')
     manifest=json.loads(path.read_text(encoding='utf-8-sig'),object_pairs_hook=projects.unique)
-    projects.require(manifest.get('schema')=='fighter-registry-draft-1' and not manifest.get('requires') and not manifest.get('overrides'),
-        'Import an independent ordinary pack without global overrides or dependencies')
+    projects.require(manifest.get('schema')=='fighter-registry-draft-1' and not manifest.get('requires'),
+        'Import an independent fighter pack without dependencies')
     fighter=next((f for f in manifest['fighters'] if f['id']==fighter_id),None)
+    deployment=None
+    if manifest.get('overrides'):
+        rows=manifest['overrides']
+        projects.require(not manifest['fighters'] and len(rows)==1 and not rows[0]['supersedes']
+                         and rows[0]['target']==fighter_id and fighter_id.startswith('retail/'),
+                         'Import one independent retail appearance override at a time')
+        fighter=dict(id='override',name=fighter_id.split('/')[1].replace('-',' ').title(),inherits=fighter_id,components=rows[0]['components'])
+        deployment=dict(mode='override',target=fighter_id)
+        fighter_id='override'
     projects.require(fighter is not None,'Choose a fighter from this pack')
     projects.require(fighter.get('inherits','').startswith('retail/'),'Imported fighter needs a retail base')
     document=new(fighter['inherits'],fighter['name']);document['identity']={'pack':manifest['id'],'fighter':fighter_id}
+    if fighter.get('outfit_of'):deployment=dict(mode='outfit',target=fighter['outfit_of'])
+    if deployment:document.update(schema=SCHEMA2,deployment=deployment)
     document['metadata']['version']=manifest['version']
     document['definition']={'inherits':fighter['inherits'],'components':copy.deepcopy(fighter['components'])}
     selected={v.split('/',1)[1] for k,v in fighter['components'].items() if k in KINDS and v.startswith(manifest['id']+'/')}
@@ -244,10 +264,13 @@ class Session:
             return self.snapshot()
         if action in ('new','open','import'):
             if action=='new':document=new(args['donor'])
-            elif action=='open':document,digest=projects.read(args['path']);projects.require(document['schema']==SCHEMA,'Open CAF projects in the CAF editor')
+            elif action=='open':document,digest=projects.read(args['path']);projects.require(document['schema'] in (SCHEMA,SCHEMA2),'Open CAF projects in the CAF editor')
             else:document=import_pack(args['folder'],args['fighter'])
             self.document=document;self.saved=copy.deepcopy(document) if action=='open' else None
             self.path=Path(args['path']) if action=='open' else None;self.digest=digest if action=='open' else None;self.history=[];self.draft=None
+            if action=='new' and args.get('mode','add')!='add':
+                self.document.update(schema=SCHEMA2,deployment=dict(mode=args['mode'],target=args['donor']))
+                validate(self.document)
             return self.snapshot()
         projects.require(self.document is not None,'Create or open a retail fighter project')
         if action=='undo':
@@ -265,6 +288,11 @@ class Session:
             self.digest=projects.write(target,document,expected);self.document=document;self.draft=None;self.path=target;self.saved=copy.deepcopy(document);self.history=[]
             return self.snapshot()
         candidate=self.effective()
+        if action=='deployment':
+            projects.require(self.catalog and any('retail/'+r['id']==args['target'] for r in self.catalog['fighters']),'Unknown retail target')
+            candidate.update(schema=SCHEMA2,deployment=dict(mode=args['mode'],target=args['target']))
+            if args['mode']!='add':candidate['definition']['inherits']=args['target']
+            return self.commit(candidate)
         if action=='details':
             candidate['metadata'].update(args['metadata']);candidate['identity'].update(args['identity']);return self.commit(candidate)
         if action=='combat':
@@ -355,6 +383,14 @@ class Session:
             native['fighters'][0]['components']['portrait']=native['id']+'/workshop-ui'
         selected={v for k,v in native['fighters'][0]['components'].items() if k in KINDS}
         native['resources']=[r for r in native['resources'] if native['id']+'/'+r['id'] in selected]
+        deployment=document.get('deployment',dict(mode='add',target=document['definition']['inherits']))
+        if deployment['mode']=='override':
+            projects.require(set(native['fighters'][0]['components'])<= {'appearance'},'Retail override currently supports appearance only; clear UI overrides')
+            projects.require(native['fighters'][0]['components'],'Import an appearance before exporting an override')
+            native['overrides']=[dict(target=deployment['target'],components=native['fighters'][0]['components'],supersedes=[])]
+            native['fighters']=[]
+        elif deployment['mode']=='outfit':
+            native['fighters'][0]['outfit_of']=deployment['target']
         # Keep only transitively declared assets; unused imported resources must
         # not leak original art into the export or violate ordinary inventory.
         needed=set();queue=list(descriptors(native['resources']))

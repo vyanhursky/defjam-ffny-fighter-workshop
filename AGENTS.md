@@ -1,5 +1,11 @@
 # defjam-ffny-fighter-workshop
 
+- Owner approved retail appearance overrides and additional selectable retail
+  outfits on 2026-11-10, including normal ZIP installation and native Pockets
+  selection/battle tests. Preserve originals and shared retail combat identity;
+  keep artwork, projects and captures private. Source-only feature PRs remain
+  authorized; no release or merge is implied.
+
 - Owner approved voice overrides, original entrance/victory selection, source
   animation playback and AI personality authoring on 2026-11-10. Target exportable
   projects first and preserve Story-save workflows. Use versioned portable

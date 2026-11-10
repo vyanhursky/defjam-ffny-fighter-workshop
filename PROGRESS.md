@@ -1,5 +1,43 @@
 # Progress and handoff
 
+## Retail appearance overrides and extra outfits — 2026-11-10
+
+Owner requested two normal package workflows using Pockets with red pants:
+replace the existing retail appearance, or add another selectable outfit while
+preserving the original. The retail studio now offers these purposes alongside
+standalone fighters, with a retail target, shared-combat controls disabled and
+the expanded center-options/right-viewer layout. Existing project v1 remains
+unchanged; v2 adds a typed deployment mode/target. Override and outfit ZIP import
+restore those choices. See docs/retail-overrides-outfits.md.
+
+Source integrates the independent retail studio with the performance/UI branch
+in isolated feature/retail-overrides-outfits worktrees. Private projects save and
+reopen identically; both ZIPs compile and install/activate through the ordinary
+mod manager. Override adds0/edits1; extra outfit adds1/edits0, with a hidden native
+variant rather than another public roster cell. Appearance resources and RGB
+atlas imports are supported; retail UI-art replacement remains explicitly refused.
+
+Focused Workshop tests: 39 passed (retail deployment/projects, performance and
+movesets). Real Qt/WebChannel check passes: actual red-pants model preview,
+read-only shared combat controls, correct deployment and viewer to the right.
+Runtime focused checks: 50 passed, including compiled C FWR1/FWR2 admission and
+retail parent bounds. Final Windows x64 release build passes with pinned toolkit
+4801dc1. The runtime encodes retail selection+1 in FWR2 to preserve native ID 0.
+
+Native investigation verifies original Pockets' cell and a two-choice clothing
+selector, with original green pants on choice 1. Choice2 submits logical100/core64;
+a real battle renders red pants under the Pockets name. Early startup stall,
+capture-limit rejection, navigation-only runs and one wrong Blaze-identity
+assertion remain negative evidence in the runtime research report. Final paired
+Windows 200-second runs pass: exact selections 100/56 for the extra outfit and
+76/56 for replacement Pockets versus Blaze;5/5 combat checks each, red-pants
+battle captures, 100 two-second samples each (median120), zero fault signatures,
+one verified save generation each and identical guarded save restoration.
+Receipts: runtime logs/pockets/final-outfit-result.txt and final-override-result.txt,
+native logs run-20261110-112649.log.err and run-20261110-113023.log.err. The owner's
+original saves are never used as writable test data. Broad regressions remain
+deferred per the owner; no release or asset publication is authorized.
+
 ## Center customization layout — 2026-11-10
 
 Owner requested more room for the growing customization menu. The main workspace
@@ -134,6 +172,43 @@ pending. Keep Advanced/Expert experimental. Original Tupac packages/playtest
 roots are unchanged; all generated geometry, projects and captures stay private.
 No merge or packaged release is authorized. Follow-up: owner review and the
 broader qualification matrix before promoting sculpting beyond the pilot.
+## Retail/owned fighter studio — 2026-11-09
+
+Owner approved the DMX pilot with a Memphis Bleek-compatible appearance, Teck
+combat/stats, supplied voice and conditional supplied finisher/intro/victory.
+The first outfit is shirtless and Vendetta-inspired; a second outfit comes later.
+Work is isolated from the Tupac authoring/runtime branches and playtest data.
+
+Implemented a separate portable retail project schema and studio: verified
+75-fighter catalog, independent original body/combat donors, ordinary one-fighter
+resource import, scoped texture identities (including shared injury names),
+native stats, explicit resource fallbacks, static preview, RGB/HD atlas and
+complete UI-art import, staged metadata/history, save/reopen and validated ZIPs.
+Existing CAF/profile formats remain intact. Static preview filters collapsed
+source placeholders for framing only. Arbitrary Blender reimport remains deferred.
+
+Validation:140 Python tests pass (3 platform skips),4 Node tests;17 real Windows
+Qt/WebChannel steps pass through actual native ZIP export and persistent reopen.
+The companion runtime's61 focused tests cover appearance/PNG/template/alpha/HD,
+packages and managed launch. Original Memphis body plus Teck combat exports after
+explicitly scoping shared-name injury textures. Native DMX intro/Blazin activation,
+voice and combat run without crashes/watchdogs/unresolved calls and restore the
+guarded save root identically. A450-second native run reaches a decisive result
+against Pockets with zero faults and identical guarded restoration. Full MSVC
+unit suite:2487pass/57skip/1standard slow exclusion. Final paired-finisher/DMX
+victory and exact-head CI evidence are recorded in the source PRs.
+
+Two hosted full-atlas imagegen outputs were rejected under the sexual category.
+The owner then explicitly selected the existing local ComfyUI workflow. A4x
+Real-ESRGAN upscale plus SDXL strength0.12/30steps produces a2048-square body
+candidate with exact original material alpha. Its5.54MiB PNG exposed the UI-only
+4MiB admission limit; body PNGs now have a separate16MiB cap, still bounded by
+the combined64MiB/96MiB portable project budgets. The actual HD project/ZIP
+compiles and installs with30HD layer files. Selector/loading/titlecard generation
+also succeeded; all artwork remains an unapproved private candidate.
+Source-only Workshop PR4/runtime PR218 are open. All source art, projects, packs,
+captures, saves and game binaries remain private; no merge or packaged release.
+See docs/retail-fighter-projects.md and the companion runtime's retail contract.
 
 ## Complete fighter UI artwork — 2026-11-09
 

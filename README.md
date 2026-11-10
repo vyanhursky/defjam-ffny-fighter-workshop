@@ -35,6 +35,12 @@ visibility, pose and lighting always remain preview-only.
 
 ## In development: standalone fighters
 
+The development source also includes a separate **Retail fighter studio** for
+retail/owned model resources, independent combat/body donors, ordinary pack
+import, native stats, supplied voice/animation components and HD RGB/UI artwork.
+Portable retail projects export through the matching runtime's complete compiler.
+See [retail fighter projects](docs/retail-fighter-projects.md) for limits and workflow.
+
 The development source adds portable `.ffnyfighter` projects, pack metadata,
 portrait capture/import and validated CAF-to-Custom-Fighter-Mod ZIP export.
 Native 256×256 atlas import and saved retail finisher preservation are available

@@ -41,6 +41,8 @@ class Editor:
         self.outfit_draft = None
         self.active_outfit = outfits.DEFAULT
         self._project_base_document = self._project_base = None
+        from .retail import Session
+        self.retail = Session(self)
 
     def base(self):
         if self.project is not None:
@@ -353,6 +355,8 @@ class Editor:
         return result
 
     def request(self, action, args):
+        if action.startswith('retail_'):
+            return self.retail.request(action.removeprefix('retail_'), args)
         if action=='ui_preview':
             if self.project is None:return {'png':None}
             effective=ui_art.resolved(self.project_document(validate=False),self.active_outfit)

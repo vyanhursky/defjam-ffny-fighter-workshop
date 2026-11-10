@@ -50,6 +50,51 @@ class Bridge(QObject):
             ident, action, args = request["id"], request["action"], request.get("args", {})
             if not isinstance(ident, str) or not isinstance(args, dict):
                 raise ValueError("Invalid editor request")
+            if action in ('open_retail_editor','open_caf_editor'):
+                target='retail.html' if action=='open_retail_editor' else 'index.html'
+                self.response.emit(json.dumps(dict(id=ident,result=None)))
+                self.window.web.setUrl(QUrl.fromLocalFile(str(Path(__file__).parent/'resources'/target)))
+                return
+            if action.startswith('choose_retail_'):
+                operation=action.removeprefix('choose_retail_')
+                session=self.editor.retail
+                if operation in ('runtime','data','import'):
+                    title={'runtime':'Select compatible Custom Fighter runtime checkout','data':'Select Recomp data directory','import':'Select ordinary fighter pack folder'}[operation]
+                    path=QFileDialog.getExistingDirectory(self.window,title)
+                    if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                    if operation=='data':
+                        data=Path(path).resolve()
+                        if not (data/'extracted').is_dir():raise ValueError('Choose the data directory containing extracted')
+                        session.data=data
+                        session.catalog=None
+                        return self.response.emit(json.dumps(dict(id=ident,result=session.snapshot())))
+                    if operation=='import':
+                        manifest=json.loads((Path(path)/'fighters.json').read_text(encoding='utf-8-sig'))
+                        labels=[f['id']+' · '+f['name'] for f in manifest['fighters']]
+                        label,ok=QInputDialog.getItem(self.window,'Import fighter','Choose one fighter',labels,0,False)
+                        if not ok:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                        action,args='retail_import',{'folder':path,'fighter':label.split(' · ',1)[0]}
+                    else:action,args='retail_configure',{'runtime':path}
+                elif operation in ('open','save','copy','export'):
+                    if operation=='save' and session.path:
+                        action,args='retail_save',{}
+                    else:
+                        opening=operation=='open';exporting=operation=='export'
+                        dialog=QFileDialog.getOpenFileName if opening else QFileDialog.getSaveFileName
+                        path,_=dialog(self.window, 'Open retail fighter project' if opening else 'Export Custom Fighter Mod' if exporting else 'Save retail fighter project',
+                            '' if opening else 'fighter.zip' if exporting else 'fighter.ffnyfighter',
+                            'Fighter mod (*.zip)' if exporting else 'Fighter projects (*.ffnyfighter)')
+                        if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                        action,args='retail_'+('open' if opening else 'export' if exporting else 'save'),{'path':path}
+                elif operation in ('ui','texture'):
+                    path,_=QFileDialog.getOpenFileName(self.window,'Import fighter artwork','','PNG image (*.png)')
+                    if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                    import base64
+                    limit=(16 if operation=='texture' else 4)*1024**2
+                    with Path(path).open('rb') as stream:raw=stream.read(limit+1)
+                    if len(raw)>limit:raise ValueError('PNG exceeds '+str(limit//1024**2)+' MiB')
+                    action,args='retail_'+operation,{**args,'png':base64.b64encode(raw).decode('ascii')}
+                else:raise ValueError('Unsupported retail dialog')
             if action == "boot":
                 if self.initial:
                     action, args = "open_data", {"path": str(self.initial)}
@@ -158,7 +203,7 @@ class Window(QMainWindow):
             QMessageBox.information(self, "Operation in progress", "Please wait for the current operation to finish.")
             event.ignore()
             return
-        if (self.bridge.editor.profile or self.bridge.editor.project) and self.bridge.editor.changes():
+        if ((self.bridge.editor.profile or self.bridge.editor.project) and self.bridge.editor.changes()) or self.bridge.editor.retail.snapshot()['dirty']:
             answer = QMessageBox.question(self, "Unsaved changes", "Discard your unsaved fighter changes and close?")
             if answer != QMessageBox.StandardButton.Yes:
                 event.ignore()
@@ -222,6 +267,9 @@ def main(argv=None):
     parser.add_argument("--smoke-test", type=Path, help="Write a read-only desktop startup receipt and exit")
     parser.add_argument("--capture", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--quit-after", type=int, help=argparse.SUPPRESS)
+    parser.add_argument('--retail',action='store_true',help='Open the retail fighter studio')
+    parser.add_argument('--project',type=Path,help='Open a retail fighter project (with --retail)')
+    parser.add_argument('--runtime',type=Path,help='Compatible development runtime for retail authoring')
     args = parser.parse_args(argv)
     QApplication.setApplicationName("defjam-ffny-fighter-workshop")
     QApplication.setOrganizationName("FFNY Community Tools")
@@ -240,6 +288,15 @@ def main(argv=None):
     # Automated package checks without --data stay independent of installed saves.
     initial = args.data if args.smoke_test else initial_data_directory(args.data)
     window = Window(workspace, initial)
+    if args.retail:
+        # The retail studio needs the game directory, not a CAF cache/profile.
+        window.bridge.initial=None
+        window.bridge.editor.data=initial.resolve() if initial else None
+        if args.project:window.bridge.editor.retail.request('open',{'path':str(args.project)})
+        if args.runtime:window.bridge.editor.retail.request('configure',{'runtime':str(args.runtime)})
+        window.web.setUrl(QUrl.fromLocalFile(str(Path(__file__).parent/'resources/retail.html')))
+    elif args.project or args.runtime:
+        parser.error('--project and --runtime require --retail')
     app.setWindowIcon(window.windowIcon())
     window.show()
     if args.smoke_test:

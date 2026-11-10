@@ -1,5 +1,43 @@
 # Progress and handoff
 
+## Retail/owned fighter studio — 2026-11-09
+
+Owner approved the DMX pilot with a Memphis Bleek-compatible appearance, Teck
+combat/stats, supplied voice and conditional supplied finisher/intro/victory.
+The first outfit is shirtless and Vendetta-inspired; a second outfit comes later.
+Work is isolated from the Tupac authoring/runtime branches and playtest data.
+
+Implemented a separate portable retail project schema and studio: verified
+75-fighter catalog, independent original body/combat donors, ordinary one-fighter
+resource import, scoped texture identities (including shared injury names),
+native stats, explicit resource fallbacks, static preview, RGB/HD atlas and
+complete UI-art import, staged metadata/history, save/reopen and validated ZIPs.
+Existing CAF/profile formats remain intact. Static preview filters collapsed
+source placeholders for framing only. Arbitrary Blender reimport remains deferred.
+
+Validation:140 Python tests pass (3 platform skips),4 Node tests;17 real Windows
+Qt/WebChannel steps pass through actual native ZIP export and persistent reopen.
+The companion runtime's61 focused tests cover appearance/PNG/template/alpha/HD,
+packages and managed launch. Original Memphis body plus Teck combat exports after
+explicitly scoping shared-name injury textures. Native DMX intro/Blazin activation,
+voice and combat run without crashes/watchdogs/unresolved calls and restore the
+guarded save root identically. A450-second native run reaches a decisive result
+against Pockets with zero faults and identical guarded restoration. Full MSVC
+unit suite:2487pass/57skip/1standard slow exclusion. Final paired-finisher/DMX
+victory and exact-head CI evidence are recorded in the source PRs.
+
+Two hosted full-atlas imagegen outputs were rejected under the sexual category.
+The owner then explicitly selected the existing local ComfyUI workflow. A4x
+Real-ESRGAN upscale plus SDXL strength0.12/30steps produces a2048-square body
+candidate with exact original material alpha. Its5.54MiB PNG exposed the UI-only
+4MiB admission limit; body PNGs now have a separate16MiB cap, still bounded by
+the combined64MiB/96MiB portable project budgets. The actual HD project/ZIP
+compiles and installs with30HD layer files. Selector/loading/titlecard generation
+also succeeded; all artwork remains an unapproved private candidate.
+Source-only Workshop PR4/runtime PR218 are open. All source art, projects, packs,
+captures, saves and game binaries remain private; no merge or packaged release.
+See docs/retail-fighter-projects.md and the companion runtime's retail contract.
+
 ## Complete fighter UI artwork — 2026-11-09
 
 Owner approved roadmap modpack authoring for selector/loading portraits,

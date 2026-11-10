@@ -37,6 +37,7 @@ class Editor:
         self.moveset_error = 'Load original game assets to choose a retail moveset.'
         self.preview_error = None
         self._face_preview_basis = {}
+        self.performance_link = None
         self.project = self.project_path = self.project_hash = None
         self.portrait_edit = None
         self.metadata_edit = None
@@ -130,6 +131,7 @@ class Editor:
         return self.snapshot()
 
     def open_data(self, data):
+        self.performance_link = None
         data = Path(data).expanduser().resolve()
         result = discover(data)
         self.data, self.discovery = data, result
@@ -242,7 +244,7 @@ class Editor:
     def changes(self):
         if self.profile is None and self.project is None:
             return []
-        if self.project is not None and (self.outfit_draft is not None or self.project["schema"] in (projects.SCHEMA3,projects.SCHEMA4,projects.SCHEMA5,projects.SCHEMA6)):
+        if self.project is not None and (self.outfit_draft is not None or self.project["schema"] in (projects.SCHEMA3,projects.SCHEMA4,projects.SCHEMA5,projects.SCHEMA6,projects.SCHEMA7)):
             return self.outfit_changes()
         before, after = read_fields(self.base().payload), read_fields(self.current().payload)
         result = []
@@ -278,6 +280,9 @@ class Editor:
     def outfit_changes(self):
         before, after = self.project, self.project_document(validate=False)
         result = []
+        for key, label in (('voice','Voice'),('intro','Entrance sequence'),('victory','Victory sequence'),('ai','AI personality')):
+            if before.get('performance',{}).get(key) != after.get('performance',{}).get(key):
+                result.append(label+' changed (all outfits)')
         if any(before[k] != after[k] for k in ("identity", "metadata")):
             result.append("Project details changed")
         for key, label in (("stats", "Training stats"), ("styles", "Fighting styles"), ("finishers", "Blazin' assignments"), ('retail_moveset','Moveset selection')):
@@ -314,6 +319,7 @@ class Editor:
                       groups=[], skins=[], issues=self.discovery.issues if self.discovery else [])
         project_view = copy.deepcopy(self.project_source())
         if project_view is not None:
+            project_view.pop('performance',None)
             project_view.pop("outfits", None)
             project_view.pop('ui_art',None)
             project_view.pop('face_sculpt',None)
@@ -338,6 +344,11 @@ class Editor:
             row=self.movesets.by_core.get(read_fields(self.current().payload)['combined_style'])
             key=row['key'] if row else None
         result['retail_movesets']=dict(options=self.movesets.options if self.movesets else [],selected=key,error=self.moveset_error)
+        from . import performance
+        result['performance'] = dict(settings=performance.status((self.project_source() or {}).get('performance')),
+            catalog=self.performance_link.catalog if self.performance_link else None,
+            ai_fields=[dict(id=key,label=label) for key,label in performance.AI_FIELDS],
+            project_available=self.project is not None)
         if self.discovery:
             result["profiles"] = [dict(name=p.name, has_fighter=read_fields(p.container.payload)["has_fighter"],
                                        legacy=p.directory_kind == "legacy") for p in self.discovery.profiles]
@@ -411,6 +422,49 @@ class Editor:
         return result
 
     def request(self, action, args):
+        if action == 'performance_connect':
+            from .performance_api import Link
+            if self.data is None:raise SaveError('Open your game data directory first')
+            self.performance_link = Link(args['runtime'],self.data,self.workspace)
+            return self.snapshot()
+        if action in ('performance_audio','performance_animation'):
+            if self.performance_link is None:raise SaveError('Connect compatible fighter tools first')
+            if action=='performance_audio' and args.get('override'):
+                from . import performance
+                encoded=(self.project_document().get('performance',{}).get('voice',{}).get('clips',{}).get(args['override']))
+                if encoded is None:raise SaveError('No imported clip in this slot')
+                performance.audio_bytes(encoded)
+                return dict(mime='audio/wav',data=encoded)
+            return (self.performance_link.voice if action=='performance_audio' else self.performance_link.animation)(args)
+        if action in ('performance_set','performance_clip','performance_clear'):
+            from . import performance
+            if self.project is None:raise SaveError('Create a standalone fighter project to author performance resources')
+            document=self.project_document()
+            settings=copy.deepcopy(document.get('performance',{}))
+            if action=='performance_clip':
+                import base64
+                raw=base64.b64decode(args['wav'],validate=True) if args.get('wav') is not None else None
+                settings=performance.set_clip(settings,args['target'],raw)
+                if self.performance_link is None:raise SaveError('Connect compatible fighter tools first')
+                self.performance_link.call('workshop-check',settings)
+            elif action=='performance_clear':
+                if args.get('section') not in ('voice','intro','victory','ai'):raise SaveError('Unknown performance section')
+                settings.pop(args['section'],None)
+            else:
+                if self.performance_link is None:raise SaveError('Connect compatible fighter tools first')
+                section=args['section']
+                if section not in ('voice','intro','victory','ai'):raise SaveError('Unknown performance section')
+                settings[section]=copy.deepcopy(args['value'])
+                if section=='voice' and not args.get('reset_clips'):
+                    settings[section]['clips']=copy.deepcopy(document.get('performance',{}).get('voice',{}).get('clips',{}))
+                performance.validate(settings)
+                self.performance_link.call('workshop-check',settings)
+            document['schema']=projects.SCHEMA7;document['performance']=performance.validate(settings)
+            candidate=projects.validate(document)
+            if candidate==self.project_document():return self.snapshot()
+            self.remember();self.outfit_draft=candidate;self.edits={}
+            self.portrait_edit=self.texture_edit=self.metadata_edit=None
+            return self.snapshot()
         if action == 'fighting_style':
             mode=args.get('mode')
             if mode not in ('caf','retail'):raise SaveError('Choose CAF combination or Retail fighter moveset')
@@ -423,7 +477,7 @@ class Editor:
                 return self.stage({'styles':args['styles']})
             document=self.project_document()
             if row:
-                document['schema']=projects.SCHEMA6;document['fighter']['retail_moveset']=row['key']
+                document['schema']=projects.SCHEMA7 if document['schema']==projects.SCHEMA7 else projects.SCHEMA6;document['fighter']['retail_moveset']=row['key']
             else:
                 document['fighter'].pop('retail_moveset',None);document['fighter']['styles']=args['styles']
             candidate=projects.validate(document)

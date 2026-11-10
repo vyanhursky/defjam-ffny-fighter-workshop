@@ -1,5 +1,31 @@
 # Progress and handoff
 
+## Performance editors — 2026-11-10
+
+Owner selected exportable projects first: Voice, original entrance/victory, source
+animation playback and AI. Project v7 shares performance across outfits and embeds
+bounded PCM16 WAV overrides; CAF v6 exports typed resources through the companion
+API. Voice presets are independent of movesets; category/event overrides and
+original/imported auditions are available. AI exposes 23 fields across three
+difficulties and four native slots, retaining untouched original values. Native
+FVA3/FIA2/FIC3 bind by CAF identity and participant so shared motion cores do not
+alias behavior. Existing Story-save fields and old contracts retain their scope.
+
+Focused project/history and compiler checks pass; disposable Qt checks verified
+real Tupac animation, play/pause/scrub, independent settings and Save. The complete
+three-outfit project compiles with all overrides, including an imported WAV. Native
+C fixtures verify two CAF identities sharing one retail core with different voice,
+AI and cinematic bindings. Original and supplied assets remain private.
+
+Playback currently supports body types18/13 and root20 with actual per-part rigs
+and skin weights. Blaze bank5:7 supported clips,110 excluded (primarily type19).
+Preview runs at explicit30 source ticks/s; camera, face/hand palettes, events and
+runtime blending are not reproduced. Full in-game and cross-platform qualification
+remains for owner joint testing; broad regressions were expressly deferred. No
+release or merge. See docs/performance-editor.md. Private evidence: logs/performance-
+desktop-result-5.txt and logs/performance-wav-export-result.txt.
+
+
 ## Retail moveset authoring — 2026-11-10
 
 Owner explicitly requested projects and direct Story-save editing. The Fighting

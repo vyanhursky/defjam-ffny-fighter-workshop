@@ -1,5 +1,12 @@
 # defjam-ffny-fighter-workshop
 
+- Owner approved voice overrides, original entrance/victory selection, source
+  animation playback and AI personality authoring on 2026-11-10. Target exportable
+  projects first and preserve Story-save workflows. Use versioned portable
+  resources and the matching runtime; never store these fields in unknown save
+  bytes. The owner deferred broad regressions until joint testing after more
+  features. Focused codec, desktop and compiler checks remain appropriate.
+
 Read PROGRESS.md and docs/specification.md first. This is a separate, local-first
 desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
 

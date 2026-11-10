@@ -35,6 +35,13 @@ visibility, pose and lighting always remain preview-only.
 
 ## In development: standalone fighters
 
+Development adds [voice, presentation, animation playback and AI editors](docs/performance-editor.md)
+for exportable projects with the matching CAF v6 runtime. Choose independent
+voice banks and WAV overrides, original entrance/victory sequences, and per-difficulty
+CPU tendencies. The viewer plays supported original body/root tracks with actual
+skin weights; unsupported codecs and preview limits are explicit. Story-save
+workflows remain available.
+
 The development source adds portable `.ffnyfighter` projects, pack metadata,
 portrait capture/import and validated CAF-to-Custom-Fighter-Mod ZIP export.
 Native 256×256 atlas import and saved retail finisher preservation are available

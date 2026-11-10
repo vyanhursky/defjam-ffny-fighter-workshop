@@ -91,7 +91,8 @@ The menu consumes provider-qualified stable keys and named source groups, not
 native row ordinals. This leaves a route for future custom Blazin' providers.
 Original native saves and CAF v2 currently encode retail references only; actual
 custom animation resources require an explicit future contract/runtime capability.
-Animation playback in the editor remains deferred.
+Source animation playback is now an approved development feature; see the
+performance milestone below for supported codecs and preview limits.
 
 ## Approved complete fighter UI artwork — 2026-11-09
 
@@ -152,3 +153,15 @@ Test actual native selection/combat on research/custom-fighter-mods using
 disposable saves. Projects exclude Story progression and currency; existing
 profile export remains available. Required runtime extensions must be explicit,
 with their actual tested source recorded. No merge, push or release is implied.
+
+## Approved performance milestone — 2026-11-10
+
+The owner selected exportable projects first for voice editing, independent
+entrance/victory sequences, real source animation playback and AI personalities.
+Preserve Story-save workflows. Project v7 shares these settings across outfits;
+the companion CAF v6 runtime owns their native resource bindings. Use original
+catalogs and event ordinals, bounded PCM16 WAV overrides, per-difficulty native
+AI slots and verified source rig/weight mapping. Unsupported playback codecs
+remain explicit exclusions. Full native/cross-platform acceptance is deferred
+for joint testing at the owner's request; focused checks are still required.
+See [Performance editor](performance-editor.md).

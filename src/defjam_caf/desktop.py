@@ -76,6 +76,17 @@ class Bridge(QObject):
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = ("open_project" if opening else "export" if action == "choose_project_copy" else "new_project"), {"path": path}
+            elif action == 'choose_performance_tools':
+                runtime = QFileDialog.getExistingDirectory(self.window, 'Select compatible Custom Fighter runtime source checkout')
+                if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                action,args='performance_connect',dict(runtime=runtime)
+            elif action == 'choose_voice_clip':
+                import base64
+                path,_=QFileDialog.getOpenFileName(self.window,'Import mono PCM16 voice clip','','WAV audio (*.wav)')
+                if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                with Path(path).open('rb') as stream:audio=stream.read(8*1024**2+1)
+                if len(audio)>8*1024**2:raise ValueError('Voice clip exceeds 8 MiB')
+                action,args='performance_clip',dict(target=args['target'],wav=base64.b64encode(audio).decode('ascii'))
             elif action == "choose_mod_export":
                 runtime = QFileDialog.getExistingDirectory(self.window, "Select Custom Fighter runtime source checkout")
                 if not runtime:

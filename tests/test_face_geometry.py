@@ -93,3 +93,19 @@ def test_profile_cannot_store_arbitrary_geometry(tmp_path):
     editor=Editor(tmp_path)
     for action in ('face_import','face_export','face_sliders','face_clear'):
         with pytest.raises(SaveError,match='standalone'):editor.request(action,{})
+
+
+def test_preview_exposes_control_basis_without_staging_or_changing_saved_sculpt(tmp_path,monkeypatch):
+    ref=reference();project=projects.from_fields(fields()[0],'Example')
+    project.update(schema=projects.SCHEMA5,face_sculpt=fg.sliders(ref,{'face_width':.3}))
+    path=tmp_path/'face.ffnyfighter';projects.write(path,project)
+    editor=Editor(tmp_path/'work');editor.open_project(path)
+    editor.appearance=SimpleNamespace(outfit=lambda _: {})
+    editor.cache=SimpleNamespace(compose=lambda _:dict(meshes=[dict(copy.deepcopy(ref['meshes'][0]),slot='2')],textures={},notices=[]))
+    monkeypatch.setattr(fg,'template',lambda *a:ref)
+    before=copy.deepcopy(editor.project_document()),path.read_bytes(),copy.deepcopy(editor.history)
+    result=editor.preview()
+    assert result['face_preview']==fg.preview_basis(ref)
+    assert result['meshes'][0]['positions']==fg.apply(dict(meshes=ref['meshes']),project['face_sculpt'])['meshes'][0]['positions']
+    assert (editor.project_document(),path.read_bytes(),editor.history)==before
+    assert len(editor._face_preview_basis)==1

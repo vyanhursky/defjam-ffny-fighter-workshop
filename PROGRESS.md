@@ -1,5 +1,22 @@
 # Progress and handoff
 
+## Immediate face slider preview — 2026-11-10
+
+Owner requested instant geometry feedback while dragging, with Apply reserved
+for staging. Unit-control deltas from the existing export generator now blend
+directly into the WebGL head each frame; no per-drag backend/texture rebuild.
+Preview stays separate from project data/history. Revert restores staged values;
+Apply stages, Save persists. Pose and scene refresh retain the preview, while
+fighter/outfit/state changes clear it. Imported-sculpt locking is explained
+beside the sliders. Pending previews cannot be captured/exported as head art.
+
+147 Python tests and 7 Node tests pass, including Python/JS deformation parity.
+Actual Qt input events updated rendered vertices on the next frame (16.7 ms
+observed), without staging or writing the project. Rapid inputs, Revert, Apply
+parity, Undo, pose/scene refresh and Save passed in an isolated project.
+Private evidence: logs/live-face-desktop.txt and live-face test workspace.
+No runtime/geometry export contract change; native pilot evidence remains valid.
+
 ## Facial authoring — 2026-11-09
 
 Isolated `feature/face-authoring` work extends the custom meshes/modpack roadmap

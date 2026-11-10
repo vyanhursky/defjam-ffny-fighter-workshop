@@ -185,3 +185,11 @@ def apply(model, value):
         if mesh['rm'] in rows:
             mesh['positions'] = [[a+b for a,b in zip(p,d)] for p,d in zip(mesh['positions'],rows[mesh['rm']])]
     return result
+
+
+def preview_basis(reference):
+    """Linear control deltas for frame-local preview; reuse the export math."""
+    targets = {key: sliders(reference, {key: 1}) for key, _ in CONTROLS}
+    return dict(meshes=[dict(rm=mesh['rm'], positions=copy.deepcopy(mesh['positions']),
+        controls={key: targets[key]['meshes'][i]['deltas'] for key, _ in CONTROLS})
+        for i, mesh in enumerate(reference['meshes'])])

@@ -53,7 +53,7 @@ jobs:
       - name: Synthetic codec, transaction and platform tests
         run: python -m pytest -q
       - name: Pose tests
-        run: node --test tests/poses.test.mjs
+        run: node --test tests/*.test.mjs
       - name: Build native package
         run: python scripts/package_desktop.py
       - name: Relocated frozen startup and authoring helper

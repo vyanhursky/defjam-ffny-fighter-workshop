@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {poseMesh} from './poses.mjs';
+import {blendFace,faceDraft as makeFaceDraft} from './face-preview.mjs';
 
 const $ = id => document.getElementById(id);
 let bridge, current=null, serial=0, busyCount=0, options=[], selectionKey=null, previewEpoch=0;
 let auditionKey=null, categoryEpoch=0, previewTimer=null, sceneData=null, atlasTextures=[];
+let faceDraft=null,faceFrame=null,faceSceneEpoch=-1;
 const pending=new Map();
 function toast(message,error=false){$('toast').textContent=message;$('toast').classList.toggle('error',error);$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,error?12000:6500);}
 function call(action,args={},label=null){
@@ -19,6 +21,8 @@ function discard(){return !current?.dirty||confirm('Discard unsaved changes to t
 function projectDetails(){const metadata={};for(const key of ['name','author','version','description','license','donor'])metadata[key]=$('project-'+key).value;return {metadata,identity:{pack:$('project-pack').value,fighter:$('project-fighter').value}};}
 function readyFighter(){return Boolean(current?.fields?.has_fighter);}
 function renderState(state){
+  faceDraft=null;if(faceFrame!==null)cancelAnimationFrame(faceFrame);faceFrame=null;
+  window.__cafFacePreview=null;
   auditionKey=null;
   current=state;window.__cafState=state;
   $('data-path').textContent=state.data||'Choose your Recomp data directory to begin';
@@ -74,13 +78,38 @@ function renderFaceSculpt(state){
   for(const row of data.controls||[]){
     const label=document.createElement('label');label.textContent=row.label;
     const slider=document.createElement('input');slider.id='sculpt-'+row.id;slider.type='range';slider.min=-1;slider.max=1;slider.step=.01;slider.value=data.sliders?.[row.id]||0;slider.disabled=!data.available||data.imported;
-    const output=document.createElement('output');output.textContent=Number(slider.value).toFixed(2);slider.oninput=()=>output.textContent=Number(slider.value).toFixed(2);
+    const output=document.createElement('output');output.textContent=Number(slider.value).toFixed(2);slider.oninput=()=>{
+      output.textContent=Number(slider.value).toFixed(2);
+      faceDraft=makeFaceDraft(data.controls,data.sliders||{},faceSliderValues());updateFacePreviewStatus();
+      if(faceFrame===null)faceFrame=requestAnimationFrame(()=>{faceFrame=null;applyFacePreview();});
+    };
     label.append(slider,output);root.append(label);
   }
   for(const id of ['apply-face-sliders','export-face','import-face','clear-face'])$(id).disabled=!data.available;
   $('apply-face-sliders').disabled=!data.available||data.imported;
   $('clear-face').disabled=!data.available||!data.present;
+  updateFacePreviewStatus();
   $('face-sculpt-status').textContent=!data.available?'Create a standalone fighter project to use face sculpting. Story CAFs use the preset controls above.':data.imported?'Imported sculpt staged in this outfit.':data.present?'Slider sculpt staged in this outfit.':'Original head presets; no sculpt.';
+}
+function faceSliderValues(){return Object.fromEntries((current?.face_sculpt?.controls||[]).map(({id})=>[id,Number($('sculpt-'+id).value)]));}
+function updateFacePreviewStatus(){
+  const data=current?.face_sculpt||{};
+  $('revert-face-preview').disabled=!faceDraft;
+  $('export-face').disabled=!data.available||Boolean(faceDraft);
+  $('face-preview-status').textContent=!data.available?'Create a standalone project to preview face proportions.':data.imported?'Imported sculpt: clear it under Expert to enable sliders.':faceDraft?'Preview only · Apply face proportions adds these changes to Pending Changes.':'Drag a slider to preview immediately. Apply adds the preview to Pending Changes; Save project writes it.';
+}
+function applyFacePreview(repose=true){
+  if(!sceneData?.face_preview||faceSceneEpoch!==previewEpoch)return;
+  const values=faceDraft||current?.face_sculpt?.sliders||{};
+  const rows=new Map(sceneData.face_preview.meshes.map(row=>[row.rm,row]));
+  const head=model.children.filter(mesh=>String(mesh.userData.source.slot)==='2');
+  for(const mesh of head){const row=rows.get(mesh.userData.source.rm);if(row)mesh.userData.source.positions=blendFace(row,values);}
+  if(repose)applyPose(head);
+  window.__cafFacePreview={values:{...values},temporary:Boolean(faceDraft),head:head.map(mesh=>({rm:mesh.userData.source.rm,positions:Array.from(mesh.geometry.getAttribute('position').array)}))};
+}
+function revertFacePreview(){
+  faceDraft=null;if(faceFrame!==null)cancelAnimationFrame(faceFrame);faceFrame=null;
+  renderFaceSculpt(current);applyFacePreview();
 }
 function renderFacePresets(state){
   renderFaceSculpt(state);
@@ -153,13 +182,13 @@ async function renderScene(data,keepCamera,epoch){
   await Promise.all(Object.entries(data.textures).map(async([name,url])=>{const tex=await loader.loadAsync(url);tex.colorSpace=THREE.SRGBColorSpace;tex.flipY=false;tex.wrapS=tex.wrapT=THREE.ClampToEdgeWrapping;tex.magFilter=THREE.LinearFilter;tex.minFilter=THREE.LinearMipmapLinearFilter;tex.anisotropy=renderer.capabilities.getMaxAnisotropy();textures[name]=tex;}));
   if(epoch!==previewEpoch){for(const texture of Object.values(textures))texture.dispose();return false;}
   dispose();
-  atlasTextures=Object.values(textures);sceneData=data;
+  atlasTextures=Object.values(textures);sceneData=data;faceSceneEpoch=epoch;
   for(const part of data.meshes){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(part.positions.flat(),3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(part.normals.flat(),3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(part.uv.flat(),2));geometry.setIndex(part.indices);const material=materialFor(textures[part.atlas],part.transparent);const mesh=new THREE.Mesh(geometry,material);mesh.userData={atlas:part.atlas,transparent:part.transparent,source:part};model.add(mesh);}
-  bounds=data.bounds;applyPose();if(!keepCamera)frame();$('empty').hidden=true;$('empty').style.display='none';window.__cafPreview={meshes:data.meshes.length,bounds:data.bounds,ready:true,part:auditionKey,hideClothes:$('no-clothes').checked};updateViewState();return true;
+  bounds=data.bounds;applyFacePreview(false);applyPose();if(!keepCamera)frame();$('empty').hidden=true;$('empty').style.display='none';window.__cafPreview={meshes:data.meshes.length,bounds:data.bounds,ready:true,part:auditionKey,hideClothes:$('no-clothes').checked};updateViewState();return true;
 }
 function materialFor(texture,transparent){const config={map:texture,transparent:Boolean(transparent),side:THREE.FrontSide};return $('lighting').value!=='flat'?new THREE.MeshStandardMaterial({...config,roughness:.85,metalness:0}):new THREE.MeshBasicMaterial(config);}
 function updateViewState(){const box=new THREE.Box3().setFromObject(model);window.__cafView={pose:$('pose').value,lighting:$('lighting').value,hideClothes:$('no-clothes').checked,materials:[...new Set(model.children.map(m=>m.material.type))],bounds:box.isEmpty()?null:[box.min.toArray(),box.max.toArray()]};$('preview-note').textContent=[$('pose').value==='tpose'?'Source T-pose':'Approximate preview pose · retail shop animation is not decoded',...(sceneData?.notices||[])].join(' · ');}
-function applyPose(){if(!sceneData)return;for(const mesh of model.children){const posed=poseMesh(mesh.userData.source,$('pose').value,sceneData.arm_pivots);mesh.geometry.setAttribute('position',new THREE.Float32BufferAttribute(posed.positions.flat(),3));mesh.geometry.setAttribute('normal',new THREE.Float32BufferAttribute(posed.normals.flat(),3));mesh.geometry.computeBoundingBox();mesh.geometry.computeBoundingSphere();}updateViewState();}
+function applyPose(meshes=model.children){if(!sceneData)return;for(const mesh of meshes){const posed=poseMesh(mesh.userData.source,$('pose').value,sceneData.arm_pivots);mesh.geometry.setAttribute('position',new THREE.Float32BufferAttribute(posed.positions.flat(),3));mesh.geometry.setAttribute('normal',new THREE.Float32BufferAttribute(posed.normals.flat(),3));mesh.geometry.computeBoundingBox();mesh.geometry.computeBoundingSphere();}updateViewState();}
 function applyLighting(){
   const name=$('lighting').value,settings={studio:[0xe5edd6,0x3c4538,0xffedcc,0xaac7b7,2.1,3.5,2.5,1.2],warm:[0xffe5bf,0x423126,0xffcf9a,0xffbb77,1.8,3,1.5,1.05],cool:[0xc7e4ff,0x242c44,0xb5d5ff,0xa288ff,1.2,3.4,3.5,1.15],flat:[0xffffff,0x000000,0xffffff,0xffffff,0,0,0,1]}[name];
   fill.color.setHex(settings[0]);fill.groundColor.setHex(settings[1]);key.color.setHex(settings[2]);rim.color.setHex(settings[3]);fill.intensity=settings[4];key.intensity=settings[5];rim.intensity=settings[6];renderer.toneMappingExposure=settings[7];renderer.toneMapping=name==='flat'?THREE.NoToneMapping:THREE.ACESFilmicToneMapping;
@@ -214,7 +243,7 @@ $('duplicate').onclick=()=>act('choose_duplicate',{},'Duplicating profile…');
 $('save').onclick=()=>{if(current.project){act('save',{},'Saving fighter project…');return;}if(confirm('Save these changes to '+current.selected+'?\n\n'+current.changes.join('\n')+'\n\nA backup will be created first. Close the game before saving.'))act('save',{},'Saving profile and backup…');};
 $('open-project').onclick=()=>{if(discard())act('choose_project',{},'Opening fighter project…');};
 $('new-project').onclick=()=>act('choose_new_project',{},'Creating standalone fighter project…');
-$('capture-portrait').onclick=()=>{if(!window.__cafPreview?.ready||auditionKey||$('no-clothes').checked){fail(new Error('Finish or cancel try-on and show the full outfit before capturing its portrait.'));return;}const size=renderer.getSize(new THREE.Vector2()),ratio=renderer.getPixelRatio(),scale=Math.min(1,1024/Math.max(size.x,size.y));renderer.setPixelRatio(1);renderer.setSize(Math.round(size.x*scale),Math.round(size.y*scale),false);renderer.render(scene,camera);const png=renderer.domElement.toDataURL('image/png');renderer.setPixelRatio(ratio);renderer.setSize(size.x,size.y,false);renderer.render(scene,camera);act('project_portrait',{png});};
+$('capture-portrait').onclick=()=>{if(faceDraft){fail(new Error('Apply or revert the face preview before capturing its portrait.'));return;}if(!window.__cafPreview?.ready||auditionKey||$('no-clothes').checked){fail(new Error('Finish or cancel try-on and show the full outfit before capturing its portrait.'));return;}const size=renderer.getSize(new THREE.Vector2()),ratio=renderer.getPixelRatio(),scale=Math.min(1,1024/Math.max(size.x,size.y));renderer.setPixelRatio(1);renderer.setSize(Math.round(size.x*scale),Math.round(size.y*scale),false);renderer.render(scene,camera);const png=renderer.domElement.toDataURL('image/png');renderer.setPixelRatio(ratio);renderer.setSize(size.x,size.y,false);renderer.render(scene,camera);act('project_portrait',{png});};
 $('import-portrait').onclick=()=>act('choose_project_portrait',{},'Importing portrait PNG…');
 $('import-atlas').onclick=()=>act('choose_project_atlas',{slot:$('atlas-slot').value},'Importing texture atlas…');
 $('clear-atlases').onclick=()=>act('project_atlas_clear',{},'Clearing imported atlases…');
@@ -229,7 +258,8 @@ $('export-mod').onclick=()=>act('choose_mod_export',{},'Validating and exporting
 $('export-face').onclick=()=>act('choose_face_export',{},'Exporting head template…');
   $('import-face').onclick=()=>act('choose_face_import',{},'Validating head sculpt…');
   $('clear-face').onclick=()=>act('face_clear');
-  $('apply-face-sliders').onclick=()=>{const values={};for(const row of current.face_sculpt.controls)values[row.id]=Number($('sculpt-'+row.id).value);act('face_sliders',{values},'Updating face proportions…');};
+  $('apply-face-sliders').onclick=()=>act('face_sliders',{values:faceSliderValues()},'Staging face proportions…');
+  $('revert-face-preview').onclick=revertFacePreview;
   $('undo').onclick=()=>act('undo');$('reset').onclick=()=>{if(confirm('Reset all unsaved fighter changes?'))act('reset');};
 $('build').onchange=()=>act('appearance',{changes:{build:$('build').value}});
 $('skin').onchange=()=>act('appearance',{changes:{skin:Number($('skin').value)}});
@@ -241,7 +271,7 @@ $('apply-styles').onclick=()=>{const styles=[0,1,2].map(i=>Number($(`style-${i}`
 $('apply-blazin').onclick=()=>{const moves=[0,1,2,3].map(i=>$(`blazin-${i}`).value);if(moves.some(key=>!key)){fail(new Error('Choose a move for all four Blazin’ slots.'));return;}act('blazin',{moves});};
 $('inherit-blazin').onclick=()=>act('blazin_inherit');
 for(const id of ['front','back','face','fit'])$(id).onclick=()=>frame(id);
-$('pose').onchange=applyPose;$('lighting').onchange=applyLighting;$('no-clothes').onchange=()=>{queuePreview(0);updateViewState();};
+$('pose').onchange=()=>applyPose();$('lighting').onchange=applyLighting;$('no-clothes').onchange=()=>{queuePreview(0);updateViewState();};
 applyLighting();
 
 new QWebChannel(qt.webChannelTransport,channel=>{

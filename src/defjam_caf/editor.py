@@ -34,6 +34,7 @@ class Editor:
         self.blazin = None
         self.blazin_error = "Load original game assets to choose Blazin' moves."
         self.preview_error = None
+        self._face_preview_basis = {}
         self.project = self.project_path = self.project_hash = None
         self.portrait_edit = None
         self.metadata_edit = None
@@ -343,6 +344,17 @@ class Editor:
                 fields["caf_colors"][slot] = 0
         result = self.cache.compose(self.appearance.outfit(fields))
         sculpt = (self.active_view() or {}).get('face_sculpt')
+        if self.project is not None and (not sculpt or sculpt['sliders']) and any(
+                str(mesh.get('slot')) == '2' for mesh in result.get('meshes', [])):
+            from . import face_geometry
+            reference = face_geometry.template(self.cache, self.appearance, fields)
+            key = reference['sha256']
+            if key not in self._face_preview_basis:
+                # Bounded across outfit/preset changes in a long authoring session.
+                if len(self._face_preview_basis) >= 8:
+                    self._face_preview_basis.clear()
+                self._face_preview_basis[key] = face_geometry.preview_basis(reference)
+            result['face_preview'] = self._face_preview_basis[key]
         if sculpt:
             from . import face_geometry
             reference = face_geometry.template(self.cache, self.appearance, fields)

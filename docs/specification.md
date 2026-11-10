@@ -51,6 +51,18 @@ the referenced viewer are not required, but faithful loading of existing faces i
    styles, duplicated identity and Story progress. Hash originals before/after.
 6. Owner testing and native Windows/macOS/Linux packaged-app acceptance.
 
+## Approved retail fighter movesets — 2026-11-10
+
+The owner requested an alternative to CAF style combinations: select a named
+retail fighter's complete moveset for a project or directly edited Story CAF.
+This explicitly extends the original beta profile-only scope with companion
+runtime support. Derive choices and stable symbols from the player's original
+database, deduplicating costumes that share a motion core. Preserve the CAF's
+appearance, training, career bytes and separately editable Blazin' assignments.
+Keep its CAF combination available when switching back. Project v6 and CAF v5
+declare the selection explicitly; earlier formats retain their interpretation.
+See [Retail movesets](retail-movesets.md).
+
 ## Roadmap (deferred)
 
 Granular movesets, animation player, custom meshes/textures, custom animations,

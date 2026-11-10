@@ -9,7 +9,7 @@ import tempfile
 import zipfile
 
 from .container import SaveError
-from .projects import validate, portrait_bytes, atlas_bytes, require, SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5
+from .projects import validate, portrait_bytes, atlas_bytes, require, SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5, SCHEMA6
 
 
 def run_contract(runtime, output, arguments):
@@ -109,7 +109,7 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         default_atlases = write_atlases(views[0][1], "atlases")
         if default_atlases:
             fighter["atlases"] = default_atlases
-        if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5):
+        if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6):
             fighter["outfit_name"] = project.get("outfit_name", "Outfit 1")
             fighter["outfits"] = []
             for row, view in views[1:]:
@@ -124,14 +124,14 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
                 fighter["outfits"].append(entry)
         recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
         (root / "fighter.json").write_bytes(recipe)
-        capability = "caf-fighter-4" if face_cache is not None else "caf-fighter-3" if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5) else "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
+        capability = "caf-fighter-5" if 'retail_moveset' in fighter else "caf-fighter-4" if face_cache is not None else "caf-fighter-3" if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6) else "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
         manifest = {"schema": "fighter-registry-draft-1", "id": pack_id, "version": meta["version"],
                     "requires": {}, "resources": [{"id": "caf", "kind": "caf", "compatibility": {},
                     "source": {"format": capability, "selection": {"path": "fighter.json", "sha256": hashlib.sha256(recipe).hexdigest()}}}],
                     "fighters": [{"id": fighter_id, "name": meta["name"], "inherits": meta["donor"],
                                   "components": {"caf": pack_id + "/caf"}}], "overrides": []}
         for row, view in views:
-            role_art=project['schema'] in (SCHEMA4,SCHEMA5) and any('ui_art' in node for node in [project,*project.get('outfits',[])])
+            role_art=project['schema'] in (SCHEMA4,SCHEMA5,SCHEMA6) and any('ui_art' in node for node in [project,*project.get('outfits',[])])
             if "portrait" not in view and not role_art:
                 continue
             is_default = row["id"] == outfits.DEFAULT
@@ -168,7 +168,7 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
             manifest["resources"].append({"id": portrait_id, "kind": "portrait", "compatibility": {}, "source": source})
             if is_default:
                 manifest["fighters"][0]["components"]["portrait"] = pack_id + "/" + portrait_id
-            if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5):
+            if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6):
                 fighter.setdefault("portraits", {})[row["id"]] = pack_id + "/" + portrait_id
         # Outfit portrait references are part of the hash-bound CAF recipe.
         recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
@@ -181,10 +181,12 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         extras_note = ("Atlas and finisher overrides require the runtime's hash-checked fighter-caf-extras.bin support.\n"
                        "Declared native atlases replace RGB only; original material alpha is retained.\n"
                        "Saved finisher identities resolve against the player's original database.\n") if capability != "caf-fighter-1" else ""
-        if capability in ("caf-fighter-3", "caf-fighter-4"):
+        if capability in ("caf-fighter-3", "caf-fighter-4", "caf-fighter-5"):
             extras_note += "One roster entry exposes up to three outfits through the native clothing selector.\nCombat settings are shared; appearance, atlases and portraits are outfit-specific.\n"
-        if capability == 'caf-fighter-4':
+        if face_cache is not None:
             extras_note += 'Experimental template sculpt: bounded head positions only; original rig, UVs and normals retained. Native startup verifies the assembled head before applying it.\n'
+        if capability == 'caf-fighter-5':
+            extras_note += 'Retail moveset: '+fighter['retail_moveset']+'. Appearance and training remain authored by this CAF recipe.\n'
         (root / "README.md").write_text(f"# {meta['name']}\n\n{meta['description']}\n\nAuthor: {meta['author'] or 'Unspecified'}\nVersion: {meta['version']}\n\nRequires Custom Fighter runtime with {capability} support.\n{extras_note}CAF appearance, training stats and retail style combination come from fighter.json.\nVoice, AI and inherited presentation use {meta['donor']}.\n{portrait_note}\nNo Story save or currency is included. The player's own game files supply the CAF parts.\n", encoding="utf-8")
         (root / "LICENSE.txt").write_text(meta["license"] or "No additional license granted. Original game assets are supplied locally by the player.\n", encoding="utf-8")
         progress("Validating the complete fighter pack against your game files…")

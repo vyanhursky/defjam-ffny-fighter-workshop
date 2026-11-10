@@ -42,10 +42,13 @@ def replace_view(document, identity, selected):
     result["fighter"].pop("finishers", None)
     if "finishers" in selected["fighter"]:
         result["fighter"]["finishers"] = selected["fighter"]["finishers"][:]
+    result['fighter'].pop('retail_moveset',None)
+    if 'retail_moveset' in selected['fighter']:
+        result['fighter']['retail_moveset']=selected['fighter']['retail_moveset']
     if identity == DEFAULT:
         target = result["fighter"]
         assets = result
-        if result["schema"] not in (projects.SCHEMA3,projects.SCHEMA4,projects.SCHEMA5):
+        if result["schema"] not in (projects.SCHEMA3,projects.SCHEMA4,projects.SCHEMA5,projects.SCHEMA6):
             result["schema"] = selected["schema"]
     else:
         target = next((row for row in result.get("outfits", []) if row["id"] == identity), None)
@@ -57,14 +60,14 @@ def replace_view(document, identity, selected):
         assets.pop(key, None)
         if key in selected:
             assets[key] = copy.deepcopy(selected[key])
-    if selected['schema'] == projects.SCHEMA5:
-        result['schema'] = projects.SCHEMA5
+    if selected['schema'] in (projects.SCHEMA5,projects.SCHEMA6):
+        if result['schema']!=projects.SCHEMA6:result['schema'] = selected['schema']
     return result
 
 
 def upgrade(document):
     result = copy.deepcopy(document)
-    result["schema"] = document['schema'] if document['schema'] in (projects.SCHEMA4,projects.SCHEMA5) else projects.SCHEMA3
+    result["schema"] = document['schema'] if document['schema'] in (projects.SCHEMA4,projects.SCHEMA5,projects.SCHEMA6) else projects.SCHEMA3
     result.setdefault("outfit_name", "Outfit 1")
     result.setdefault("outfits", [])
     return result

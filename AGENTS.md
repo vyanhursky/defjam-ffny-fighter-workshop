@@ -78,3 +78,10 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   versioned projects and the companion runtime, never unknown Story save bytes.
   Preserve topology/UV/rig contracts and report native qualification limits.
   Source-only roadmap feature PRs remain authorized.
+
+- Owner approved retail fighter movesets on 2026-11-10 for projects and direct
+  Story-save editing, explicitly including companion runtime compatibility.
+  Keep the CAF's appearance, career/training and four Blazin' assignments;
+  select complete original motion cores by stable retail identity. Preserve
+  the original CAF combination and old formats. Document native qualification
+  separately from editor/codec tests; no release or merge is authorized.

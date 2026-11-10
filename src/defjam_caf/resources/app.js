@@ -70,8 +70,24 @@ function renderState(state){
   renderBlazin(state);
   renderUIArt(state);
   renderFacePresets(state);
+  renderMovesets(state);
   loadCategory().catch(fail);
   queuePreview(0);
+}
+function renderMovesets(state){
+  const data=state.retail_movesets||{};
+  makeOptions($('retail-moveset'),(data.options||[]).map(row=>({value:row.key,label:row.label})),data.selected||data.options?.[0]?.key);
+  $('moveset-mode').value=data.selected?'retail':'caf';
+  $('moveset-status').textContent=data.error||'Retail names identify the full original moveset, including fighter-specific attacks.';
+  updateMovesetMode();
+}
+function updateMovesetMode(){
+  const retail=$('moveset-mode').value==='retail';
+  $('caf-style-controls').hidden=retail;$('retail-style-controls').hidden=!retail;
+  $('apply-styles').disabled=!readyFighter()||(retail&&!current?.retail_movesets?.options?.length);
+  if(retail)$('moveset-status').textContent='Retail movesets require the companion CAF v5 runtime. Story career styles and training are preserved.';
+  const row=current?.retail_movesets?.options.find(row=>row.key===$('retail-moveset').value);
+  $('moveset').textContent=retail?(row?row.label+' · retail moveset':'Unavailable original moveset'):current?.fields?.styles.map(i=>current.style_names[i]).join(' + ')||'No fighting style assigned.';
 }
 function renderFaceSculpt(state){
   const data=state.face_sculpt||{},root=$('face-sliders');root.replaceChildren();
@@ -267,7 +283,8 @@ $('category').onchange=()=>{auditionKey=null;$('search').value='';loadCategory()
 $('garment').onchange=()=>{renderColors();tryOn();};$('color').onchange=()=>{renderFittings();tryOn();};$('fitting').onchange=tryOn;
 $('equip').onclick=()=>{const selected=garmentOptions().find(o=>o.color_name===$('color').value&&o.fitting===$('fitting').value);if(selected)act('appearance',{changes:{part:selected.key}});};
 for(const id of ['cash','development'])$(id).onchange=()=>{const value=Number($(id).value);if(!Number.isInteger(value)||value<0||value>current.limits[id]){fail(new Error(`${id} must be between 0 and ${current.limits[id].toLocaleString()}.`));return;}act('stage',{edits:{[id]:value}});};
-$('apply-styles').onclick=()=>{const styles=[0,1,2].map(i=>Number($(`style-${i}`).value));if(styles[1]===-1&&styles[2]!==-1){fail(new Error('Choose a second style before adding a third.'));return;}act('stage',{edits:{styles:styles.filter(s=>s!==-1)}});};
+  $('moveset-mode').onchange=updateMovesetMode;$('retail-moveset').onchange=updateMovesetMode;
+  $('apply-styles').onclick=()=>{if($('moveset-mode').value==='retail'){act('fighting_style',{mode:'retail',fighter:$('retail-moveset').value});return;}const styles=[0,1,2].map(i=>Number($(`style-${i}`).value));if(styles[1]===-1&&styles[2]!==-1){fail(new Error('Choose a second style before adding a third.'));return;}act('fighting_style',{mode:'caf',styles:styles.filter(s=>s!==-1)});};
 $('apply-blazin').onclick=()=>{const moves=[0,1,2,3].map(i=>$(`blazin-${i}`).value);if(moves.some(key=>!key)){fail(new Error('Choose a move for all four Blazin’ slots.'));return;}act('blazin',{moves});};
 $('inherit-blazin').onclick=()=>act('blazin_inherit');
 for(const id of ['front','back','face','fit'])$(id).onclick=()=>frame(id);

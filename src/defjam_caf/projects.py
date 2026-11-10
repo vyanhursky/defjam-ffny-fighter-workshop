@@ -19,6 +19,7 @@ SCHEMA2 = "ffny-fighter-project-2"
 SCHEMA3 = "ffny-fighter-project-3"
 SCHEMA4 = "ffny-fighter-project-4"
 SCHEMA5 = "ffny-fighter-project-5"
+SCHEMA6 = "ffny-fighter-project-6"
 MAX_PROJECT = 96 * 1024 * 1024
 ATLAS_SLOTS = ("a", "b", "c", "d", "d1", "d2")
 FIGHTER_FIELDS = ("stats", "styles", "caf_values", "caf_colors")
@@ -43,10 +44,11 @@ def validate(document):
     require(type(document) is dict and {"schema", "identity", "metadata", "fighter"} <= set(document)
             and set(document) <= {"schema", "identity", "metadata", "fighter", "portrait", "textures", "outfit_name", "outfits", "ui_art", "face_sculpt"},
             "Unsupported fighter project fields")
-    require(document["schema"] in (SCHEMA, SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5), "Unsupported fighter project version")
-    version5 = document['schema']==SCHEMA5
-    version4 = document['schema'] in (SCHEMA4, SCHEMA5)
-    version2 = document["schema"] in (SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5)
+    require(document["schema"] in (SCHEMA, SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5, SCHEMA6), "Unsupported fighter project version")
+    version6 = document['schema']==SCHEMA6
+    version5 = document['schema'] in (SCHEMA5, SCHEMA6)
+    version4 = document['schema'] in (SCHEMA4, SCHEMA5, SCHEMA6)
+    version2 = document["schema"] in (SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5, SCHEMA6)
     version3 = document["schema"] == SCHEMA3 or version4 and bool({'outfits','outfit_name'}&set(document))
     require(version4 or 'ui_art' not in document,'Role-specific UI artwork requires project version 4')
     require(version5 or 'face_sculpt' not in document, 'Face sculpts require project version 5')
@@ -70,8 +72,11 @@ def validate(document):
     require(VERSION.fullmatch(metadata["version"]), "Pack version must be major.minor.patch")
     require(re.fullmatch(r"retail/[a-z0-9]+(?:-[a-z0-9]+)*", metadata["donor"]), "Choose a retail presentation donor")
     require(type(fighter) is dict and set(FIGHTER_FIELDS) <= set(fighter)
-            and set(fighter) <= set(FIGHTER_FIELDS) | ({"finishers"} if version2 else set()),
+            and set(fighter) <= set(FIGHTER_FIELDS) | ({"finishers"} if version2 else set()) | ({'retail_moveset'} if version6 else set()),
             "Projects contain fighter fields only")
+    if 'retail_moveset' in fighter:
+        require(type(fighter['retail_moveset']) is str and re.fullmatch(r'retail/[a-z0-9]+(?:-[a-z0-9]+)*',fighter['retail_moveset']),
+                'Choose an original fighter moveset by stable identity')
     require(type(fighter["stats"]) is dict and set(fighter["stats"]) == set(STAT_KEYS), "Project needs all five training stats")
     require(type(fighter["styles"]) is list, "Project styles must be a list")
     combine_styles(fighter["styles"])
@@ -143,7 +148,7 @@ def with_atlas(document, slot, raw):
     result = copy.deepcopy(validate(document))
     value = base64.b64encode(raw).decode("ascii")
     atlas_bytes(value)
-    if result["schema"] not in (SCHEMA3,SCHEMA4,SCHEMA5):
+    if result["schema"] not in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6):
         result["schema"] = SCHEMA2
     textures = result.setdefault("textures", {"appearance_sha256": appearance_hash(result["fighter"]), "atlases": {}})
     textures["atlases"][slot] = value
@@ -173,7 +178,7 @@ def empty_container():
     return Container(bytes(64), bytes(payload))
 
 
-def from_fields(fields, name, metadata=None):
+def from_fields(fields, name, metadata=None, moveset_key=None):
     require(fields.get("has_fighter"), "Create a Story fighter in the game before making a project")
     token = uuid.uuid4().hex[:12]
     document = {"schema": SCHEMA, "identity": {"pack": "fighter-" + token, "fighter": "fighter"},
@@ -182,12 +187,22 @@ def from_fields(fields, name, metadata=None):
                 "fighter": {k: copy.deepcopy(fields[k]) for k in ("stats", "styles", "caf_values", "caf_colors")}}
     if metadata:
         document["metadata"].update(metadata)
+    if 1<=fields.get('combined_style',0)<=86:
+        require(moveset_key is not None,'Load original fighter assets to preserve this retail moveset')
+        document['schema']=SCHEMA6;document['fighter']['retail_moveset']=moveset_key
     return validate(document)
 
 
 def from_profile(payload, name, database=None):
     """Convert fighter fields while resolving saved retail finisher identities."""
-    document = from_fields(read_fields(payload), name)
+    fields=read_fields(payload);key=None
+    if 1<=fields['combined_style']<=86:
+        require(database is not None,'Load original fighter assets to preserve this retail moveset')
+        from .movesets import Catalog
+        row=Catalog(database).by_core.get(fields['combined_style'])
+        require(row is not None,'Saved retail moveset is unavailable in the original catalog')
+        key=row['key']
+    document = from_fields(fields, name, moveset_key=key)
     values = struct.unpack_from("<4I", payload, 0x120)
     if values == (0xFFFFFFFF,) * 4:
         return document
@@ -204,7 +219,7 @@ def from_profile(payload, name, database=None):
             identities.append(f"{identity:08x}")
     except (ValueError, KeyError, IndexError, struct.error) as exc:
         raise SaveError("Unsupported saved finisher assignment: " + str(exc)) from exc
-    document["schema"] = SCHEMA2
+    if document['schema']!=SCHEMA6:document["schema"] = SCHEMA2
     document["fighter"]["finishers"] = identities
     return validate(document)
 

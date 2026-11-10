@@ -1,5 +1,33 @@
 # Progress and handoff
 
+## Retail moveset authoring — 2026-11-10
+
+Owner explicitly requested projects and direct Story-save editing. The Fighting
+style tab now switches between CAF combinations and 69 distinct original retail
+motion cores, derived from the player's database and identified by stable retail
+symbols. Project v6 shares the selection across outfits and retains CAF styles;
+CAF v5 exports retain outfits, atlas overrides, UI art, sculpts and finishers.
+Direct profile edits change only payload 0x137, preserving career/progression,
+component styles, bonuses and separately edited four-slot Blazin' choices.
+
+163 Python tests and 7 Node tests pass. Actual Qt selection, Undo, backup/save,
+reopen and profile-to-project conversion passed against a copied VY3 profile
+(logs/retail-style-desktop-qualified.txt). A complete three-outfit Tupac export
+with original art, atlases, finisher identities, sculpt and Blaze motion core
+passed the companion compiler (logs/retail-complete-export.txt). Earlier native
+standalone Blaze/D-Mob test started a match with cores5/51 and logical104/105.
+Direct-profile D-Mob native acceptance now passes in the matching runtime:
+run-20261110-084737.log.err reached combat with actorcore50, original VY3 CAF
+model,201.6 health, speech538 and four saved choices77/49/49/49; damage events
+followed.77 presentation intervals, median120/2s, no crash/watchdog/unresolved
+call; copied saves restored identically. The game separates CAF presentation
+identity from live retail motion after initialization; initial failed intro runs
+remain negative evidence.58 focused runtime tests pass and the final cleanup
+guard builds. Owner deferred broad regressions on2026-11-10 until joint testing
+after more features. Direct-profile Blaze, career fights, rematches and broader
+retail/multi-profile checks remain for that session. Matching experimental
+CAF v5 runtime required; packaged Beta1 unchanged.
+
 ## Persistent imported artwork — 2026-11-10
 
 Owner reported imported 2Pac tattoos reverting to original game artwork after

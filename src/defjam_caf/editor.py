@@ -33,6 +33,8 @@ class Editor:
         self.appearance = None
         self.blazin = None
         self.blazin_error = "Load original game assets to choose Blazin' moves."
+        self.movesets = None
+        self.moveset_error = 'Load original game assets to choose a retail moveset.'
         self.preview_error = None
         self._face_preview_basis = {}
         self.project = self.project_path = self.project_hash = None
@@ -132,6 +134,8 @@ class Editor:
         result = discover(data)
         self.data, self.discovery = data, result
         self.cache = self.appearance = None
+        self.movesets = None
+        self.moveset_error = 'Load original game assets to choose a retail moveset.'
         self.blazin = None
         self.blazin_error = "Load original game assets to choose Blazin' moves."
         self.preview_error = None
@@ -149,6 +153,12 @@ class Editor:
                 self.blazin_error = None
             except (OSError, ValueError, KeyError, SaveError) as exc:
                 self.blazin_error = "Blazin' catalog could not be loaded: " + str(exc)
+            try:
+                from .movesets import Catalog
+                self.movesets = Catalog(self.cache.db if self.cache else Database(data / 'extracted'))
+                self.moveset_error = None
+            except (OSError,ValueError,KeyError,SaveError) as exc:
+                self.moveset_error = 'Retail moveset catalog could not be loaded: ' + str(exc)
         candidates = [p for p in result.profiles if read_fields(p.container.payload)["has_fighter"]]
         chosen = max(candidates or result.profiles, key=lambda p: p.path.stat().st_mtime, default=None)
         if self.project is not None:
@@ -185,6 +195,9 @@ class Editor:
         return [None] * 4
 
     def stage(self, changes):
+        if 'moveset_core' in changes:
+            if self.project is not None or not self.movesets or changes['moveset_core'] not in self.movesets.by_core:
+                raise SaveError('Choose a retail moveset through the loaded catalog')
         if self.project is not None and set(changes) & {"cash", "development"}:
             raise SaveError("Fighter projects have no Story currency")
         if not read_fields(self.current().payload)["has_fighter"]:
@@ -199,6 +212,8 @@ class Editor:
             if changes["finishers"] is not None:
                 self.blazin.select(blazin.project_keys(changes["finishers"]))
         combined = copy.deepcopy(self.edits)
+        if 'styles' in changes:
+            combined.pop('moveset_core', None)
         if "stats" in changes:
             combined["stats"] = dict(combined.get("stats", {}), **changes["stats"])
         combined.update({k: v for k, v in changes.items() if k != "stats"})
@@ -227,7 +242,7 @@ class Editor:
     def changes(self):
         if self.profile is None and self.project is None:
             return []
-        if self.project is not None and (self.outfit_draft is not None or self.project["schema"] in (projects.SCHEMA3,projects.SCHEMA4,projects.SCHEMA5)):
+        if self.project is not None and (self.outfit_draft is not None or self.project["schema"] in (projects.SCHEMA3,projects.SCHEMA4,projects.SCHEMA5,projects.SCHEMA6)):
             return self.outfit_changes()
         before, after = read_fields(self.base().payload), read_fields(self.current().payload)
         result = []
@@ -246,6 +261,9 @@ class Editor:
         if before["styles"] != after["styles"]:
             result.append("Fighting styles: " + ", ".join(STYLE_NAMES[i] for i in after["styles"]))
         before_moves = self.blazin_keys({})
+        if before['combined_style']!=after['combined_style']:
+            core=after['combined_style'];row=self.movesets.by_core.get(core) if self.movesets else None
+            result.append('Moveset: '+(row['label'] if row else 'CAF combination'))
         for slot, (old, new) in enumerate(zip(before_moves, self.blazin_keys())):
             if old != new:
                 result.append(f"Blazin' slot {slot + 1}: " + (self.blazin.label(new) if self.blazin else str(new)))
@@ -262,7 +280,7 @@ class Editor:
         result = []
         if any(before[k] != after[k] for k in ("identity", "metadata")):
             result.append("Project details changed")
-        for key, label in (("stats", "Training stats"), ("styles", "Fighting styles"), ("finishers", "Blazin' assignments")):
+        for key, label in (("stats", "Training stats"), ("styles", "Fighting styles"), ("finishers", "Blazin' assignments"), ('retail_moveset','Moveset selection')):
             if before["fighter"].get(key) != after["fighter"].get(key):
                 result.append(label + " changed (all outfits)")
         old, new = ({row["id"]: row["name"] for row in outfits.entries(doc)} for doc in (before, after))
@@ -315,6 +333,11 @@ class Editor:
         result["atlas_slots"] = sorted(textures.get("atlases", {}))
         result["blazin"] = dict(options=self.blazin.options if self.blazin else [], selected=self.blazin_keys(),
                                 error=self.blazin_error)
+        key=(active or {}).get('fighter',{}).get('retail_moveset')
+        if not self.project and self.profile and self.movesets:
+            row=self.movesets.by_core.get(read_fields(self.current().payload)['combined_style'])
+            key=row['key'] if row else None
+        result['retail_movesets']=dict(options=self.movesets.options if self.movesets else [],selected=key,error=self.moveset_error)
         if self.discovery:
             result["profiles"] = [dict(name=p.name, has_fighter=read_fields(p.container.payload)["has_fighter"],
                                        legacy=p.directory_kind == "legacy") for p in self.discovery.profiles]
@@ -388,6 +411,25 @@ class Editor:
         return result
 
     def request(self, action, args):
+        if action == 'fighting_style':
+            mode=args.get('mode')
+            if mode not in ('caf','retail'):raise SaveError('Choose CAF combination or Retail fighter moveset')
+            row=None
+            if mode=='retail':
+                if not self.movesets:raise SaveError(self.moveset_error)
+                row=self.movesets.select(args.get('fighter'))
+            if self.project is None:
+                if row:return self.stage({'moveset_core':row['core']})
+                return self.stage({'styles':args['styles']})
+            document=self.project_document()
+            if row:
+                document['schema']=projects.SCHEMA6;document['fighter']['retail_moveset']=row['key']
+            else:
+                document['fighter'].pop('retail_moveset',None);document['fighter']['styles']=args['styles']
+            candidate=projects.validate(document)
+            self.remember();self.outfit_draft=candidate;self.edits={}
+            self.portrait_edit=self.texture_edit=self.metadata_edit=None
+            return self.snapshot()
         if action in ('face_export', 'face_import', 'face_sliders', 'face_clear'):
             from . import face_geometry
             if self.project is None:

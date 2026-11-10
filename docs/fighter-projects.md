@@ -59,6 +59,7 @@ the export contains no Story profile or compiled game executable. Portraits
 are converted through locally verified original UI templates. 
 
 Voice, AI and unmodified presentation inherit the selected retail donor.
+Project v7 can override these independently in the [performance editor](performance-editor.md).
 Individual move authoring, custom clothing/model import and animation
 playback are later milestones. Native atlas import is described below. CAF export currently rejects unsupported
 appearance encodings and combinations with sourced non-portrait components.
@@ -119,7 +120,7 @@ original game database (82 moves in the verified dump). Character finishers and
 CAF moves share the full pool, independent of styles and Story unlocks. Duplicate
 choices are allowed. Pick all four, then **Apply Blazin' moves** to stage them.
 Review slot/name changes, use Undo or Reset as needed, then Save. Browsing a
-dropdown alone does not alter the fighter. Animation playback is not included.
+dropdown alone does not alter the fighter. Supported source-track playback is available in the Animation tab; see the performance editor limits.
 
 For a Story CAF, saving updates only its four assignment references, with the
 normal original backup and stale-save protection. Creating a standalone project

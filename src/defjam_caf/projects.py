@@ -20,6 +20,7 @@ SCHEMA3 = "ffny-fighter-project-3"
 SCHEMA4 = "ffny-fighter-project-4"
 SCHEMA5 = "ffny-fighter-project-5"
 SCHEMA6 = "ffny-fighter-project-6"
+SCHEMA7 = "ffny-fighter-project-7"
 MAX_PROJECT = 96 * 1024 * 1024
 ATLAS_SLOTS = ("a", "b", "c", "d", "d1", "d2")
 FIGHTER_FIELDS = ("stats", "styles", "caf_values", "caf_colors")
@@ -41,14 +42,21 @@ def unique(pairs):
 
 
 def validate(document):
+    if type(document) is dict and document.get('schema') in ('ffny-retail-fighter-project-1','ffny-retail-fighter-project-2'):
+        from .retail import validate as retail_validate
+        return retail_validate(document)
     require(type(document) is dict and {"schema", "identity", "metadata", "fighter"} <= set(document)
-            and set(document) <= {"schema", "identity", "metadata", "fighter", "portrait", "textures", "outfit_name", "outfits", "ui_art", "face_sculpt"},
+            and set(document) <= {"schema", "identity", "metadata", "fighter", "portrait", "textures", "outfit_name", "outfits", "ui_art", "face_sculpt", "performance"},
             "Unsupported fighter project fields")
-    require(document["schema"] in (SCHEMA, SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5, SCHEMA6), "Unsupported fighter project version")
-    version6 = document['schema']==SCHEMA6
-    version5 = document['schema'] in (SCHEMA5, SCHEMA6)
-    version4 = document['schema'] in (SCHEMA4, SCHEMA5, SCHEMA6)
-    version2 = document["schema"] in (SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5, SCHEMA6)
+    require(document["schema"] in (SCHEMA, SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5, SCHEMA6, SCHEMA7), "Unsupported fighter project version")
+    require(document['schema']==SCHEMA7 or 'performance' not in document, 'Performance authoring requires project version 7')
+    if 'performance' in document:
+        from .performance import validate as validate_performance
+        validate_performance(document['performance'])
+    version6 = document['schema'] in (SCHEMA6, SCHEMA7)
+    version5 = document['schema'] in (SCHEMA5, SCHEMA6, SCHEMA7)
+    version4 = document['schema'] in (SCHEMA4, SCHEMA5, SCHEMA6, SCHEMA7)
+    version2 = document["schema"] in (SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5, SCHEMA6, SCHEMA7)
     version3 = document["schema"] == SCHEMA3 or version4 and bool({'outfits','outfit_name'}&set(document))
     require(version4 or 'ui_art' not in document,'Role-specific UI artwork requires project version 4')
     require(version5 or 'face_sculpt' not in document, 'Face sculpts require project version 5')
@@ -148,7 +156,7 @@ def with_atlas(document, slot, raw):
     result = copy.deepcopy(validate(document))
     value = base64.b64encode(raw).decode("ascii")
     atlas_bytes(value)
-    if result["schema"] not in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6):
+    if result["schema"] not in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7):
         result["schema"] = SCHEMA2
     textures = result.setdefault("textures", {"appearance_sha256": appearance_hash(result["fighter"]), "atlases": {}})
     textures["atlases"][slot] = value
@@ -219,7 +227,7 @@ def from_profile(payload, name, database=None):
             identities.append(f"{identity:08x}")
     except (ValueError, KeyError, IndexError, struct.error) as exc:
         raise SaveError("Unsupported saved finisher assignment: " + str(exc)) from exc
-    if document['schema']!=SCHEMA6:document["schema"] = SCHEMA2
+    if document['schema'] not in (SCHEMA6,SCHEMA7):document["schema"] = SCHEMA2
     document["fighter"]["finishers"] = identities
     return validate(document)
 
@@ -230,7 +238,9 @@ def container(document):
 
 
 def encoded(document):
-    return (json.dumps(validate(document), ensure_ascii=True, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
+    raw = (json.dumps(validate(document), ensure_ascii=True, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
+    require(len(raw)<=MAX_PROJECT,'Fighter project exceeds the portable file size limit')
+    return raw
 
 
 def read(path):

@@ -35,6 +35,20 @@ visibility, pose and lighting always remain preview-only.
 
 ## In development: standalone fighters
 
+Development adds [voice, presentation, animation playback and AI editors](docs/performance-editor.md)
+for exportable projects with the matching CAF v6 runtime. Choose independent
+voice banks and WAV overrides, original entrance/victory sequences, and per-difficulty
+CPU tendencies. The viewer plays supported original body/root tracks with actual
+skin weights; unsupported codecs and preview limits are explicit. Story-save
+workflows remain available.
+The development source also includes a separate **Retail fighter studio** for
+retail/owned model resources, independent combat/body donors, ordinary pack
+import, native stats, supplied voice/animation components and HD RGB/UI artwork.
+Portable retail projects export through the matching runtime's complete compiler.
+See [retail fighter projects](docs/retail-fighter-projects.md) for limits and workflow.
+It also supports [retail appearance overrides and additional outfits](docs/retail-overrides-outfits.md)
+through the matching feature runtime, with portable projects and ordinary mod ZIPs.
+
 The development source adds portable `.ffnyfighter` projects, pack metadata,
 portrait capture/import and validated CAF-to-Custom-Fighter-Mod ZIP export.
 Native 256×256 atlas import and saved retail finisher preservation are available
@@ -129,3 +143,16 @@ icacls 'dist\defjam-ffny-fighter-workshop' /setintegritylevel '(OI)(CI)M' /T /Q
 ```
 
 This does not disable Chromium sandboxing or change Windows security policy.
+
+## License
+
+Copyright © 2026 Vlad Yanhursky. The Workshop's original software and
+documentation are licensed under [GNU GPL version 3 only](LICENSE)
+(`GPL-3.0-only`). Distributed modified versions must remain under the GPL and
+provide corresponding source as required by the license. Preserve the applicable
+copyright and license notices; see [COPYRIGHT](COPYRIGHT).
+
+Third-party components retain their own licenses and attribution, listed in
+[THIRD_PARTY.md](THIRD_PARTY.md). Game artwork, saves and imported/exported
+fighter artwork are outside the Workshop software license. Earlier MIT releases
+retain their original licensing terms.

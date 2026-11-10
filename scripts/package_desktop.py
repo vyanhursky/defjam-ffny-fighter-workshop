@@ -17,7 +17,7 @@ BUNDLE_ID = "org.ffnycommunity.fighterworkshop"
 
 def collect_notices(root, destination):
     destination.mkdir(parents=True, exist_ok=True)
-    for name in ("LICENSE", "THIRD_PARTY.md", "README.md", "PROGRESS.md"):
+    for name in ("LICENSE", "COPYRIGHT", "THIRD_PARTY.md", "README.md", "PROGRESS.md"):
         shutil.copy2(root / name, destination / name)
     for name in ("beta-test-guide.md", "validation.md", "desktop-platforms.md"):
         shutil.copy2(root / "docs" / name, destination / name)

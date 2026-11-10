@@ -1,5 +1,37 @@
 # Progress and handoff
 
+## Complete fighter UI artwork — 2026-11-09
+
+Owner approved roadmap modpack authoring for selector/loading portraits,
+titlecards, result icons and grid states. Audited Method Man/Blaze costumes and
+Pockets against original movies: 24 distinct roles across 2/3/4-player layouts.
+The UI artwork tab provides six master imports plus all advanced slots, independent
+UI donor, retail-reference import, native/2×/4× output and effective-art preview.
+Version4 embeds exact PNGs with shared defaults and sparse outfit overrides.
+Undo/Reset/review/save/copy/variant/export preserve the complete collection;
+old project formats and profile workflows retain their contracts.
+
+The companion typed PNG compiler preserves original geometry/actions/material
+controls, compiles all layouts, and stages verified HD replacement tiles after
+selected texture packs for this launch without changing persisted settings.
+Missing art uses the UI donor; retail grid placeholders derive from result icons.
+Source and output budgets, hash checks and conflicts fail before ZIP publication.
+
+Validation:124 Python tests pass (3 platform skips), plus4 Node tests. A real
+Windows Qt/WebChannel workflow passes23 steps through full native export and
+save/reopen. All24 roles compile for all3 outfits. Managed native launch passes
+with the HD layer and3 CAF recipes/extras:16 present samples, median120/min108
+per2s; zero crashes/watchdogs/unresolved calls; identical guarded saves.
+Selector/loading/result native acceptance and current-head CI are recorded in
+the source PR handoff. Windows evidence does not claim macOS/Linux gameplay.
+
+The requested Tupac UI imagegen attempt was rejected at input; no image was
+generated. Per owner instruction the private pilot uses Pockets placeholders,
+with the original3 Tupac outfit textures. HD output is deterministic resampling,
+not restored source detail. Private logs/ui-art-ui-proof1 and UI preview receipts
+retain evidence; no art, captures, saves or binaries enter Git. Source PR updates
+only; no merge or packaged release.
+
 ## Three-outfit custom fighter implementation — 2026-11-09
 
 Owner requested one custom fighter with three outfits, following retail Blaze

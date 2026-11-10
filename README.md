@@ -42,6 +42,9 @@ with the matching version 2 runtime. Experimental [PS2 snapshot recovery](docs/p
 can create a new project from a verified CAF without converting its Story save.
 The **Blazin' moves** tab edits four assignments for Story CAFs and projects,
 using the complete original-game pool with normal Apply, Undo, Reset and Save.
+The Project tab supports up to three named outfits with independent appearance,
+textures and portraits, sharing one fighter's stats and moves. Exporting these
+projects requires the matching CAF version 3 runtime.
 This requires the companion Custom Fighter runtime extension and is not part
 of the Beta 1 downloads above. See [the project/export workflow](docs/fighter-projects.md).
 

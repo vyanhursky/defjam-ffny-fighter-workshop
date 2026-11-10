@@ -56,6 +56,13 @@ function renderState(state){
   for(const key of ['name','author','version','description','license','donor']){const input=$('project-'+key);input.value=state.project?.metadata[key]||'';input.disabled=!state.project;}
   for(const key of ['pack','fighter']){$('project-'+key).value=state.project?.identity[key]||'';$('project-'+key).disabled=!state.project;}
   for(const id of ['save-project-details','project-copy','export-mod','capture-portrait','import-portrait','import-atlas','clear-atlases','atlas-slot'])$(id).disabled=!state.project;
+  makeOptions($('outfit-select'),(state.outfits||[]).map((row,i)=>({value:row.id,label:`${i+1}. ${row.name}`})),state.active_outfit);
+  $('outfit-select').disabled=!state.project;
+  $('outfit-name').value=state.outfits?.find(row=>row.id===state.active_outfit)?.name||'';
+  $('outfit-name').disabled=$('rename-outfit').disabled=!state.project;
+  $('add-outfit').disabled=!state.project||(state.outfits?.length||0)>=3;
+  $('remove-outfit').disabled=!state.project||state.active_outfit==='default';
+  $('outfit-status').textContent=state.project?'Stats, fighting styles and Blazin’ moves are shared. Appearance, textures and portraits belong to the selected outfit.':'Create or open a fighter project to add outfits.';
   renderBlazin(state);
   loadCategory().catch(fail);
   queuePreview(0);
@@ -152,6 +159,10 @@ $('capture-portrait').onclick=()=>{if(!window.__cafPreview?.ready||auditionKey||
 $('import-portrait').onclick=()=>act('choose_project_portrait',{},'Importing portrait PNG…');
 $('import-atlas').onclick=()=>act('choose_project_atlas',{slot:$('atlas-slot').value},'Importing texture atlas…');
 $('clear-atlases').onclick=()=>act('project_atlas_clear',{},'Clearing imported atlases…');
+$('outfit-select').onchange=()=>act('outfit_select',{id:$('outfit-select').value},'Switching outfit…');
+$('add-outfit').onclick=()=>act('outfit_add',{},'Copying outfit…');
+$('rename-outfit').onclick=()=>act('outfit_rename',{name:$('outfit-name').value});
+$('remove-outfit').onclick=()=>{if(confirm('Remove this outfit from the project? Save writes the change.'))act('outfit_remove');};
 $('project-copy').onclick=()=>act('choose_project_copy',{},'Saving project copy…');
 $('save-project-details').onclick=()=>act('project_metadata',projectDetails(),'Saving project & details…');
 for(const key of ['name','author','version','description','license','donor','pack','fighter'])$('project-'+key).oninput=async()=>{try{const state=await call('project_metadata_draft',projectDetails());current=state;window.__cafState=state;$('save').disabled=!state.dirty;$('reset').disabled=!state.dirty;$('save-status').textContent=state.dirty?'● Unsaved changes':'● Saved project';$('save-status').classList.toggle('dirty',state.dirty);$('changes').replaceChildren(...state.changes.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));}catch(e){fail(e);}};

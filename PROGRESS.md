@@ -1,5 +1,39 @@
 # Progress and handoff
 
+## Three-outfit custom fighter implementation — 2026-11-09
+
+Owner requested one custom fighter with three outfits, following retail Blaze
+and D-Mob. Work is in progress on the isolated Workshop/runtime feature branches.
+The source archive supplies shirtless, red jersey and black tank art. Original
+single-outfit project/pack and original saves remain read-only inputs.
+
+Plan: version3 projects keep one shared fighter identity/combat configuration,
+a default appearance and up to two additional named outfits with stable IDs,
+independent appearance/atlases/portrait. Existing v1/v2 stay readable. Outfit
+switching preserves all staged changes; Undo/Reset/save/copy/variant/export cover
+the whole collection. Native menus retain one roster cell and use the original
+three-choice clothing UI. A typed runtime-owned selector command carries the
+chosen ordinal per participant; stock selectors/semantic fighter IDs stay intact.
+No extra public fighter identities or raw package bytecode are introduced.
+
+Implemented: collection schema/validation, staged editor/history/preview, Project
+controls and complete CAF v3 export with per-outfit typed portrait references.
+111 Python tests pass (3 platform skips), plus4 Node pose tests. Twenty real
+Windows Qt/WebChannel steps pass: switching, rename, copy/remove, Undo/Reset,
+three actual WebGL portrait captures and save/reopen of the complete collection.
+The resulting three-outfit pack passes the actual runtime compiler/inventory.
+The native selector displays three choices and the correct black-tank portrait;
+index2 builds bodyA/face4/core101 under the original canonical100 identity, with
+zero crashes/watchdogs/unresolved calls and identical guarded-save restoration.
+
+The original CCharacter constructor reads additional CLOTH datasets from the
+retail roster stream; the owned runtime initializes one normal dataset and fills
+additional canonical datasets locally. Its visual-only aliases and bounded outfit
+commands do not create ledger/progress identities. Full per-outfit gameplay,
+results, rematch/cancellation and final CI evidence remain in the companion PR
+acceptance work. Native Windows evidence does not claim macOS/Linux gameplay.
+No merge or packaged release is included. Private logs/outfits holds source/art
+provenance, plan, desktop receipt and export validation; no assets are tracked.
 ## Editable Blazin' assignments — 2026-11-09
 
 Owner approved a four-slot menu for Story CAFs and standalone CAF projects,

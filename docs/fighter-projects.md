@@ -3,6 +3,19 @@
 This workflow is under development after 0.1 Beta 1. It requires the matching
 Custom Fighter runtime extension; the released Beta 1 editor/game do not provide it.
 
+On **Project & mod**, **Fighter outfits** switches between up to three named
+outfits. **Copy as new** clones the selected appearance, textures and portrait;
+edit the copy's clothing and import matching complete atlases, then capture its
+own portrait. **Remove** deletes additional outfits; the first outfit is kept.
+Switching preserves staged changes. Stats, fighting styles and Blazin' moves
+apply to every outfit. Undo/Reset and Save cover the complete project.
+
+Multi-outfit projects export as CAF version 3 and require a runtime supporting
+that contract. The game shows one roster cell, then its original clothing-choice
+menu. Each outfit has its own selector/loading/result portrait. One fighter
+identity retains shared unlock/progress ownership. Existing single-outfit
+projects keep their earlier formats until outfit controls upgrade them.
+
 1. Open your Recomp data directory and select an existing Story fighter.
 2. On **Project & mod**, choose **Create project from this fighter** and save a
    `.ffnyfighter` file. Staged fighter changes are included. Your original profile

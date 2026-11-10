@@ -72,6 +72,26 @@ Original native saves and CAF v2 currently encode retail references only; actual
 custom animation resources require an explicit future contract/runtime capability.
 Animation playback in the editor remains deferred.
 
+## Approved multi-outfit fighter projects — 2026-11-09
+
+Extend roadmap fighter modpack authoring with one stable fighter and one roster
+entry offering up to three outfits, like the original Blaze and D-Mob selectors.
+Project version 3 retains the default appearance at the root and adds named
+outfits with stable IDs. Stats, styles and Blazin' assignments are shared;
+appearance, imported atlases and portraits are outfit-specific. Existing project
+versions and Story profile workflows retain their contracts.
+
+Project controls copy, rename, switch and remove additional outfits. Switching
+preserves staged edits; Undo/Reset, change review, save/copy/variant and export
+cover the complete project. Each appearance validates its own texture bindings.
+Export declares CAF v3, reuses normal typed portrait resources and validates the
+whole pack with the companion runtime before publishing its ZIP. The native
+selector chooses outfits independently per participant without adding progress
+identities. Portrait aliases are temporary UI paths, never fighter/save IDs.
+Native gameplay, cancellation and rematch acceptance remain separate from codec
+and static model tests. This does not change the original Story save format or
+add arbitrary outfit counts/custom animation support.
+
 ## Texture-mod fighter pilot — 2026-11-09
 
 Owner requested recovering an existing texture-mod CAF, proving its stock body

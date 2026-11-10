@@ -9,7 +9,7 @@ from .container import SaveError
 from .fields import apply_fields, read_fields, STYLE_NAMES, CASH_LIMIT, DEV_LIMIT
 from .profiles import discover
 from .storage import save_profile, export_profile, duplicate, read_archive, install_files
-from . import projects
+from . import projects, outfits
 
 
 class Editor:
@@ -38,20 +38,44 @@ class Editor:
         self.portrait_edit = None
         self.metadata_edit = None
         self.texture_edit = None
+        self.outfit_draft = None
+        self.active_outfit = outfits.DEFAULT
         self._project_base_document = self._project_base = None
 
     def base(self):
         if self.project is not None:
-            if self._project_base_document is not self.project:
-                self._project_base = projects.container(self.project)
-                self._project_base_document = self.project
+            source = self.outfit_draft if self.outfit_draft is not None else self.project
+            key = (id(source), self.active_outfit)
+            if self._project_base_document != key:
+                view = outfits.view(source, self.active_outfit)
+                self._project_base = apply_fields(projects.empty_container(), {k: view["fighter"][k] for k in projects.FIGHTER_FIELDS})
+                self._project_base_document = key
             return self._project_base
         if self.profile is None:
             raise SaveError("Choose a profile or open a fighter project first")
         return self.profile.container
 
-    def project_document(self):
-        document = copy.deepcopy(self.project)
+    def project_source(self):
+        return self.outfit_draft if self.outfit_draft is not None else self.project
+
+    def active_view(self):
+        return outfits.view(self.project_source(), self.active_outfit) if self.project is not None else None
+
+    def remember(self):
+        self.history.append(copy.deepcopy(dict(edits=self.edits, active_outfit=self.active_outfit,
+            outfit_draft=self.outfit_draft, portrait_edit=self.portrait_edit,
+            texture_edit=self.texture_edit, metadata_edit=self.metadata_edit)))
+        self.history = self.history[-100:]
+
+    def flush_outfit(self):
+        document = self.project_document(validate=False)
+        self.outfit_draft = None if document == self.project else document
+        self.edits = {}
+        self.portrait_edit = self.texture_edit = self.metadata_edit = None
+
+    def project_document(self, validate=True):
+        source = self.project_source()
+        document = outfits.view(source, self.active_outfit)
         if self.metadata_edit is not None:
             document.update(copy.deepcopy(self.metadata_edit))
         fields = read_fields(self.current().payload)
@@ -66,7 +90,8 @@ class Editor:
             document["portrait"] = self.portrait_edit
         if self.texture_edit is not None:
             document.update(schema=projects.SCHEMA2, textures=copy.deepcopy(self.texture_edit))
-        return projects.validate(document)
+        document = outfits.replace_view(source, self.active_outfit, document)
+        return projects.validate(document) if validate else document
 
     def create_project(self, path):
         fields = read_fields(self.current().payload)
@@ -74,25 +99,23 @@ class Editor:
                     if self.profile else projects.from_fields(fields, self.project["metadata"]["name"]))
         if self.project is not None:
             source = self.project_document()
-            document["metadata"] = copy.deepcopy(source["metadata"])
-            if "portrait" in source:
-                document["portrait"] = source["portrait"]
-            if "textures" in source:
-                document.update(schema=projects.SCHEMA2, textures=copy.deepcopy(source["textures"]))
-            if "finishers" in source["fighter"]:
-                document["schema"] = projects.SCHEMA2
-                document["fighter"]["finishers"] = source["fighter"]["finishers"][:]
+            identity = document["identity"]
+            document = copy.deepcopy(source)
+            document["identity"] = identity
         digest = projects.write(path, document)
         self.project, self.project_path, self.project_hash = document, Path(path), digest
         self.profile = None
         self.portrait_edit = self.metadata_edit = None
         self.texture_edit = None
+        self.outfit_draft = None
         self.edits, self.history = {}, []
         return self.snapshot()
 
     def open_project(self, path):
         document, digest = projects.read(path)
         self.project, self.project_path, self.project_hash = document, Path(path), digest
+        self.active_outfit = outfits.DEFAULT
+        self.outfit_draft = None
         self.profile = None
         self.portrait_edit = self.metadata_edit = None
         self.texture_edit = None
@@ -138,6 +161,8 @@ class Editor:
         if self.profile is None:
             raise SaveError("Profile is unavailable; refresh the data directory")
         self.project = self.project_path = self.project_hash = None
+        self.outfit_draft = None
+        self.active_outfit = outfits.DEFAULT
         self.portrait_edit = self.metadata_edit = None
         self.texture_edit = None
         self.edits, self.history = {}, []
@@ -149,7 +174,7 @@ class Editor:
     def blazin_keys(self, edits=None):
         edits = self.edits if edits is None else edits
         if self.project is not None:
-            return blazin.project_keys(edits.get("finishers", self.project["fighter"].get("finishers")))
+            return blazin.project_keys(edits.get("finishers", self.project_source()["fighter"].get("finishers")))
         if self.blazin and self.profile:
             return self.blazin.profile_keys(apply_fields(self.base(), edits).payload)
         return [None] * 4
@@ -168,7 +193,6 @@ class Editor:
                 raise SaveError("Choose project Blazin' moves through the loaded catalog")
             if changes["finishers"] is not None:
                 self.blazin.select(blazin.project_keys(changes["finishers"]))
-        previous = copy.deepcopy(self.edits)
         combined = copy.deepcopy(self.edits)
         if "stats" in changes:
             combined["stats"] = dict(combined.get("stats", {}), **changes["stats"])
@@ -176,8 +200,7 @@ class Editor:
         candidate = apply_fields(self.base(), {k: v for k, v in combined.items() if k != "finishers"})
         if candidate.payload == self.current().payload and self.blazin_keys(combined) == self.blazin_keys():
             return self.snapshot()
-        self.history.append(previous)
-        self.history = self.history[-100:]
+        self.remember()
         self.edits = combined
         return self.snapshot()
 
@@ -196,6 +219,8 @@ class Editor:
     def changes(self):
         if self.profile is None and self.project is None:
             return []
+        if self.project is not None and (self.outfit_draft is not None or self.project["schema"] == projects.SCHEMA3):
+            return self.outfit_changes()
         before, after = read_fields(self.base().payload), read_fields(self.current().payload)
         result = []
         if self.metadata_edit is not None:
@@ -224,18 +249,49 @@ class Editor:
                 result.append((label or "Appearance") + " changed")
         return result
 
+    def outfit_changes(self):
+        before, after = self.project, self.project_document(validate=False)
+        result = []
+        if any(before[k] != after[k] for k in ("identity", "metadata")):
+            result.append("Project details changed")
+        for key, label in (("stats", "Training stats"), ("styles", "Fighting styles"), ("finishers", "Blazin' assignments")):
+            if before["fighter"].get(key) != after["fighter"].get(key):
+                result.append(label + " changed (all outfits)")
+        old, new = ({row["id"]: row["name"] for row in outfits.entries(doc)} for doc in (before, after))
+        for identity in old.keys() - new.keys():
+            result.append("Outfit removed: " + old[identity])
+        for identity, name in new.items():
+            if identity not in old:
+                result.append("Outfit added: " + name)
+                continue
+            if old[identity] != name:
+                result.append("Outfit renamed: " + name)
+            left, right = outfits.view(before, identity), outfits.view(after, identity)
+            if any(left["fighter"][key] != right["fighter"][key] for key in outfits.APPEARANCE):
+                result.append(name + ": appearance changed")
+            for key, label in (("textures", "texture atlases"), ("portrait", "portrait")):
+                if left.get(key) != right.get(key):
+                    result.append(name + ": " + label + " changed")
+        if not result and before != after:
+            result.append("Project outfit collection changed")
+        return result
+
     def snapshot(self):
         result = dict(data=str(self.data) if self.data else None, profiles=[], selected=None,
                       fields=None, changes=[], dirty=False, undo=False,
                       style_names=STYLE_NAMES, limits=dict(cash=CASH_LIMIT, development=DEV_LIMIT),
                       preview_error=self.preview_error, preview_available=self.appearance is not None,
                       groups=[], skins=[], issues=self.discovery.issues if self.discovery else [])
-        project_view = copy.deepcopy(self.project)
+        project_view = copy.deepcopy(self.project_source())
+        if project_view is not None:
+            project_view.pop("outfits", None)
         if project_view is not None and self.metadata_edit is not None:
             project_view.update(copy.deepcopy(self.metadata_edit))
+        active = self.active_view()
         result.update(project=project_view, project_path=str(self.project_path) if self.project_path else None,
-                      portrait_available=self.portrait_edit is not None or bool(self.project and "portrait" in self.project))
-        textures = self.texture_edit if self.texture_edit is not None else (self.project or {}).get("textures", {})
+                      portrait_available=self.portrait_edit is not None or bool(active and "portrait" in active),
+                      outfits=outfits.entries(self.project_source()) if self.project else [], active_outfit=self.active_outfit)
+        textures = self.texture_edit if self.texture_edit is not None else (active or {}).get("textures", {})
         result["atlas_slots"] = sorted(textures.get("atlases", {}))
         result["blazin"] = dict(options=self.blazin.options if self.blazin else [], selected=self.blazin_keys(),
                                 error=self.blazin_error)
@@ -245,7 +301,8 @@ class Editor:
         if self.profile or self.project:
             result.update(selected=self.project["metadata"]["name"] if self.project else self.profile.name,
                           fields=read_fields(self.current().payload),
-                          changes=self.changes(), dirty=self.current().encode() != self.base().encode() or self.blazin_keys() != self.blazin_keys({}) or self.portrait_edit is not None or self.metadata_edit is not None or self.texture_edit is not None,
+                          changes=self.changes(), dirty=(self.project_document(validate=False) != self.project if self.project else
+                              self.current().encode() != self.base().encode()),
                           undo=bool(self.history))
             if self.appearance:
                 fields = result["fields"]
@@ -272,7 +329,7 @@ class Editor:
                 fields["caf_values"][slot] = 0xffffffff
                 fields["caf_colors"][slot] = 0
         result = self.cache.compose(self.appearance.outfit(fields))
-        textures = self.texture_edit if self.texture_edit is not None else (self.project or {}).get("textures")
+        textures = self.texture_edit if self.texture_edit is not None else (self.active_view() or {}).get("textures")
         if textures and textures["atlases"]:
             # Try-on/No clothes uses the original temporary outfit, never the
             # final flattened artwork for a different appearance.
@@ -294,6 +351,28 @@ class Editor:
         return result
 
     def request(self, action, args):
+        if action in ("outfit_select", "outfit_add", "outfit_rename", "outfit_remove"):
+            if self.project is None:
+                raise SaveError("Create or open a fighter project before editing outfits")
+            if action == "outfit_select":
+                if args["id"] not in {row["id"] for row in outfits.entries(self.project_source())}:
+                    raise SaveError("This outfit is unavailable")
+                self.flush_outfit()
+                self.active_outfit = args["id"]
+            else:
+                candidate = self.project_document(validate=False)
+                if action == "outfit_add":
+                    candidate, selected = outfits.add(candidate, self.active_outfit)
+                elif action == "outfit_rename":
+                    candidate = outfits.rename(candidate, self.active_outfit, args["name"])
+                    selected = self.active_outfit
+                else:
+                    candidate = outfits.remove(candidate, self.active_outfit)
+                    selected = outfits.DEFAULT
+                self.remember()
+                self.flush_outfit()
+                self.outfit_draft, self.active_outfit = candidate, selected
+            return self.snapshot()
         if action == "blazin":
             if not self.blazin:
                 raise SaveError(self.blazin_error)
@@ -307,14 +386,16 @@ class Editor:
                 raise SaveError("Create or open a fighter project first")
             if action == "project_atlas_clear":
                 fields = read_fields(self.current().payload)
-                self.texture_edit = {"appearance_sha256": projects.appearance_hash(fields), "atlases": {}}
+                textures = {"appearance_sha256": projects.appearance_hash(fields), "atlases": {}}
             else:
                 raw = args["png"]
                 if raw.startswith("data:image/png;base64,"):
                     raw = raw.split(",", 1)[1]
                 import base64
-                document = projects.with_atlas(self.project_document(), args["slot"], projects.atlas_bytes(raw))
-                self.texture_edit = document["textures"]
+                document = projects.with_atlas(outfits.view(self.project_document(), self.active_outfit), args["slot"], projects.atlas_bytes(raw))
+                textures = document["textures"]
+            self.remember()
+            self.texture_edit = textures
             return self.snapshot()
         if action == "project_portrait":
             if self.project is None:
@@ -323,6 +404,7 @@ class Editor:
             if raw.startswith("data:image/png;base64,"):
                 raw = raw.split(",", 1)[1]
             projects.portrait_bytes(raw)
+            self.remember()
             self.portrait_edit = raw
             return self.snapshot()
         if action == "new_project":
@@ -349,6 +431,7 @@ class Editor:
             projects.validate(document)
             self.project_hash = projects.write(self.project_path, document, self.project_hash)
             self.project, self.edits, self.history = document, {}, []
+            self.outfit_draft = None
             self.portrait_edit = self.metadata_edit = None
             self.texture_edit = None
             return dict(snapshot=self.snapshot(), message="Saved fighter project and pack details")
@@ -378,18 +461,23 @@ class Editor:
             return self.preview(args.get("changes"), bool(args.get("hide_clothes", False)))
         if action == "undo":
             if self.history:
-                self.edits = self.history.pop()
+                for key, value in self.history.pop().items():
+                    setattr(self, key, value)
             return self.snapshot()
         if action == "reset":
             self.edits, self.history = {}, []
             self.portrait_edit = self.metadata_edit = None
             self.texture_edit = None
+            self.outfit_draft = None
+            if self.project and self.active_outfit not in {row["id"] for row in outfits.entries(self.project)}:
+                self.active_outfit = outfits.DEFAULT
             return self.snapshot()
         if action == "save":
             if self.project is not None:
                 document = self.project_document()
                 self.project_hash = projects.write(self.project_path, document, self.project_hash)
                 self.project, self.edits, self.history = document, {}, []
+                self.outfit_draft = None
                 self.portrait_edit = self.metadata_edit = None
                 self.texture_edit = None
                 return dict(snapshot=self.snapshot(), message="Saved fighter project")
@@ -400,6 +488,7 @@ class Editor:
                 self.project_hash = projects.write(args["path"], self.project_document())
                 self.project_path = Path(args["path"])
                 self.project, self.edits, self.history = self.project_document(), {}, []
+                self.outfit_draft = None
                 self.portrait_edit = self.metadata_edit = None
                 self.texture_edit = None
                 return dict(snapshot=self.snapshot(), message="Saved project copy")

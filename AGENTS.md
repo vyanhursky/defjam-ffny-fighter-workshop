@@ -58,3 +58,10 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   Keep selection provider/identity based so future custom animation resources
   can extend the menu; unsupported resource types remain refused until their
   format/runtime capability exists. Source PR updates remain authorized.
+
+- Owner approved one custom fighter with up to three selectable outfits on
+  2026-11-09. Extend standalone projects and the explicit runtime contract, with
+  shared identity/combat settings and per-outfit appearance, atlases and portrait.
+  Use the original clothing selector; preserve existing profile workflows and
+  project versions. This targets roadmap fighter modpack authoring. Source PR
+  updates are authorized; original assets remain private and releases need approval.

@@ -9,7 +9,7 @@ import tempfile
 import zipfile
 
 from .container import SaveError
-from .projects import validate, portrait_bytes, atlas_bytes, require, SCHEMA2
+from .projects import validate, portrait_bytes, atlas_bytes, require, SCHEMA2, SCHEMA3
 
 
 def run_contract(runtime, output, arguments):
@@ -73,38 +73,70 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         root.mkdir()
         import copy
         fighter = copy.deepcopy(project["fighter"])
-        if project.get("textures", {}).get("atlases"):
-            folder = root / "atlases"
-            folder.mkdir()
-            fighter["atlases"] = {}
-            for slot, value in project["textures"]["atlases"].items():
+        from . import outfits
+        views = [(row, outfits.view(project, row["id"])) for row in outfits.entries(project)]
+        def write_atlases(view, relative):
+            result = {}
+            if not view.get("textures", {}).get("atlases"):
+                return result
+            folder = root / relative
+            folder.mkdir(parents=True)
+            for slot, value in view["textures"]["atlases"].items():
                 png = atlas_bytes(value)
                 (folder / (slot + ".png")).write_bytes(png)
-                fighter["atlases"][slot] = {"path": "atlases/" + slot + ".png", "sha256": hashlib.sha256(png).hexdigest()}
+                result[slot] = {"path": relative + "/" + slot + ".png", "sha256": hashlib.sha256(png).hexdigest()}
+            return result
+        default_atlases = write_atlases(views[0][1], "atlases")
+        if default_atlases:
+            fighter["atlases"] = default_atlases
+        if project["schema"] == SCHEMA3:
+            fighter["outfit_name"] = project["outfit_name"]
+            fighter["outfits"] = []
+            for row, view in views[1:]:
+                entry = dict(id=row["id"], name=row["name"],
+                             **{key: copy.deepcopy(view["fighter"][key]) for key in outfits.APPEARANCE})
+                atlases = write_atlases(view, "outfits/" + row["id"] + "/atlases")
+                if atlases:
+                    entry["atlases"] = atlases
+                fighter["outfits"].append(entry)
         recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
         (root / "fighter.json").write_bytes(recipe)
-        capability = "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
+        capability = "caf-fighter-3" if project["schema"] == SCHEMA3 else "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
         manifest = {"schema": "fighter-registry-draft-1", "id": pack_id, "version": meta["version"],
                     "requires": {}, "resources": [{"id": "caf", "kind": "caf", "compatibility": {},
                     "source": {"format": capability, "selection": {"path": "fighter.json", "sha256": hashlib.sha256(recipe).hexdigest()}}}],
                     "fighters": [{"id": fighter_id, "name": meta["name"], "inherits": meta["donor"],
                                   "components": {"caf": pack_id + "/caf"}}], "overrides": []}
-        if "portrait" in project:
-            png = Path(temporary) / "portrait.png"
-            png.write_bytes(portrait_bytes(project["portrait"]))
+        for row, view in views:
+            if "portrait" not in view:
+                continue
+            is_default = row["id"] == outfits.DEFAULT
+            relative = "portraits" if is_default else "portraits/" + row["id"]
+            png = Path(temporary) / ("portrait-" + row["id"] + ".png")
+            png.write_bytes(portrait_bytes(view["portrait"]))
             portrait = contract(runtime, ["export-caf-portrait", "--game", str(game), "--portrait-png", str(png),
-                                         "--portrait-out", str(root / "portraits")], temporary, workspace)
+                                         "--portrait-out", str(root / relative)], temporary, workspace)
             source = portrait["source"]
             for key, descriptor in source.items():
                 if isinstance(descriptor, dict):
-                    descriptor["path"] = "portraits/" + descriptor["path"]
-            manifest["resources"].append({"id": "portrait", "kind": "portrait", "compatibility": {}, "source": source})
-            manifest["fighters"][0]["components"]["portrait"] = pack_id + "/portrait"
+                    descriptor["path"] = relative + "/" + descriptor["path"]
+            portrait_id = "portrait" if is_default else "portrait-outfit-" + hashlib.sha256(row["id"].encode()).hexdigest()[:12]
+            manifest["resources"].append({"id": portrait_id, "kind": "portrait", "compatibility": {}, "source": source})
+            if is_default:
+                manifest["fighters"][0]["components"]["portrait"] = pack_id + "/" + portrait_id
+            if project["schema"] == SCHEMA3:
+                fighter.setdefault("portraits", {})[row["id"]] = pack_id + "/" + portrait_id
+        # Outfit portrait references are part of the hash-bound CAF recipe.
+        recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
+        (root / "fighter.json").write_bytes(recipe)
+        manifest["resources"][0]["source"]["selection"]["sha256"] = hashlib.sha256(recipe).hexdigest()
         (root / "fighters.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-        portrait_note = "Portraits/thumbnails use the project's PNG, converted through original UI templates." if "portrait" in project else "Portraits/thumbnails inherit the presentation donor."
-        extras_note = ("Version 2 requires the runtime's hash-checked fighter-caf-extras.bin support.\n"
+        portrait_note = "Authored outfit portraits/thumbnails use the project's PNGs, converted through original UI templates." if any('portrait' in view for _, view in views) else "Portraits/thumbnails inherit the presentation donor."
+        extras_note = ("Atlas and finisher overrides require the runtime's hash-checked fighter-caf-extras.bin support.\n"
                        "Declared native atlases replace RGB only; original material alpha is retained.\n"
-                       "Saved finisher identities resolve against the player's original database.\n") if capability == "caf-fighter-2" else ""
+                       "Saved finisher identities resolve against the player's original database.\n") if capability != "caf-fighter-1" else ""
+        if capability == "caf-fighter-3":
+            extras_note += "One roster entry exposes up to three outfits through the native clothing selector.\nCombat settings are shared; appearance, atlases and portraits are outfit-specific.\n"
         (root / "README.md").write_text(f"# {meta['name']}\n\n{meta['description']}\n\nAuthor: {meta['author'] or 'Unspecified'}\nVersion: {meta['version']}\n\nRequires Custom Fighter runtime with {capability} support.\n{extras_note}CAF appearance, training stats and retail style combination come from fighter.json.\nVoice, AI and inherited presentation use {meta['donor']}.\n{portrait_note}\nNo Story save or currency is included. The player's own game files supply the CAF parts.\n", encoding="utf-8")
         (root / "LICENSE.txt").write_text(meta["license"] or "No additional license granted. Original game assets are supplied locally by the player.\n", encoding="utf-8")
         progress("Validating the complete fighter pack against your game files…")

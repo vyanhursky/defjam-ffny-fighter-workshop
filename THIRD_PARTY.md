@@ -1,5 +1,9 @@
 # Third-party source
 
+The Workshop's original software and documentation use GPL-3.0-only; see LICENSE
+and COPYRIGHT. The separately licensed components below retain their original
+notices and terms. They are not relicensed by the Workshop's license change.
+
 `src/defjam_caf/_vendor` includes the CAF-only decoder/assembly foundation from
 [DefJam-Modding-Tools PR #5](https://github.com/vyanhursky/DefJam-Modding-Tools/pull/5),
 MIT, copyright 2026 Vlad Yanhursky, snapshot
@@ -21,9 +25,9 @@ The app icons in `src/defjam_caf/resources/branding` are reused byte for byte
 from DefJamFFNY-recomp at the owner's request (2026-11-07). See the accompanying
 `provenance.json` for source paths, commit and SHA-256 fingerprints. They contain
 the game's artwork, which remains the property of its rights holders and is
-not covered by this project's MIT license.
+not covered by this project's software license.
 
 The four README screenshots in `docs/media`, pinned by `SHA256SUMS` there, were
 reviewed and approved by the owner on 2026-11-07. They include original game
 artwork, which remains the property of its rights holders and is not covered
-by the project MIT license. The permission is limited to those exact captures.
+by the project software license. The permission is limited to those exact captures.

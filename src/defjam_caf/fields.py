@@ -40,7 +40,7 @@ def read_fields(payload):
 
 
 def apply_fields(save: Container, edits: dict) -> Container:
-    if not isinstance(edits, dict) or set(edits) - {"cash", "development", "stats", "styles", "caf_values", "caf_colors", "blazin_values"}:
+    if not isinstance(edits, dict) or set(edits) - {"cash", "development", "stats", "styles", "caf_values", "caf_colors", "blazin_values", "moveset_core"}:
         raise SaveError("Unknown profile edit")
     payload = bytearray(save.payload)
     if len(payload) != PROFILE_SIZE:
@@ -78,6 +78,13 @@ def apply_fields(save: Container, edits: dict) -> Container:
                 raise SaveError("Stored style bonuses are inconsistent; preserve styles unchanged")
             struct.pack_into("<I", payload, offset, value)
         payload[0x134:0x138] = bytes(styles + [255] * (3 - len(styles)) + [combined])
+    if "moveset_core" in edits:
+        core = edits["moveset_core"]
+        if type(core) is not int or not 1 <= core <= 86:
+            raise SaveError("Choose a verified retail moveset")
+        # Battle motion selection only. Preserve Story progression/training and
+        # its original style mirror at 0x4d87. Requires the companion runtime.
+        payload[0x137] = core
     if "blazin_values" in edits:
         values = edits["blazin_values"]
         if type(values) is not list or len(values) != 4 or any(type(n) is not int or not 0 <= n < 0xFFFFFFFF for n in values):

@@ -29,11 +29,15 @@ zero crashes/watchdogs/unresolved calls and identical guarded-save restoration.
 The original CCharacter constructor reads additional CLOTH datasets from the
 retail roster stream; the owned runtime initializes one normal dataset and fills
 additional canonical datasets locally. Its visual-only aliases and bounded outfit
-commands do not create ledger/progress identities. Full per-outfit gameplay,
-results, rematch/cancellation and final CI evidence remain in the companion PR
+commands do not create ledger/progress identities. Native red-jersey gameplay/result acceptance passes seven combat checks and two
+Options-save generations with identical guarded restoration. Detailed gameplay,
+results, rematch/cancellation and final CI evidence are maintained in the companion PR
 acceptance work. Native Windows evidence does not claim macOS/Linux gameplay.
-No merge or packaged release is included. Private logs/outfits holds source/art
+Four native package CI jobs pass at9f7cd7c: Windows x64, macOS arm64/x64 and
+Linux x64 (run42732816506). No merge or packaged release is included.
+Private logs/outfits holds source/art
 provenance, plan, desktop receipt and export validation; no assets are tracked.
+
 ## Editable Blazin' assignments — 2026-11-09
 
 Owner approved a four-slot menu for Story CAFs and standalone CAF projects,

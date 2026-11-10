@@ -1,5 +1,22 @@
 # Progress and handoff
 
+## GPLv3 licensing and pending PR integration — 2026-11-10
+
+Owner approved GPLv3 and merging all pending Workshop/runtime PRs. Original
+Workshop code/documentation now use GPL-3.0-only, with the unmodified official
+GPLv3 text in LICENSE, Vlad Yanhursky's attribution in COPYRIGHT and README,
+and SPDX metadata in pyproject.toml. Source history identifies only the owner
+as the first-party author. Vendored decoder/Three.js MIT notices and dependency
+licenses remain intact; game-art exclusions and historical MIT releases remain.
+Desktop packages now include COPYRIGHT alongside the complete license and
+third-party notices. No new release or game-art publication is authorized.
+Validation: 191 Python tests pass (5 platform skips). A real wheel has
+License-Expression GPL-3.0-only, LICENSE/COPYRIGHT/THIRD_PARTY metadata files and
+both vendored MIT licenses. Actual desktop notice collection retains the full
+GPL text and attribution byte for byte. Historical beta release notes keep
+their original MIT description. GPL source publication and pending-PR merges
+are authorized; existing native qualification limits remain unchanged.
+
 ## Retail workflow documentation — 2026-11-10
 
 Owner requested the tested retail workflow be documented in the Workshop.

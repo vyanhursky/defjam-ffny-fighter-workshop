@@ -143,3 +143,16 @@ icacls 'dist\defjam-ffny-fighter-workshop' /setintegritylevel '(OI)(CI)M' /T /Q
 ```
 
 This does not disable Chromium sandboxing or change Windows security policy.
+
+## License
+
+Copyright © 2026 Vlad Yanhursky. The Workshop's original software and
+documentation are licensed under [GNU GPL version 3 only](LICENSE)
+(`GPL-3.0-only`). Distributed modified versions must remain under the GPL and
+provide corresponding source as required by the license. Preserve the applicable
+copyright and license notices; see [COPYRIGHT](COPYRIGHT).
+
+Third-party components retain their own licenses and attribution, listed in
+[THIRD_PARTY.md](THIRD_PARTY.md). Game artwork, saves and imported/exported
+fighter artwork are outside the Workshop software license. Earlier MIT releases
+retain their original licensing terms.

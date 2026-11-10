@@ -15,21 +15,27 @@ complete UI-art import, staged metadata/history, save/reopen and validated ZIPs.
 Existing CAF/profile formats remain intact. Static preview filters collapsed
 source placeholders for framing only. Arbitrary Blender reimport remains deferred.
 
-Validation:139 Python tests pass (3 platform skips),4 Node tests;17 real Windows
+Validation:140 Python tests pass (3 platform skips),4 Node tests;17 real Windows
 Qt/WebChannel steps pass through actual native ZIP export and persistent reopen.
-The companion runtime's49 focused tests cover appearance/PNG/template/alpha/HD,
+The companion runtime's61 focused tests cover appearance/PNG/template/alpha/HD,
 packages and managed launch. Original Memphis body plus Teck combat exports after
 explicitly scoping shared-name injury textures. Native DMX intro/Blazin activation,
 voice and combat run without crashes/watchdogs/unresolved calls and restore the
-guarded save root identically. Final paired-finisher/result acceptance, complete
-native unit evidence and hosted cross-platform CI are recorded in the source PRs.
+guarded save root identically. A450-second native run reaches a decisive result
+against Pockets with zero faults and identical guarded restoration. Full MSVC
+unit suite:2487pass/57skip/1standard slow exclusion. Final paired-finisher/DMX
+victory and exact-head CI evidence are recorded in the source PRs.
 
-Two full-atlas imagegen outputs were rejected under the sexual category; no HD
-body restoration was produced. Selector/loading/titlecard generation succeeded;
-the private pilot embeds unapproved HD UI candidates and original body pixels.
-The CLI/API fallback requires an explicit owner choice; no API key is configured
-in this session. All source art, projects, packs, captures, saves and game binaries
-remain private. Source-only development work; no merge or packaged release.
+Two hosted full-atlas imagegen outputs were rejected under the sexual category.
+The owner then explicitly selected the existing local ComfyUI workflow. A4x
+Real-ESRGAN upscale plus SDXL strength0.12/30steps produces a2048-square body
+candidate with exact original material alpha. Its5.54MiB PNG exposed the UI-only
+4MiB admission limit; body PNGs now have a separate16MiB cap, still bounded by
+the combined64MiB/96MiB portable project budgets. The actual HD project/ZIP
+compiles and installs with30HD layer files. Selector/loading/titlecard generation
+also succeeded; all artwork remains an unapproved private candidate.
+Source-only Workshop PR4/runtime PR218 are open. All source art, projects, packs,
+captures, saves and game binaries remain private; no merge or packaged release.
 See docs/retail-fighter-projects.md and the companion runtime's retail contract.
 
 ## Complete fighter UI artwork — 2026-11-09

@@ -27,7 +27,7 @@ The runtime verifies the original database and supplies the 75-fighter catalog.
    are omitted from this preview. Runtime appearance data is unchanged. It does
    not play animations or reproduce native material shading/injury switching.
 6. Under **Textures**, choose an original shape and import a complete RGB PNG at
-   native, 2× or 4× dimensions (32–2048px, at most 4 MiB). The matching runtime
+   native, 2× or 4× dimensions (32–2048px, at most 16 MiB). The matching runtime
    admits `eagl-appearance-png-1`. It retains native UV dimensions, controls and
    exact material alpha, compiles an indexed/BGRA/DXT fallback, and emits source
    HD RGB with nearest original material alpha. Invalid layouts and alpha changes

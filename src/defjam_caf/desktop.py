@@ -90,8 +90,9 @@ class Bridge(QObject):
                     path,_=QFileDialog.getOpenFileName(self.window,'Import fighter artwork','','PNG image (*.png)')
                     if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
                     import base64
-                    with Path(path).open('rb') as stream:raw=stream.read(4*1024**2+1)
-                    if len(raw)>4*1024**2:raise ValueError('PNG exceeds 4 MiB')
+                    limit=(16 if operation=='texture' else 4)*1024**2
+                    with Path(path).open('rb') as stream:raw=stream.read(limit+1)
+                    if len(raw)>limit:raise ValueError('PNG exceeds '+str(limit//1024**2)+' MiB')
                     action,args='retail_'+operation,{**args,'png':base64.b64encode(raw).decode('ascii')}
                 else:raise ValueError('Unsupported retail dialog')
             if action == "boot":

@@ -20,6 +20,7 @@ from .container import SaveError
 SCHEMA = 'ffny-retail-fighter-project-1'
 MAX_ASSET = 64 * 1024**2
 MAX_TOTAL = 64 * 1024**2
+MAX_TEXTURE = 16 * 1024**2
 KINDS = {'appearance':'appearance','moveset':'moveset','voice':'voice','ai':'ai',
          'portrait':'portrait','intro':'cinematic','victory':'cinematic','blazin':'blazin'}
 
@@ -54,6 +55,19 @@ def unblob(value):
     try: raw = base64.b64decode(value['data'], validate=True)
     except ValueError as exc: raise SaveError('Invalid embedded asset encoding') from exc
     projects.require(len(raw) <= MAX_ASSET and hashlib.sha256(raw).hexdigest() == value['sha256'], 'Embedded asset hash changed')
+    return raw
+
+
+def texture_bytes(value):
+    from PIL import Image
+    projects.require(type(value) is str and len(value)<=MAX_TEXTURE*4//3+8,'Body atlas PNG exceeds 16 MiB')
+    try:
+        raw=base64.b64decode(value,validate=True)
+        projects.require(0<len(raw)<=MAX_TEXTURE,'Body atlas PNG exceeds 16 MiB')
+        with Image.open(io.BytesIO(raw)) as image:
+            projects.require(image.format=='PNG' and 32<=image.width<=2048 and 32<=image.height<=2048,'Body atlas must be a 32–2048px PNG')
+            image.verify()
+    except (ValueError,OSError) as exc:raise SaveError('Invalid body atlas PNG: '+str(exc)) from exc
     return raw
 
 
@@ -109,7 +123,7 @@ def validate(document):
     textures=document['textures'];projects.require(type(textures) is dict and len(textures)<=64,'Invalid texture imports')
     for name,value in textures.items():
         projects.require(re.fullmatch('[A-Za-z0-9_]{4}',name) is not None,'Choose a four-character texture shape')
-        used+=len(projects.portrait_bytes(value))
+        used+=len(texture_bytes(value))
     projects.require(used<=MAX_TOTAL,'Combined native assets and PNG artwork exceed 64 MiB')
     return document
 
@@ -317,10 +331,10 @@ class Session:
         for name,value in document['assets'].items():
             path=root/relative(name);path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(unblob(value))
         if document['textures']:
-            spec={name:{'path':'texture-imports/'+name+'.png','sha256':hashlib.sha256(projects.portrait_bytes(value)).hexdigest()}
+            spec={name:{'path':'texture-imports/'+name+'.png','sha256':hashlib.sha256(texture_bytes(value)).hexdigest()}
                   for name,value in document['textures'].items()}
             for name,value in document['textures'].items():
-                path=root/spec[name]['path'];path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(projects.portrait_bytes(value))
+                path=root/spec[name]['path'];path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(texture_bytes(value))
             # Typed texture sources are compiled by the runtime, never renamed PNGs.
             key=native['fighters'][0]['components'].get('appearance')
             resource=next((r for r in native['resources'] if key==native['id']+'/'+r['id']),None)

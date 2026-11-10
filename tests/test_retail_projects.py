@@ -106,3 +106,15 @@ def test_texture_names_are_stable_scoped_and_four_portable_characters():
     assert mapping==retail.texture_namespace('example','body',['A001','br01','br02'])
     assert mapping!=retail.texture_namespace('other','body',['A001','br01','br02'])
     assert all(len(v)==4 and v.isascii() and v.isalnum() for v in mapping.values()) and len(set(mapping.values()))==3
+
+
+def test_body_png_budget_is_independent_of_ui_art_budget():
+    stream=io.BytesIO();Image.new('RGB',(32,32),(20,30,40)).save(stream,format='PNG');raw=stream.getvalue()
+    # PNG ancillary padding is legal and models incompressible production atlases
+    # without storing a multi-megabyte fixture in source.
+    import zlib,struct
+    padding=b'x'*(4*1024**2);chunk=b'tEXt'+padding
+    encoded=raw[:-12]+struct.pack('>I',len(padding))+chunk+struct.pack('>I',zlib.crc32(chunk))+raw[-12:]
+    value=base64.b64encode(encoded).decode()
+    assert retail.texture_bytes(value)==encoded
+    with pytest.raises(SaveError,match='too large'):projects.portrait_bytes(value)

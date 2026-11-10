@@ -64,6 +64,7 @@ function renderState(state){
   $('remove-outfit').disabled=!state.project||state.active_outfit==='default';
   $('outfit-status').textContent=state.project?'Stats, fighting styles and Blazin’ moves are shared. Appearance, textures and portraits belong to the selected outfit.':'Create or open a fighter project to add outfits.';
   renderBlazin(state);
+  renderUIArt(state);
   loadCategory().catch(fail);
   queuePreview(0);
 }
@@ -146,6 +147,35 @@ async function updatePreview(epoch){
 new ResizeObserver(()=>{const box=$('viewport');renderer.setSize(box.clientWidth,box.clientHeight,false);camera.aspect=box.clientWidth/Math.max(1,box.clientHeight);camera.updateProjectionMatrix();}).observe($('viewport'));
 renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
 
+let uiArtEpoch=0;
+async function previewUIArt(){
+  const epoch=++uiArtEpoch,role=$('ui-role').value;
+  $('ui-image').hidden=true;
+  const row=current?.ui_art?.roles.find(r=>r.id===role);
+  $('ui-clear').disabled=!current?.project||!row?.own;
+  $('ui-role-status').textContent=row?`${row.label} · ${row.origin.source}${row.origin.role?' · '+row.origin.role:''}`:'Create or open a fighter project to import UI artwork.';
+  if(!current?.project||!role)return;
+  try{const result=await call('ui_preview',{role});if(epoch!==uiArtEpoch)return;$('ui-image').hidden=!result?.png;if(result?.png)$('ui-image').src=result.png;window.__cafUIArt={role,ready:true,hasImage:Boolean(result?.png)};}catch(e){if(epoch===uiArtEpoch)fail(e);}
+}
+function renderUIArt(state){
+  const ui=state.ui_art,role=$('ui-role').value;
+  $('ui-donor').value=ui?.donor||'retail/blaze';$('ui-scale').value=String(ui?.hd_scale||4);
+  $('ui-role').replaceChildren();const groups=new Map();
+  for(const row of ui?.roles||[]){let group=groups.get(row.group);if(!group){group=document.createElement('optgroup');group.label=row.group;groups.set(row.group,group);$('ui-role').append(group);}group.append(new Option(row.label,row.id));}
+  if((ui?.roles||[]).some(r=>r.id===role))$('ui-role').value=role;
+  for(const id of ['ui-donor','ui-scale','ui-role','ui-apply-settings','ui-retail','ui-import','ui-clear-all'])$(id).disabled=!state.project;
+  const outfit=state.outfits?.find(r=>r.id===state.active_outfit);
+  $('ui-outfit').textContent=state.project?`Editing ${outfit?.name||'Outfit 1'}. ${state.active_outfit==='default'?'These UI defaults are shared with the other outfits.':'Overrides apply to this outfit.'}`:'UI artwork belongs to standalone fighter projects.';
+  const variants=(ui?.roles||[]).filter(r=>r.group!=='All layouts');
+  $('ui-coverage').textContent=ui?`${variants.filter(r=>r.available).length}/24 roles use project images. Remaining roles inherit the UI donor. ${ui.hd_scale===1?'Native output.':ui.hd_scale+'× HD tiles accompany the native fallback.'}`:'';
+  previewUIArt();
+}
+$('ui-role').onchange=previewUIArt;
+$('ui-import').onclick=()=>act('choose_ui_art',{role:$('ui-role').value},'Importing UI artwork…');
+$('ui-clear').onclick=()=>act('ui_clear',{role:$('ui-role').value});
+$('ui-clear-all').onclick=()=>act('ui_clear_all');
+$('ui-apply-settings').onclick=()=>act('ui_settings',{donor:$('ui-donor').value,hd_scale:Number($('ui-scale').value)});
+$('ui-retail').onclick=()=>act('choose_ui_retail',{},'Importing the complete retail UI set…');
 for(const b of document.querySelectorAll('.tab'))b.onclick=()=>{for(const button of document.querySelectorAll('.tab'))button.classList.toggle('active',button===b);for(const panel of document.querySelectorAll('.tab-content'))panel.hidden=panel.id!==`tab-${b.dataset.tab}`;};
 $('open-data').onclick=$('empty-open').onclick=()=>{if(discard())act('choose_data',{},'Loading profiles and original assets…');};
 $('refresh').onclick=()=>{if(current?.data&&discard())act('open_data',{path:current.data},'Refreshing profiles…');};

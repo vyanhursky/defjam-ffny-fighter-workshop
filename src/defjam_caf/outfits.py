@@ -6,7 +6,7 @@ from . import projects
 
 DEFAULT = "default"
 MAX_OUTFITS = 3
-ASSETS = ("textures", "portrait")
+ASSETS = ("textures", "portrait", "ui_art")
 APPEARANCE = ("caf_values", "caf_colors")
 
 
@@ -45,7 +45,7 @@ def replace_view(document, identity, selected):
     if identity == DEFAULT:
         target = result["fighter"]
         assets = result
-        if result["schema"] != projects.SCHEMA3:
+        if result["schema"] not in (projects.SCHEMA3,projects.SCHEMA4):
             result["schema"] = selected["schema"]
     else:
         target = next((row for row in result.get("outfits", []) if row["id"] == identity), None)
@@ -62,7 +62,7 @@ def replace_view(document, identity, selected):
 
 def upgrade(document):
     result = copy.deepcopy(document)
-    result["schema"] = projects.SCHEMA3
+    result["schema"] = projects.SCHEMA4 if document['schema']==projects.SCHEMA4 else projects.SCHEMA3
     result.setdefault("outfit_name", "Outfit 1")
     result.setdefault("outfits", [])
     return result
@@ -75,7 +75,7 @@ def add(document, source=DEFAULT):
     identity = "outfit-" + uuid.uuid4().hex[:12]
     row = dict(id=identity, name="Outfit " + str(len(entries(document)) + 1),
                **{key: copy.deepcopy(selected["fighter"][key]) for key in APPEARANCE})
-    row.update({key: copy.deepcopy(selected[key]) for key in ASSETS if key in selected})
+    row.update({key: copy.deepcopy(selected[key]) for key in ASSETS if key in selected and (key!='ui_art' or source!=DEFAULT)})
     result["outfits"].append(row)
     return result, identity
 

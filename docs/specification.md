@@ -72,6 +72,19 @@ Original native saves and CAF v2 currently encode retail references only; actual
 custom animation resources require an explicit future contract/runtime capability.
 Animation playback in the editor remains deferred.
 
+## Approved complete fighter UI artwork — 2026-11-09
+
+Extend roadmap fighter modpack authoring with editable selector/loading portraits,
+stylized titlecards, result icons and normal/selected grid icons. Audit retail
+Method Man/Blaze layouts rather than treating one portrait as all presentation.
+Support six master roles and all 24 native 2/3/4-player variants, shared default
+art with per-outfit overrides, exact embedded PNGs and compatible HD output.
+Keep UI donor/layout independent of combat identity, preserve old projects and
+Story profile workflows, and validate complete packs through the shared runtime.
+Use original Pockets placeholders when the requested Tupac generation is refused.
+Source PR updates are authorized; artwork, saves, captures and game binaries stay
+private. This does not authorize a packaged release or merge.
+
 ## Approved multi-outfit fighter projects — 2026-11-09
 
 Extend roadmap fighter modpack authoring with one stable fighter and one roster

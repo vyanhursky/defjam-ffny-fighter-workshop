@@ -63,6 +63,44 @@ Individual move authoring, custom clothing/model import and animation
 playback are later milestones. Native atlas import is described below. CAF export currently rejects unsupported
 appearance encodings and combinations with sourced non-portrait components.
 
+### Complete UI artwork (development)
+
+Open **UI artwork** in a standalone project. Import transparent PNGs for six
+master roles: selector portrait, loading portrait, result icon, titlecard, normal
+grid icon and selected grid icon. A master fills all relevant layouts. The 24
+advanced roles provide independent selector/result portraits, selector/result/
+loading titlecards, loading portraits and both grid states for 2, 3 and 4 players.
+Importing a master replaces its local advanced overrides; clearing a local role
+restores inherited artwork. The preview identifies the source of the selected art.
+
+The first outfit supplies shared defaults. Other outfits inherit those defaults
+and can override any role or UI setting independently. Undo, Reset, change review,
+Save, copy and variant creation include all art. These edits upgrade the portable
+project to version 4; opening older projects alone does not change their format.
+Story profiles retain their original presentation and do not accept these imports.
+
+Choose the retail UI layout/placeholder donor independently of the combat donor.
+**Import complete retail UI set** reads 24 PNGs from your own extracted game via
+the compatible runtime. Loading close-ups and titlecards remain separate assets.
+Grid placeholders derive from that donor's result icon; import distinct normal
+and selected grid art when desired. Retail placeholders are original game art,
+not an HD restoration. No extracted art is shipped with Workshop.
+
+PNGs must be 32–2048 pixels per side, at most 4 MiB each, with visible content.
+The project admits at most 48 MiB / 64 million decoded pixels across UI imports.
+Source PNG bytes are embedded unchanged. Exact donor canvases at 1×, 2× or 4×
+retain their layout; other images are fitted inside the original covered region,
+with square result/grid crops. Use exact per-layout canvases for precise framing.
+Original movie actions, geometry and material controls are preserved by export.
+
+Choose native, 2× or 4× texture output. HD tiles are resampled directly from the
+imported source, retain alpha/padding, and activate automatically after selected
+texture packs through a verified, temporary fighter UI layer. This preserves
+high-resolution source detail; increasing the output scale cannot invent detail.
+The exported `eagl-portrait-png-1` resources require the matching runtime update.
+CAF recipes remain version 3; old six-part portrait exports remain supported.
+Export compiles every layout before publishing the ZIP, without installing it.
+
 ### Native atlas import and saved finishers (development)
 
 Project version 2 embeds native 256×256 PNG atlases and preserves the four saved

@@ -84,10 +84,15 @@ class Bridge(QObject):
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "export_mod", {"path": path, "runtime": runtime}
-            elif action in {"choose_project_portrait", "choose_project_atlas"}:
+            elif action=='choose_ui_retail':
+                runtime=QFileDialog.getExistingDirectory(self.window,'Select Custom Fighter runtime for retail UI references')
+                if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                action,args='ui_retail',{'runtime':runtime}
+            elif action in {"choose_project_portrait", "choose_project_atlas",'choose_ui_art'}:
                 import base64
                 atlas = action == "choose_project_atlas"
-                path, _ = QFileDialog.getOpenFileName(self.window, "Import 256x256 RGB atlas" if atlas else "Import fighter portrait", "", "PNG image (*.png)")
+                title = "Import 256x256 RGB atlas" if atlas else "Import fighter UI artwork" if action=='choose_ui_art' else "Import fighter portrait"
+                path, _ = QFileDialog.getOpenFileName(self.window, title, "", "PNG image (*.png)")
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 limit = 1024 * 1024 if atlas else 4 * 1024 * 1024
@@ -95,7 +100,9 @@ class Bridge(QObject):
                     raw = stream.read(limit + 1)
                 if len(raw) > limit:
                     raise ValueError("Atlas PNG is too large" if atlas else "Portrait PNG is too large")
-                action, args = ("project_atlas", {"slot": args["slot"], "png": base64.b64encode(raw).decode("ascii")}) if atlas else ("project_portrait", {"png": base64.b64encode(raw).decode("ascii")})
+                action, args = ("project_atlas", {"slot": args["slot"], "png": base64.b64encode(raw).decode("ascii")}) if atlas else (
+                    ('ui_import',{'role':args['role'],'png':base64.b64encode(raw).decode('ascii')}) if action=='choose_ui_art' else
+                    ("project_portrait", {"png": base64.b64encode(raw).decode("ascii")}))
             elif action == "choose_import":
                 if self.editor.discovery is None:
                     raise ValueError("Choose the destination data directory first")

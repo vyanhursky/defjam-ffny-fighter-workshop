@@ -9,7 +9,7 @@ import tempfile
 import zipfile
 
 from .container import SaveError
-from .projects import validate, portrait_bytes, atlas_bytes, require, SCHEMA2, SCHEMA3
+from .projects import validate, portrait_bytes, atlas_bytes, require, SCHEMA2, SCHEMA3, SCHEMA4
 
 
 def run_contract(runtime, output, arguments):
@@ -89,7 +89,7 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         default_atlases = write_atlases(views[0][1], "atlases")
         if default_atlases:
             fighter["atlases"] = default_atlases
-        if project["schema"] == SCHEMA3:
+        if project["schema"] in (SCHEMA3,SCHEMA4):
             fighter["outfit_name"] = project["outfit_name"]
             fighter["outfits"] = []
             for row, view in views[1:]:
@@ -101,30 +101,51 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
                 fighter["outfits"].append(entry)
         recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
         (root / "fighter.json").write_bytes(recipe)
-        capability = "caf-fighter-3" if project["schema"] == SCHEMA3 else "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
+        capability = "caf-fighter-3" if project["schema"] in (SCHEMA3,SCHEMA4) else "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
         manifest = {"schema": "fighter-registry-draft-1", "id": pack_id, "version": meta["version"],
                     "requires": {}, "resources": [{"id": "caf", "kind": "caf", "compatibility": {},
                     "source": {"format": capability, "selection": {"path": "fighter.json", "sha256": hashlib.sha256(recipe).hexdigest()}}}],
                     "fighters": [{"id": fighter_id, "name": meta["name"], "inherits": meta["donor"],
                                   "components": {"caf": pack_id + "/caf"}}], "overrides": []}
         for row, view in views:
-            if "portrait" not in view:
+            role_art=project['schema']==SCHEMA4 and any('ui_art' in node for node in [project,*project.get('outfits',[])])
+            if "portrait" not in view and not role_art:
                 continue
             is_default = row["id"] == outfits.DEFAULT
             relative = "portraits" if is_default else "portraits/" + row["id"]
-            png = Path(temporary) / ("portrait-" + row["id"] + ".png")
-            png.write_bytes(portrait_bytes(view["portrait"]))
-            portrait = contract(runtime, ["export-caf-portrait", "--game", str(game), "--portrait-png", str(png),
-                                         "--portrait-out", str(root / relative)], temporary, workspace)
-            source = portrait["source"]
-            for key, descriptor in source.items():
-                if isinstance(descriptor, dict):
-                    descriptor["path"] = relative + "/" + descriptor["path"]
+            if role_art:
+                from . import ui_art
+                effective=ui_art.resolved(project,row['id'])
+                source={'format':'eagl-portrait-png-1','donor':effective['donor'],'hd_scale':effective['hd_scale'],'images':{}}
+                folder=root/relative/'png';folder.mkdir(parents=True)
+                for part in ui_art.PARTS:
+                    if part not in effective['images']:continue
+                    raw=portrait_bytes(effective['images'][part]);digest=hashlib.sha256(raw).hexdigest()
+                    if effective['origins'][part].get('role')=='portrait':
+                        from PIL import Image,ImageOps
+                        import io
+                        with Image.open(io.BytesIO(raw)) as im:
+                            im=im.convert('RGBA');bounds=im.getchannel('A').getbbox()
+                            require(bounds is not None,'Portrait is entirely transparent');im=im.crop(bounds)
+                            if part.startswith(('result_','grid_')):
+                                side=min(im.size);im=ImageOps.fit(im,(side,side),centering=(.5,0))
+                            encoded=io.BytesIO();im.save(encoded,format='PNG');raw=encoded.getvalue();digest=hashlib.sha256(raw).hexdigest()
+                    name=digest+'.png';(folder/name).write_bytes(raw)
+                    source['images'][part]={'path':relative+'/png/'+name,'sha256':digest}
+            else:
+                png = Path(temporary) / ("portrait-" + row["id"] + ".png")
+                png.write_bytes(portrait_bytes(view["portrait"]))
+                portrait = contract(runtime, ["export-caf-portrait", "--game", str(game), "--portrait-png", str(png),
+                                             "--portrait-out", str(root / relative)], temporary, workspace)
+                source = portrait["source"]
+                for key, descriptor in source.items():
+                    if isinstance(descriptor, dict):
+                        descriptor["path"] = relative + "/" + descriptor["path"]
             portrait_id = "portrait" if is_default else "portrait-outfit-" + hashlib.sha256(row["id"].encode()).hexdigest()[:12]
             manifest["resources"].append({"id": portrait_id, "kind": "portrait", "compatibility": {}, "source": source})
             if is_default:
                 manifest["fighters"][0]["components"]["portrait"] = pack_id + "/" + portrait_id
-            if project["schema"] == SCHEMA3:
+            if project["schema"] in (SCHEMA3,SCHEMA4):
                 fighter.setdefault("portraits", {})[row["id"]] = pack_id + "/" + portrait_id
         # Outfit portrait references are part of the hash-bound CAF recipe.
         recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
@@ -132,6 +153,8 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         manifest["resources"][0]["source"]["selection"]["sha256"] = hashlib.sha256(recipe).hexdigest()
         (root / "fighters.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
         portrait_note = "Authored outfit portraits/thumbnails use the project's PNGs, converted through original UI templates." if any('portrait' in view for _, view in views) else "Portraits/thumbnails inherit the presentation donor."
+        if role_art:
+            portrait_note = "UI artwork uses embedded PNGs for selector/loading portraits, titlecards, result icons and grid states in all three player layouts. Missing roles inherit the UI donor. HD output requires the matching runtime's per-launch Fighter UI texture layer."
         extras_note = ("Atlas and finisher overrides require the runtime's hash-checked fighter-caf-extras.bin support.\n"
                        "Declared native atlases replace RGB only; original material alpha is retained.\n"
                        "Saved finisher identities resolve against the player's original database.\n") if capability != "caf-fighter-1" else ""

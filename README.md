@@ -45,6 +45,10 @@ using the complete original-game pool with normal Apply, Undo, Reset and Save.
 The Project tab supports up to three named outfits with independent appearance,
 textures and portraits, sharing one fighter's stats and moves. Exporting these
 projects requires the matching CAF version 3 runtime.
+The **UI artwork** tab imports separate selector/loading portraits, titlecards,
+result icons and grid states. Six master roles cover all layouts; 24 advanced
+slots allow individual 2/3/4-player artwork. Projects share defaults across outfits
+and support local overrides, original retail placeholders and 2×/4× HD UI output.
 This requires the companion Custom Fighter runtime extension and is not part
 of the Beta 1 downloads above. See [the project/export workflow](docs/fighter-projects.md).
 

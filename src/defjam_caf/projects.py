@@ -17,7 +17,8 @@ from .storage import atomic_bytes, sha, writer_lock
 SCHEMA = "ffny-fighter-project-1"
 SCHEMA2 = "ffny-fighter-project-2"
 SCHEMA3 = "ffny-fighter-project-3"
-MAX_PROJECT = 48 * 1024 * 1024
+SCHEMA4 = "ffny-fighter-project-4"
+MAX_PROJECT = 96 * 1024 * 1024
 ATLAS_SLOTS = ("a", "b", "c", "d", "d1", "d2")
 FIGHTER_FIELDS = ("stats", "styles", "caf_values", "caf_colors")
 SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
@@ -39,11 +40,16 @@ def unique(pairs):
 
 def validate(document):
     require(type(document) is dict and {"schema", "identity", "metadata", "fighter"} <= set(document)
-            and set(document) <= {"schema", "identity", "metadata", "fighter", "portrait", "textures", "outfit_name", "outfits"},
+            and set(document) <= {"schema", "identity", "metadata", "fighter", "portrait", "textures", "outfit_name", "outfits", "ui_art"},
             "Unsupported fighter project fields")
-    require(document["schema"] in (SCHEMA, SCHEMA2, SCHEMA3), "Unsupported fighter project version")
-    version2 = document["schema"] in (SCHEMA2, SCHEMA3)
-    version3 = document["schema"] == SCHEMA3
+    require(document["schema"] in (SCHEMA, SCHEMA2, SCHEMA3, SCHEMA4), "Unsupported fighter project version")
+    version4 = document['schema']==SCHEMA4
+    version2 = document["schema"] in (SCHEMA2, SCHEMA3, SCHEMA4)
+    version3 = document["schema"] == SCHEMA3 or version4 and bool({'outfits','outfit_name'}&set(document))
+    require(version4 or 'ui_art' not in document,'Role-specific UI artwork requires project version 4')
+    if 'ui_art' in document:
+        from . import ui_art
+        ui_art.validate(document['ui_art'])
     require(version3 or not {"outfit_name", "outfits"} & set(document), "Multiple outfits require project version 3")
     require(version2 or "textures" not in document, "Texture assets require project version 2")
     identity, metadata, fighter = (document[k] for k in ("identity", "metadata", "fighter"))
@@ -95,12 +101,15 @@ def validate(document):
         seen = {outfits.DEFAULT}
         for row in document["outfits"]:
             require(type(row) is dict and {"id", "name", "caf_values", "caf_colors"} <= set(row)
-                    and set(row) <= {"id", "name", "caf_values", "caf_colors", "textures", "portrait"}, "Invalid outfit fields")
+                    and set(row) <= {"id", "name", "caf_values", "caf_colors", "textures", "portrait"} | ({'ui_art'} if version4 else set()), "Invalid outfit fields")
             require(type(row["id"]) is str and len(row["id"]) <= 80 and SLUG.fullmatch(row["id"])
                     and row["id"] not in seen, "Outfit IDs must be unique stable slugs")
             require(name_valid(row["name"]), "Invalid outfit name")
             seen.add(row["id"])
             validate(outfits.view(document, row["id"]))
+    if version4:
+        from . import ui_art
+        ui_art.check_budget(document)
     return document
 
 
@@ -128,7 +137,7 @@ def with_atlas(document, slot, raw):
     result = copy.deepcopy(validate(document))
     value = base64.b64encode(raw).decode("ascii")
     atlas_bytes(value)
-    if result["schema"] != SCHEMA3:
+    if result["schema"] not in (SCHEMA3,SCHEMA4):
         result["schema"] = SCHEMA2
     textures = result.setdefault("textures", {"appearance_sha256": appearance_hash(result["fighter"]), "atlases": {}})
     textures["atlases"][slot] = value

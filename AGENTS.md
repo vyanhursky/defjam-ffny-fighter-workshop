@@ -65,3 +65,9 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   Use the original clothing selector; preserve existing profile workflows and
   project versions. This targets roadmap fighter modpack authoring. Source PR
   updates are authorized; original assets remain private and releases need approval.
+
+- Owner approved complete fighter UI art import on 2026-11-09, covering portraits,
+  titlecards, result/grid icons and all 2/3/4-player variants. Shared defaults and
+  outfit overrides belong to roadmap modpack authoring; preserve original-profile
+  workflows. Use Pockets placeholders after the requested imagegen refusal.
+  Source-only Workshop/runtime PR updates are authorized; no release or art publication.

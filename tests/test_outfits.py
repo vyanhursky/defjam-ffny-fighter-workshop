@@ -117,16 +117,16 @@ def test_undo_and_reset_restore_outfit_collection_active_view_and_assets(tmp_pat
     assert not e.snapshot()['dirty'] and e.active_outfit == 'default' and len(e.snapshot()['outfits']) == 1
 
 
-def test_stale_outfit_can_be_switched_back_to_and_cleared_without_losing_other_art(tmp_path):
+def test_appearance_changes_keep_per_outfit_art_through_switch_and_save(tmp_path):
     e, _ = editor(tmp_path); e.request('outfit_add', {}); second = e.active_outfit
     values = e.snapshot()['fields']['caf_values'][:]; values[0] = 4
     e.stage({'caf_values': values})
     e.request('outfit_select', {'id': 'default'})
     e.request('outfit_select', {'id': second})
     assert e.snapshot()['fields']['caf_values'][0] == 4
-    with pytest.raises(SaveError, match='Appearance changed'):
-        e.request('save', {})
-    e.request('project_atlas_clear', {}); e.request('save', {})
+    e.request('save', {})
+    assert e.project['textures']['atlases']==e.project['outfits'][0]['textures']['atlases']
+    e.request('project_atlas_clear', {});e.request('save',{})
     assert 'a' in e.project['textures']['atlases'] and not e.project['outfits'][0]['textures']['atlases']
 
 

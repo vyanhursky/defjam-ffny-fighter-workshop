@@ -1,5 +1,21 @@
 # Progress and handoff
 
+## Persistent imported artwork — 2026-11-10
+
+Owner reported imported 2Pac tattoos reverting to original game artwork after
+appearance changes. The preview had fallen back to retail RGB on a hash
+mismatch, and project save required clearing/reimporting art. Imported PNG RGB
+now stays applied across body, face, wardrobe/tattoo and temporary preview
+changes. Project staging rebinds identical PNG bytes to the current outfit;
+Clear/replace remains explicit. Original native material alpha is retained.
+Undo, outfit switching, save/copy/reopen and export preserve per-outfit art.
+
+153 Python tests pass, 3 skipped at the first checkpoint. With supplied 2Pac
+art and actual source models, bodies A–F (normal and No clothes) plus face,
+eyes, brows, nose, lips and ears preserved exact imported RGB; save/reopen and
+complete runtime export passed. Evidence: logs/persistent-real-art.txt. Different
+body UVs can affect fit; no repainting or automatic geometry/UV transfer.
+
 ## Immediate face slider preview — 2026-11-10
 
 Owner requested instant geometry feedback while dragging, with Apply reserved

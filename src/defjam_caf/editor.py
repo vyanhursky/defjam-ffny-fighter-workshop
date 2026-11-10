@@ -91,6 +91,10 @@ class Editor:
             document["portrait"] = self.portrait_edit
         if self.texture_edit is not None:
             document.update(schema=projects.SCHEMA2, textures=copy.deepcopy(self.texture_edit))
+        if 'textures' in document:
+            # Imported RGB remains the author's override across appearance
+            # changes. Rebind the same bytes to the newly staged outfit.
+            document['textures']['appearance_sha256'] = projects.appearance_hash(document['fighter'])
         document = outfits.replace_view(source, self.active_outfit, document)
         return projects.validate(document) if validate else document
 
@@ -274,7 +278,11 @@ class Editor:
             if any(left["fighter"][key] != right["fighter"][key] for key in outfits.APPEARANCE):
                 result.append(name + ": appearance changed")
             for key, label in (("textures", "texture atlases"), ("portrait", "portrait"), ('ui_art','UI artwork'), ('face_sculpt','face sculpt')):
-                if left.get(key) != right.get(key):
+                before_asset, after_asset = left.get(key), right.get(key)
+                if key == 'textures':
+                    before_asset = (before_asset or {}).get('atlases', {})
+                    after_asset = (after_asset or {}).get('atlases', {})
+                if before_asset != after_asset:
                     result.append(name + ": " + label + " changed")
         if not result and before != after:
             result.append("Project outfit collection changed")
@@ -365,22 +373,17 @@ class Editor:
             result['notices'].append('Experimental template sculpt. Original rig, UVs and normals retained; extreme edits may affect shading, eyelids, hair and accessories.')
         textures = self.texture_edit if self.texture_edit is not None else (self.active_view() or {}).get("textures")
         if textures and textures["atlases"]:
-            # Try-on/No clothes uses the original temporary outfit, never the
-            # final flattened artwork for a different appearance.
-            if textures["appearance_sha256"] == projects.appearance_hash(fields):
-                import base64, io
-                from PIL import Image
-                from .assets import image_uri
-                for atlas in "abcd":
-                    if atlas not in textures["atlases"]:
-                        continue
-                    native = Image.open(io.BytesIO(base64.b64decode(result["textures"][atlas].split(",", 1)[1]))).convert("RGBA")
-                    imported = Image.open(io.BytesIO(projects.atlas_bytes(textures["atlases"][atlas]))).convert("RGBA")
-                    imported.putalpha(native.getchannel("A"))
-                    result["textures"][atlas] = image_uri(imported)
-                result["notices"].append("Imported RGB atlases; original material alpha retained. Injury variants apply in-game; this preview shows the normal face.")
-            else:
-                result["notices"].append("Imported atlases belong to the saved outfit; this temporary appearance uses original textures.")
+            import base64, io
+            from PIL import Image
+            from .assets import image_uri
+            for atlas in "abcd":
+                if atlas not in textures["atlases"]:
+                    continue
+                native = Image.open(io.BytesIO(base64.b64decode(result["textures"][atlas].split(",", 1)[1]))).convert("RGBA")
+                imported = Image.open(io.BytesIO(projects.atlas_bytes(textures["atlases"][atlas]))).convert("RGBA")
+                imported.putalpha(native.getchannel("A"))
+                result["textures"][atlas] = image_uri(imported)
+            result["notices"].append("Imported RGB atlases stay applied across appearance changes; original material alpha retained. Clear atlases to restore retail artwork. Injury variants apply in-game; this preview shows the normal face.")
         result["preview_only"] = dict(changes=changes or {}, hide_clothes=hide_clothes)
         return result
 

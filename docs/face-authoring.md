@@ -14,9 +14,10 @@ its saved ordinal and explains the original alias to 2. Unknown saved choices
 remain visible and preserved until explicitly replaced.
 
 Only selected value/color array slots change. Normal staging, preview, change
-review, Undo/Reset, backup, save/copy and project workflows apply. Flattened
-texture atlases retain their appearance binding; changing presets requires
-clearing/reimporting them. Clear a sculpt before changing its body/shape presets.
+review, Undo/Reset, backup, save/copy and project workflows apply. Imported
+RGB atlases remain applied across appearance changes; the editor rebinds the
+same PNG bytes to the staged outfit. Clear explicitly to restore retail artwork.
+Clear a sculpt before changing its body/shape presets.
 
 ## Advanced: experimental proportions
 

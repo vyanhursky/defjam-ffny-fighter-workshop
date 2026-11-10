@@ -143,8 +143,11 @@ Under **Project & mod → Texture atlases**, choose an atlas and import its PNG.
 The preview uses its RGB while retaining the original material alpha. A–D are
 the four composed CAF atlases; D1/D2 are native facial injury variants. Import
 complete flattened atlases for the selected outfit. The project binds them to
-its appearance choices and colors: changing appearance requires clearing then
-reimporting the art. Training/style changes do not invalidate those bindings.
+its current appearance choices and colors. Changing body, face or wardrobe
+options preserves the imported PNG bytes and updates that binding. Imported RGB
+takes precedence over in-game tattoo/clothing artwork on those atlases until
+explicitly cleared or replaced. Geometry/UV changes can affect the art's fit;
+the editor does not automatically repaint or remap the PNG.
 Clear is staged, Reset restores saved art, and Save project/Save project as
 include all assets. Variant projects retain art and finishers with a new identity.
 

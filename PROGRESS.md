@@ -2,6 +2,8 @@
 
 ## Performance editors — 2026-11-10
 
+Source drafts: Workshop [#7](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/7), runtime [#221](https://github.com/vyanhursky/DefJamFFNY-recomp/pull/221).
+
 Owner selected exportable projects first: Voice, original entrance/victory, source
 animation playback and AI. Project v7 shares performance across outfits and embeds
 bounded PCM16 WAV overrides; CAF v6 exports typed resources through the companion

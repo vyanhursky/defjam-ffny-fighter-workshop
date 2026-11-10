@@ -66,7 +66,7 @@ export function performanceEditor(api){
     }catch(error){fail(error);}
   }
   function resetBones(){for(const mesh of meshes())if(mesh.skeleton){const rig=mesh.userData.previewRig;mesh.skeleton.bones.forEach((b,i)=>{b.position.fromArray(rig[i].position);b.quaternion.fromArray(rig[i].quaternion);b.scale.fromArray(rig[i].scale);});}}
-  function stop(){epoch++;clip=null;playing=false;time=0;last=null;resetBones();$('animation-play').textContent='Play';$('animation-time').value=0;repose();}
+  function stop(){epoch++;clip=null;playing=false;time=0;last=null;window.__cafAnimation=null;resetBones();$('animation-play').textContent='Play';$('animation-time').value=0;$('animation-clock').textContent='0.00 s';repose();}
   function attach(data){
     const current=meshes();
     // Check every displayed part before replacing any mesh.

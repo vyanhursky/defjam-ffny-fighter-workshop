@@ -1,5 +1,20 @@
 # Progress and handoff
 
+## Center customization layout — 2026-11-10
+
+Owner requested more room for the growing customization menu. The main workspace
+now orders profiles, the wider customization panel, then the 3D fighter viewer
+at the far right. Section navigation wraps with usable button heights; Save stays
+at the bottom of the editor. Viewer controls, loading overlay and notifications
+follow the new column layout. DOM order matches visual/keyboard reading order.
+
+A disposable Qt window verified all nine section buttons, visible save controls,
+WebGL resizing and no horizontal overflow at 1080×740,1440×940 and1920×1080.
+At1440 the editor is713px wide (previously355px) and the viewer547px. Original
+project bytes remained identical. Private evidence: logs/center-layout-result.txt
+and the corresponding layout captures. The existing Performance Editor Review
+shortcut opens the updated source; restart its window to reload the layout.
+
 ## Performance editors — 2026-11-10
 
 Source drafts: Workshop [#7](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/7), runtime [#221](https://github.com/vyanhursky/DefJamFFNY-recomp/pull/221).

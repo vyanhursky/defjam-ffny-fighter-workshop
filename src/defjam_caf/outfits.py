@@ -6,7 +6,7 @@ from . import projects
 
 DEFAULT = "default"
 MAX_OUTFITS = 3
-ASSETS = ("textures", "portrait", "ui_art")
+ASSETS = ("textures", "portrait", "ui_art", "face_sculpt")
 APPEARANCE = ("caf_values", "caf_colors")
 
 
@@ -45,7 +45,7 @@ def replace_view(document, identity, selected):
     if identity == DEFAULT:
         target = result["fighter"]
         assets = result
-        if result["schema"] not in (projects.SCHEMA3,projects.SCHEMA4):
+        if result["schema"] not in (projects.SCHEMA3,projects.SCHEMA4,projects.SCHEMA5):
             result["schema"] = selected["schema"]
     else:
         target = next((row for row in result.get("outfits", []) if row["id"] == identity), None)
@@ -57,12 +57,14 @@ def replace_view(document, identity, selected):
         assets.pop(key, None)
         if key in selected:
             assets[key] = copy.deepcopy(selected[key])
+    if selected['schema'] == projects.SCHEMA5:
+        result['schema'] = projects.SCHEMA5
     return result
 
 
 def upgrade(document):
     result = copy.deepcopy(document)
-    result["schema"] = projects.SCHEMA4 if document['schema']==projects.SCHEMA4 else projects.SCHEMA3
+    result["schema"] = document['schema'] if document['schema'] in (projects.SCHEMA4,projects.SCHEMA5) else projects.SCHEMA3
     result.setdefault("outfit_name", "Outfit 1")
     result.setdefault("outfits", [])
     return result

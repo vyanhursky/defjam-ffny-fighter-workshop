@@ -38,7 +38,7 @@ def check_budget(document):
 
 
 def upgrade(document):
-    result=copy.deepcopy(document);result['schema']=projects.SCHEMA4
+    result=copy.deepcopy(document);result['schema']=projects.SCHEMA5 if document['schema']==projects.SCHEMA5 else projects.SCHEMA4
     result.setdefault('outfit_name','Outfit 1');result.setdefault('outfits',[])
     return result
 

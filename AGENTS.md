@@ -71,3 +71,10 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   outfit overrides belong to roadmap modpack authoring; preserve original-profile
   workflows. Use Pockets placeholders after the requested imagegen refusal.
   Source-only Workshop/runtime PR updates are authorized; no release or art publication.
+
+- Owner approved facial authoring on 2026-11-09: original facial presets for
+  Story CAFs and standalone fighters, experimental proportion controls and
+  prioritized template mesh import research/implementation. Store sculpts in
+  versioned projects and the companion runtime, never unknown Story save bytes.
+  Preserve topology/UV/rig contracts and report native qualification limits.
+  Source-only roadmap feature PRs remain authorized.

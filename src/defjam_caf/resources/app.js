@@ -65,8 +65,37 @@ function renderState(state){
   $('outfit-status').textContent=state.project?'Stats, fighting styles and Blazin’ moves are shared. Appearance, textures and portraits belong to the selected outfit.':'Create or open a fighter project to add outfits.';
   renderBlazin(state);
   renderUIArt(state);
+  renderFacePresets(state);
   loadCategory().catch(fail);
   queuePreview(0);
+}
+function renderFaceSculpt(state){
+  const data=state.face_sculpt||{},root=$('face-sliders');root.replaceChildren();
+  for(const row of data.controls||[]){
+    const label=document.createElement('label');label.textContent=row.label;
+    const slider=document.createElement('input');slider.id='sculpt-'+row.id;slider.type='range';slider.min=-1;slider.max=1;slider.step=.01;slider.value=data.sliders?.[row.id]||0;slider.disabled=!data.available||data.imported;
+    const output=document.createElement('output');output.textContent=Number(slider.value).toFixed(2);slider.oninput=()=>output.textContent=Number(slider.value).toFixed(2);
+    label.append(slider,output);root.append(label);
+  }
+  for(const id of ['apply-face-sliders','export-face','import-face','clear-face'])$(id).disabled=!data.available;
+  $('apply-face-sliders').disabled=!data.available||data.imported;
+  $('clear-face').disabled=!data.available||!data.present;
+  $('face-sculpt-status').textContent=!data.available?'Create a standalone fighter project to use face sculpting. Story CAFs use the preset controls above.':data.imported?'Imported sculpt staged in this outfit.':data.present?'Slider sculpt staged in this outfit.':'Original head presets; no sculpt.';
+}
+function renderFacePresets(state){
+  renderFaceSculpt(state);
+  const root=$('face-presets');root.replaceChildren();
+  for(const row of state.face_presets||[]){
+    const label=document.createElement('label');label.textContent=row.label;
+    const select=document.createElement('select');select.id='face-'+row.id;
+    makeOptions(select,row.options,row.value);
+    if(!row.options.some(option=>option.value===row.value)){
+      const preserved=new Option('Unavailable saved preset · preserved',String(row.value));preserved.disabled=true;select.prepend(preserved);select.value=String(row.value);
+    }
+    select.disabled=!readyFighter()||!row.options.length;
+    select.onchange=()=>act('appearance',{changes:{[row.id]:Number(select.value)}},'Updating face…');
+    label.append(select);root.append(label);
+  }
 }
 function renderBlazin(state){
   const catalog=state.blazin,rows=catalog?.options||[],sources=[...new Set(rows.map(row=>row.source))];
@@ -197,7 +226,11 @@ $('project-copy').onclick=()=>act('choose_project_copy',{},'Saving project copy�
 $('save-project-details').onclick=()=>act('project_metadata',projectDetails(),'Saving project & details…');
 for(const key of ['name','author','version','description','license','donor','pack','fighter'])$('project-'+key).oninput=async()=>{try{const state=await call('project_metadata_draft',projectDetails());current=state;window.__cafState=state;$('save').disabled=!state.dirty;$('reset').disabled=!state.dirty;$('save-status').textContent=state.dirty?'● Unsaved changes':'● Saved project';$('save-status').classList.toggle('dirty',state.dirty);$('changes').replaceChildren(...state.changes.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));}catch(e){fail(e);}};
 $('export-mod').onclick=()=>act('choose_mod_export',{},'Validating and exporting fighter mod…');
-$('undo').onclick=()=>act('undo');$('reset').onclick=()=>{if(confirm('Reset all unsaved fighter changes?'))act('reset');};
+$('export-face').onclick=()=>act('choose_face_export',{},'Exporting head template…');
+  $('import-face').onclick=()=>act('choose_face_import',{},'Validating head sculpt…');
+  $('clear-face').onclick=()=>act('face_clear');
+  $('apply-face-sliders').onclick=()=>{const values={};for(const row of current.face_sculpt.controls)values[row.id]=Number($('sculpt-'+row.id).value);act('face_sliders',{values},'Updating face proportions…');};
+  $('undo').onclick=()=>act('undo');$('reset').onclick=()=>{if(confirm('Reset all unsaved fighter changes?'))act('reset');};
 $('build').onchange=()=>act('appearance',{changes:{build:$('build').value}});
 $('skin').onchange=()=>act('appearance',{changes:{skin:Number($('skin').value)}});
 $('category').onchange=()=>{auditionKey=null;$('search').value='';loadCategory().catch(fail);queuePreview();};$('search').oninput=()=>{wardrobe();tryOn();};

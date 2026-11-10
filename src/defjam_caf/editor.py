@@ -209,6 +209,9 @@ class Editor:
             raise SaveError("Load the original game assets before changing appearance")
         fields = read_fields(self.current().payload)
         edited = self.appearance.change(fields, changes)
+        from .face_geometry import basis
+        if (self.active_view() or {}).get('face_sculpt') and basis(fields) != basis(dict(fields, **edited)):
+            raise SaveError('Clear the face sculpt before changing its body or facial geometry presets')
         # Validate a complete source outfit before any bytes can be staged.
         try:
             self.cache.compose(self.appearance.outfit(dict(fields, **edited)))
@@ -219,7 +222,7 @@ class Editor:
     def changes(self):
         if self.profile is None and self.project is None:
             return []
-        if self.project is not None and (self.outfit_draft is not None or self.project["schema"] in (projects.SCHEMA3,projects.SCHEMA4)):
+        if self.project is not None and (self.outfit_draft is not None or self.project["schema"] in (projects.SCHEMA3,projects.SCHEMA4,projects.SCHEMA5)):
             return self.outfit_changes()
         before, after = read_fields(self.base().payload), read_fields(self.current().payload)
         result = []
@@ -269,7 +272,7 @@ class Editor:
             left, right = outfits.view(before, identity), outfits.view(after, identity)
             if any(left["fighter"][key] != right["fighter"][key] for key in outfits.APPEARANCE):
                 result.append(name + ": appearance changed")
-            for key, label in (("textures", "texture atlases"), ("portrait", "portrait"), ('ui_art','UI artwork')):
+            for key, label in (("textures", "texture atlases"), ("portrait", "portrait"), ('ui_art','UI artwork'), ('face_sculpt','face sculpt')):
                 if left.get(key) != right.get(key):
                     result.append(name + ": " + label + " changed")
         if not result and before != after:
@@ -286,9 +289,15 @@ class Editor:
         if project_view is not None:
             project_view.pop("outfits", None)
             project_view.pop('ui_art',None)
+            project_view.pop('face_sculpt',None)
         if project_view is not None and self.metadata_edit is not None:
             project_view.update(copy.deepcopy(self.metadata_edit))
         active = self.active_view()
+        from .face_geometry import CONTROLS
+        sculpt = (active or {}).get('face_sculpt')
+        result['face_sculpt'] = dict(available=self.project is not None and self.appearance is not None,
+            imported=bool(sculpt and not sculpt['sliders']), present=bool(sculpt),
+            sliders=sculpt['sliders'] if sculpt else {}, controls=[dict(id=k,label=v) for k,v in CONTROLS])
         result.update(project=project_view, project_path=str(self.project_path) if self.project_path else None,
                       portrait_available=self.portrait_edit is not None or bool(active and "portrait" in active),
                       outfits=outfits.entries(self.project_source()) if self.project else [], active_outfit=self.active_outfit)
@@ -309,6 +318,8 @@ class Editor:
             if self.appearance:
                 fields = result["fields"]
                 result["appearance_selected"] = self.appearance.selected(fields)
+                from .faces import selected
+                result['face_presets']=selected(fields,self.appearance.face_options)
                 result["groups"] = [dict(id=str(slot), label=self.group_label(slot),
                                           section=self.cache.groups[str(slot)]["section"], count=len(self.appearance.options[str(slot)]))
                                     for slot in range(12, 38) if slot not in (17, 26)]
@@ -331,6 +342,15 @@ class Editor:
                 fields["caf_values"][slot] = 0xffffffff
                 fields["caf_colors"][slot] = 0
         result = self.cache.compose(self.appearance.outfit(fields))
+        sculpt = (self.active_view() or {}).get('face_sculpt')
+        if sculpt:
+            from . import face_geometry
+            reference = face_geometry.template(self.cache, self.appearance, fields)
+            face_geometry.validate(sculpt, fields, reference)
+            head = face_geometry.apply(dict(meshes=[m for m in result['meshes'] if m['slot']=='2']), sculpt)
+            heads = {m['rm']: m for m in head['meshes']}
+            result['meshes'] = [heads[m['rm']] if m['slot']=='2' else m for m in result['meshes']]
+            result['notices'].append('Experimental template sculpt. Original rig, UVs and normals retained; extreme edits may affect shading, eyelids, hair and accessories.')
         textures = self.texture_edit if self.texture_edit is not None else (self.active_view() or {}).get("textures")
         if textures and textures["atlases"]:
             # Try-on/No clothes uses the original temporary outfit, never the
@@ -353,6 +373,39 @@ class Editor:
         return result
 
     def request(self, action, args):
+        if action in ('face_export', 'face_import', 'face_sliders', 'face_clear'):
+            from . import face_geometry
+            if self.project is None:
+                raise SaveError('Create a standalone fighter project for sculpting. Story saves store original presets only.')
+            if self.appearance is None:
+                raise SaveError('Load original game assets before sculpting a face')
+            document = self.project_document(validate=action!='face_clear')
+            view = outfits.view(document, self.active_outfit)
+            reference = face_geometry.template(self.cache, self.appearance, view['fighter'])
+            if action == 'face_export':
+                path = Path(args['path'])
+                if path.exists():
+                    raise SaveError('Choose a new template filename; existing files are preserved')
+                from .storage import atomic_bytes
+                atomic_bytes(path, face_geometry.obj(reference, view.get('face_sculpt')))
+                return dict(message='Exported sculptable head OBJ. Preserve vertex order, triangulation and UVs.')
+            if action == 'face_clear':
+                view.pop('face_sculpt', None)
+            elif action == 'face_sliders':
+                if view.get('face_sculpt') and not view['face_sculpt']['sliders']:
+                    raise SaveError('Clear the imported sculpt before using sliders; export it first to preserve your work')
+                view['face_sculpt'] = face_geometry.sliders(reference, args['values'])
+                view['schema'] = projects.SCHEMA5
+            else:
+                with Path(args['path']).open('rb') as stream:
+                    raw = stream.read(face_geometry.MAX_OBJ+1)
+                view['face_sculpt'] = face_geometry.import_obj(raw, reference)
+                view['schema'] = projects.SCHEMA5
+            candidate = projects.validate(outfits.replace_view(document, self.active_outfit, view))
+            self.remember()
+            self.outfit_draft, self.edits = candidate, {}
+            self.portrait_edit = self.texture_edit = self.metadata_edit = None
+            return dict(snapshot=self.snapshot(), message='Face sculpt staged; Save project preserves it')
         if action=='ui_preview':
             if self.project is None:return {'png':None}
             effective=ui_art.resolved(self.project_document(validate=False),self.active_outfit)
@@ -484,7 +537,7 @@ class Editor:
             if self.project is None:
                 raise SaveError("Create or open a fighter project before exporting a mod")
             report = export_mod(self.project_document(), args["path"], args["runtime"], self.data,
-                                self.workspace / "fighter-exports", progress=self.progress)
+                                  self.workspace / "fighter-exports", progress=self.progress, asset_cache=self.cache)
             return dict(message="Validated Custom Fighter Mod exported to " + args["path"], report=report)
         if action == "open_data":
             return self.open_data(args["path"])

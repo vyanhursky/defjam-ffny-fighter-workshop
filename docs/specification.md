@@ -57,6 +57,15 @@ Granular movesets, animation player, custom meshes/textures, custom animations,
 custom fight voices and fighter modpack authoring. Do not investigate the separate
 Custom Fighter R&D worktree as part of this beta.
 
+## Approved facial authoring milestone — 2026-11-09
+
+The owner requested original face/feature presets for Story CAFs and standalone
+fighters, proportion sliders and prioritized imported face geometry. This
+activates the relevant custom meshes/modpack roadmap scope. Preserve the profile
+editor and saves. Arbitrary sculpt data belongs to a versioned project/runtime
+contract, never unknown Story bytes. See [Face authoring](face-authoring.md) for
+controls, template spec, native pilot evidence and experimental limits.
+
 ## Approved four-slot Blazin' editor — 2026-11-09
 
 The owner requested editable assignments, analogous to fighting styles, for both

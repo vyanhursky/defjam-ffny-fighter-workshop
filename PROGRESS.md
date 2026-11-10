@@ -1,5 +1,36 @@
 # Progress and handoff
 
+## Facial authoring — 2026-11-09
+
+Isolated `feature/face-authoring` work extends the custom meshes/modpack roadmap
+on the CAF texture/UI feature base. Basic controls expose face type, eye
+shape/color, eyebrow shape/color, nose, lips and ears from verified original
+resources. Unknown choices/bytes remain preserved. Story saves use native fields.
+
+Experimental Advanced controls provide nine absolute proportion sliders. Expert
+exports/imports a 710-vertex position-only OBJ template, preserving topology,
+UVs, original rig and neck seam. Project v5 stores per-outfit sculpts with
+Undo/Reset/save/copy support. CAF v4 exports hash-bound coordinates through the
+companion `feature/caf-face-geometry` runtime. The runtime compares all reference
+vertices before applying its original morph evaluator and verifies target
+coordinates plus unchanged peer buffers. See [Face authoring](docs/face-authoring.md).
+
+Integrated checks: 146 Python tests passed, 3 skipped; 4 pose tests passed.
+Actual Qt preset/slider/history/save/reopen checks passed; original OBJ round-trip
+error below 5e-8. Windows native two-CAF menu/combat pilot verified identities,
+710 imported vertices within 1.5377998e-05 native units, unchanged peer buffers,
+77 presentation intervals and no crash/watchdog/unresolved call. Isolated saves
+restored identically. Complete mod export passed the runtime API. The first
+overlong test display name correctly failed the existing native title budget.
+
+Limits: original normals/rig and accessories retained; no arbitrary topology,
+automatic rig/UV transfer or accessory refitting. Broader facial animation,
+outfit/rematch, external DCC and cross-platform gameplay qualification remains
+pending. Keep Advanced/Expert experimental. Original Tupac packages/playtest
+roots are unchanged; all generated geometry, projects and captures stay private.
+No merge or packaged release is authorized. Follow-up: owner review and the
+broader qualification matrix before promoting sculpting beyond the pilot.
+
 ## Complete fighter UI artwork — 2026-11-09
 
 Owner approved roadmap modpack authoring for selector/loading portraits,

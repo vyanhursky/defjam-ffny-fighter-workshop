@@ -84,6 +84,14 @@ class Bridge(QObject):
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "export_mod", {"path": path, "runtime": runtime}
+            elif action in ('choose_face_export','choose_face_import'):
+                opening = action == 'choose_face_import'
+                dialog = QFileDialog.getOpenFileName if opening else QFileDialog.getSaveFileName
+                path, _ = dialog(self.window, 'Import sculpted head' if opening else 'Export head template',
+                                 '' if opening else 'head-template.obj', 'Wavefront head (*.obj)')
+                if not path:
+                    return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                action,args = ('face_import' if opening else 'face_export'),dict(path=path)
             elif action=='choose_ui_retail':
                 runtime=QFileDialog.getExistingDirectory(self.window,'Select Custom Fighter runtime for retail UI references')
                 if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))

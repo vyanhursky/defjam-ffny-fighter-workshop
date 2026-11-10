@@ -42,6 +42,9 @@ def unique(pairs):
 
 
 def validate(document):
+    if type(document) is dict and document.get('schema') in ('ffny-retail-fighter-project-1','ffny-retail-fighter-project-2'):
+        from .retail import validate as retail_validate
+        return retail_validate(document)
     require(type(document) is dict and {"schema", "identity", "metadata", "fighter"} <= set(document)
             and set(document) <= {"schema", "identity", "metadata", "fighter", "portrait", "textures", "outfit_name", "outfits", "ui_art", "face_sculpt", "performance"},
             "Unsupported fighter project fields")
@@ -235,7 +238,9 @@ def container(document):
 
 
 def encoded(document):
-    return (json.dumps(validate(document), ensure_ascii=True, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
+    raw = (json.dumps(validate(document), ensure_ascii=True, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
+    require(len(raw)<=MAX_PROJECT,'Fighter project exceeds the portable file size limit')
+    return raw
 
 
 def read(path):

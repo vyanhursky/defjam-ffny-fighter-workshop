@@ -77,6 +77,21 @@ activates the relevant custom meshes/modpack roadmap scope. Preserve the profile
 editor and saves. Arbitrary sculpt data belongs to a versioned project/runtime
 contract, never unknown Story bytes. See [Face authoring](face-authoring.md) for
 controls, template spec, native pilot evidence and experimental limits.
+## Approved retail/owned fighter pilot — 2026-11-09
+
+The owner approved a Vendetta-inspired shirtless DMX project using the
+Memphis Bleek-compatible appearance with Teck combat/stats. Preserve supplied
+DMX voice, finisher, intro and victory resources when the complete compiler and
+native checks support them; otherwise use explicit donor fallbacks. A second
+outfit comes later. Target Rich Original Detail HD artwork. Reuse the existing
+UI-art compiler and isolate work from the active Tupac branches and playtests.
+
+Implement a separate retail project kind and studio with original model/combat
+donors, ordinary resource import, portable embedded assets, stat/resource/UI/atlas
+editing and fully validated ZIP export. This targets existing fighter modpack
+authoring and custom texture/model-resource admission, not a general DCC editor.
+See [retail fighter projects](retail-fighter-projects.md). Original game data,
+generated artwork, projects, packs and native evidence stay private.
 
 ## Approved four-slot Blazin' editor — 2026-11-09
 
@@ -165,3 +180,14 @@ AI slots and verified source rig/weight mapping. Unsupported playback codecs
 remain explicit exclusions. Full native/cross-platform acceptance is deferred
 for joint testing at the owner's request; focused checks are still required.
 See [Performance editor](performance-editor.md).
+
+## Approved retail appearance deployment — 2026-11-10
+
+Support replacing an existing retail fighter's appearance and adding selectable
+outfits to its original roster identity. Keep the existing standalone mode and
+portable project round trips. Outfit variants share combat, voice, stats and
+retail progress ownership; native clothing capacity remains three in total.
+The owner requested a private Pockets red-pants override and extra-outfit test
+through ordinary ZIP installation, fighter selection and battle. See
+[Retail appearance deployment](retail-overrides-outfits.md) for the contract and
+current scope. Native evidence remains separate from project/compiler checks.

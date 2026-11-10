@@ -5,6 +5,7 @@ import {blendFace,faceDraft as makeFaceDraft} from './face-preview.mjs';
 import {performanceEditor} from './performance.mjs';
 
 const $ = id => document.getElementById(id);
+$('retail-editor').onclick=()=>call('open_retail_editor');
 let bridge, current=null, serial=0, busyCount=0, options=[], selectionKey=null, previewEpoch=0;
 let auditionKey=null, categoryEpoch=0, previewTimer=null, sceneData=null, atlasTextures=[];
 let faceDraft=null,faceFrame=null,faceSceneEpoch=-1;

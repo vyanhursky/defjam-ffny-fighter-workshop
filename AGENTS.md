@@ -1,5 +1,17 @@
 # defjam-ffny-fighter-workshop
 
+- Owner approved GPLv3-only licensing of the Workshop and merging all pending
+  Workshop/runtime PRs on 2026-11-10. Preserve Vlad Yanhursky's copyright,
+  third-party licenses and game-art exclusions. Earlier MIT versions retain
+  their original terms. This supersedes earlier source-only/no-merge limits;
+  no new packaged release or asset publication is requested.
+
+- Owner approved retail appearance overrides and additional selectable retail
+  outfits on 2026-11-10, including normal ZIP installation and native Pockets
+  selection/battle tests. Preserve originals and shared retail combat identity;
+  keep artwork, projects and captures private. Source-only feature PRs remain
+  authorized; no release or merge is implied.
+
 - Owner approved voice overrides, original entrance/victory selection, source
   animation playback and AI personality authoring on 2026-11-10. Target exportable
   projects first and preserve Story-save workflows. Use versioned portable
@@ -33,7 +45,7 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   files under `src/defjam_caf/resources/branding/` (`defjam.icns`, `defjam.ico`,
   `defjam.png`). Their source paths/commit and SHA-256 hashes are recorded in
   `provenance.json` there. This is an icon-only exception, not general permission
-  to track game assets. The MIT license does not cover that artwork.
+  to track game assets. The project software license does not cover that artwork.
 
 - Owner-approved README screenshot exception (2026-11-07): the four exact
   `docs/media/workshop-*.png` files listed in `docs/media/SHA256SUMS` were reviewed

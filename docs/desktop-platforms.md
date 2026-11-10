@@ -116,4 +116,4 @@ The app reuses the owner's approved Def Jam Recomp icon: `.icns` for the Mac
 bundle/Dock, `.ico` for the Windows executable and a PNG window icon on other
 platforms. Source paths and exact fingerprints are recorded in
 `src/defjam_caf/resources/branding/provenance.json`. The game artwork remains
-outside the project MIT license. No icon is regenerated during packaging.
+outside the project software license. No icon is regenerated during packaging.

@@ -1,5 +1,24 @@
 # defjam-ffny-fighter-workshop
 
+- Owner approved GPLv3-only licensing of the Workshop and merging all pending
+  Workshop/runtime PRs on 2026-11-10. Preserve Vlad Yanhursky's copyright,
+  third-party licenses and game-art exclusions. Earlier MIT versions retain
+  their original terms. This supersedes earlier source-only/no-merge limits;
+  no new packaged release or asset publication is requested.
+
+- Owner approved retail appearance overrides and additional selectable retail
+  outfits on 2026-11-10, including normal ZIP installation and native Pockets
+  selection/battle tests. Preserve originals and shared retail combat identity;
+  keep artwork, projects and captures private. Source-only feature PRs remain
+  authorized; no release or merge is implied.
+
+- Owner approved voice overrides, original entrance/victory selection, source
+  animation playback and AI personality authoring on 2026-11-10. Target exportable
+  projects first and preserve Story-save workflows. Use versioned portable
+  resources and the matching runtime; never store these fields in unknown save
+  bytes. The owner deferred broad regressions until joint testing after more
+  features. Focused codec, desktop and compiler checks remain appropriate.
+
 Read PROGRESS.md and docs/specification.md first. This is a separate, local-first
 desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
 
@@ -26,7 +45,7 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   files under `src/defjam_caf/resources/branding/` (`defjam.icns`, `defjam.ico`,
   `defjam.png`). Their source paths/commit and SHA-256 hashes are recorded in
   `provenance.json` there. This is an icon-only exception, not general permission
-  to track game assets. The MIT license does not cover that artwork.
+  to track game assets. The project software license does not cover that artwork.
 
 - Owner-approved README screenshot exception (2026-11-07): the four exact
   `docs/media/workshop-*.png` files listed in `docs/media/SHA256SUMS` were reviewed
@@ -45,3 +64,43 @@ desktop CAF/save editor for the Xbox-based Def Jam FFNY Recomp.
   feature branches and PRs: Workshop into develop/0.1, runtime into
   research/custom-fighter-mods, with Windows/macOS/Linux CI passing. No new
   packaged release or merge is authorized by that instruction.
+
+- Owner approved the texture-mod fighter pilot on 2026-11-09 and authorized
+  general-purpose Workshop feature PRs against the existing roadmap. This covers
+  experimental read-only PS2 snapshot recovery, portable CAF atlas import and
+  preservation of retail finisher assignments, with an explicit companion
+  runtime contract. Preserve beta profile workflows; keep source art, projects,
+  captures and native evidence private. No new packaged release is implied.
+
+- Owner approved editable four-slot Blazin' assignments on 2026-11-09 for Story
+  CAFs and standalone CAF projects, using the complete original-game move pool.
+  Keep selection provider/identity based so future custom animation resources
+  can extend the menu; unsupported resource types remain refused until their
+  format/runtime capability exists. Source PR updates remain authorized.
+
+- Owner approved one custom fighter with up to three selectable outfits on
+  2026-11-09. Extend standalone projects and the explicit runtime contract, with
+  shared identity/combat settings and per-outfit appearance, atlases and portrait.
+  Use the original clothing selector; preserve existing profile workflows and
+  project versions. This targets roadmap fighter modpack authoring. Source PR
+  updates are authorized; original assets remain private and releases need approval.
+
+- Owner approved complete fighter UI art import on 2026-11-09, covering portraits,
+  titlecards, result/grid icons and all 2/3/4-player variants. Shared defaults and
+  outfit overrides belong to roadmap modpack authoring; preserve original-profile
+  workflows. Use Pockets placeholders after the requested imagegen refusal.
+  Source-only Workshop/runtime PR updates are authorized; no release or art publication.
+
+- Owner approved facial authoring on 2026-11-09: original facial presets for
+  Story CAFs and standalone fighters, experimental proportion controls and
+  prioritized template mesh import research/implementation. Store sculpts in
+  versioned projects and the companion runtime, never unknown Story save bytes.
+  Preserve topology/UV/rig contracts and report native qualification limits.
+  Source-only roadmap feature PRs remain authorized.
+
+- Owner approved retail fighter movesets on 2026-11-10 for projects and direct
+  Story-save editing, explicitly including companion runtime compatibility.
+  Keep the CAF's appearance, career/training and four Blazin' assignments;
+  select complete original motion cores by stable retail identity. Preserve
+  the original CAF combination and old formats. Document native qualification
+  separately from editor/codec tests; no release or merge is authorized.

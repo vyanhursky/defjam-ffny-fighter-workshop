@@ -1,6 +1,389 @@
 # Progress and handoff
 
-## Status — 2026-11-07
+## GPLv3 licensing and pending PR integration — 2026-11-10
+
+Owner approved GPLv3 and merging all pending Workshop/runtime PRs. Original
+Workshop code/documentation now use GPL-3.0-only, with the unmodified official
+GPLv3 text in LICENSE, Vlad Yanhursky's attribution in COPYRIGHT and README,
+and SPDX metadata in pyproject.toml. Source history identifies only the owner
+as the first-party author. Vendored decoder/Three.js MIT notices and dependency
+licenses remain intact; game-art exclusions and historical MIT releases remain.
+Desktop packages now include COPYRIGHT alongside the complete license and
+third-party notices. No new release or game-art publication is authorized.
+Validation: 191 Python tests pass (5 platform skips). A real wheel has
+License-Expression GPL-3.0-only, LICENSE/COPYRIGHT/THIRD_PARTY metadata files and
+both vendored MIT licenses. Actual desktop notice collection retains the full
+GPL text and attribution byte for byte. Historical beta release notes keep
+their original MIT description. GPL source publication and pending-PR merges
+are authorized; existing native qualification limits remain unchanged.
+
+## Retail workflow documentation — 2026-11-10
+
+Owner requested the tested retail workflow be documented in the Workshop.
+Expanded docs/retail-overrides-outfits.md into an exact UI walkthrough covering
+replacement versus extra outfit, target/body import order, A001 PNG import,
+preview, project save/export, normal game installation, selection/battle checks
+and later editing. Pack recovery explicitly requires extracting the ZIP and
+selecting the folder containing fighters.json. Document the three-outfit total,
+shared combat identity, separate 2D portraits and testing one pack at a time.
+The retail studio includes an expandable offline workflow guide in its center
+panel. Corrected stale statements in the general retail guide that described
+all extra outfits as deferred. This is documentation/help only; gameplay
+qualification remains the previously recorded Pockets evidence below.
+Real Qt/WebChannel verification passes with the guide expanded, the existing
+3D preview rendered and no horizontal overflow at 1440×900. Private receipt:
+logs/retail-help-ui/receipt.json. Update the existing Workshop PR #8.
+
+## Retail appearance overrides and extra outfits — 2026-11-10
+
+Owner requested two normal package workflows using Pockets with red pants:
+replace the existing retail appearance, or add another selectable outfit while
+preserving the original. The retail studio now offers these purposes alongside
+standalone fighters, with a retail target, shared-combat controls disabled and
+the expanded center-options/right-viewer layout. Existing project v1 remains
+unchanged; v2 adds a typed deployment mode/target. Override and outfit ZIP import
+restore those choices. See docs/retail-overrides-outfits.md.
+
+Source integrates the independent retail studio with the performance/UI branch
+in isolated feature/retail-overrides-outfits worktrees. Private projects save and
+reopen identically; both ZIPs compile and install/activate through the ordinary
+mod manager. Override adds0/edits1; extra outfit adds1/edits0, with a hidden native
+variant rather than another public roster cell. Appearance resources and RGB
+atlas imports are supported; retail UI-art replacement remains explicitly refused.
+
+Focused Workshop tests: 39 passed (retail deployment/projects, performance and
+movesets). Real Qt/WebChannel check passes: actual red-pants model preview,
+read-only shared combat controls, correct deployment and viewer to the right.
+Runtime focused checks: 50 passed, including compiled C FWR1/FWR2 admission and
+retail parent bounds. Final Windows x64 release build passes with pinned toolkit
+4801dc1. The runtime encodes retail selection+1 in FWR2 to preserve native ID 0.
+
+Native investigation verifies original Pockets' cell and a two-choice clothing
+selector, with original green pants on choice 1. Choice2 submits logical100/core64;
+a real battle renders red pants under the Pockets name. Early startup stall,
+capture-limit rejection, navigation-only runs and one wrong Blaze-identity
+assertion remain negative evidence in the runtime research report. Final paired
+Windows 200-second runs pass: exact selections 100/56 for the extra outfit and
+76/56 for replacement Pockets versus Blaze;5/5 combat checks each, red-pants
+battle captures, 100 two-second samples each (median120), zero fault signatures,
+one verified save generation each and identical guarded save restoration.
+Receipts: runtime logs/pockets/final-outfit-result.txt and final-override-result.txt,
+native logs run-20261110-112649.log.err and run-20261110-113023.log.err. The owner's
+original saves are never used as writable test data. Broad regressions remain
+deferred per the owner; no release or asset publication is authorized.
+
+## Center customization layout — 2026-11-10
+
+Owner requested more room for the growing customization menu. The main workspace
+now orders profiles, the wider customization panel, then the 3D fighter viewer
+at the far right. Section navigation wraps with usable button heights; Save stays
+at the bottom of the editor. Viewer controls, loading overlay and notifications
+follow the new column layout. DOM order matches visual/keyboard reading order.
+
+A disposable Qt window verified all nine section buttons, visible save controls,
+WebGL resizing and no horizontal overflow at 1080×740,1440×940 and1920×1080.
+At1440 the editor is713px wide (previously355px) and the viewer547px. Original
+project bytes remained identical. Private evidence: logs/center-layout-result.txt
+and the corresponding layout captures. The existing Performance Editor Review
+shortcut opens the updated source; restart its window to reload the layout.
+
+## Performance editors — 2026-11-10
+
+Source drafts: Workshop [#7](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/7), runtime [#221](https://github.com/vyanhursky/DefJamFFNY-recomp/pull/221).
+
+Owner selected exportable projects first: Voice, original entrance/victory, source
+animation playback and AI. Project v7 shares performance across outfits and embeds
+bounded PCM16 WAV overrides; CAF v6 exports typed resources through the companion
+API. Voice presets are independent of movesets; category/event overrides and
+original/imported auditions are available. AI exposes 23 fields across three
+difficulties and four native slots, retaining untouched original values. Native
+FVA3/FIA2/FIC3 bind by CAF identity and participant so shared motion cores do not
+alias behavior. Existing Story-save fields and old contracts retain their scope.
+
+Focused project/history and compiler checks pass; disposable Qt checks verified
+real Tupac animation, play/pause/scrub, independent settings and Save. The complete
+three-outfit project compiles with all overrides, including an imported WAV. Native
+C fixtures verify two CAF identities sharing one retail core with different voice,
+AI and cinematic bindings. Original and supplied assets remain private.
+
+Playback currently supports body types18/13 and root20 with actual per-part rigs
+and skin weights. Blaze bank5:7 supported clips,110 excluded (primarily type19).
+Preview runs at explicit30 source ticks/s; camera, face/hand palettes, events and
+runtime blending are not reproduced. Full in-game and cross-platform qualification
+remains for owner joint testing; broad regressions were expressly deferred. No
+release or merge. See docs/performance-editor.md. Private evidence: logs/performance-
+desktop-result-5.txt and logs/performance-wav-export-result.txt.
+
+
+## Retail moveset authoring — 2026-11-10
+
+Owner explicitly requested projects and direct Story-save editing. The Fighting
+style tab now switches between CAF combinations and 69 distinct original retail
+motion cores, derived from the player's database and identified by stable retail
+symbols. Project v6 shares the selection across outfits and retains CAF styles;
+CAF v5 exports retain outfits, atlas overrides, UI art, sculpts and finishers.
+Direct profile edits change only payload 0x137, preserving career/progression,
+component styles, bonuses and separately edited four-slot Blazin' choices.
+
+163 Python tests and 7 Node tests pass. Actual Qt selection, Undo, backup/save,
+reopen and profile-to-project conversion passed against a copied VY3 profile
+(logs/retail-style-desktop-qualified.txt). A complete three-outfit Tupac export
+with original art, atlases, finisher identities, sculpt and Blaze motion core
+passed the companion compiler (logs/retail-complete-export.txt). Earlier native
+standalone Blaze/D-Mob test started a match with cores5/51 and logical104/105.
+Direct-profile D-Mob native acceptance now passes in the matching runtime:
+run-20261110-084737.log.err reached combat with actorcore50, original VY3 CAF
+model,201.6 health, speech538 and four saved choices77/49/49/49; damage events
+followed.77 presentation intervals, median120/2s, no crash/watchdog/unresolved
+call; copied saves restored identically. The game separates CAF presentation
+identity from live retail motion after initialization; initial failed intro runs
+remain negative evidence.58 focused runtime tests pass and the final cleanup
+guard builds. Owner deferred broad regressions on2026-11-10 until joint testing
+after more features. Direct-profile Blaze, career fights, rematches and broader
+retail/multi-profile checks remain for that session. Matching experimental
+CAF v5 runtime required; packaged Beta1 unchanged.
+
+## Persistent imported artwork — 2026-11-10
+
+Owner reported imported 2Pac tattoos reverting to original game artwork after
+appearance changes. The preview had fallen back to retail RGB on a hash
+mismatch, and project save required clearing/reimporting art. Imported PNG RGB
+now stays applied across body, face, wardrobe/tattoo and temporary preview
+changes. Project staging rebinds identical PNG bytes to the current outfit;
+Clear/replace remains explicit. Original native material alpha is retained.
+Undo, outfit switching, save/copy/reopen and export preserve per-outfit art.
+
+153 Python tests pass, 3 skipped at the first checkpoint. With supplied 2Pac
+art and actual source models, bodies A–F (normal and No clothes) plus face,
+eyes, brows, nose, lips and ears preserved exact imported RGB; save/reopen and
+complete runtime export passed. Evidence: logs/persistent-real-art.txt. Different
+body UVs can affect fit; no repainting or automatic geometry/UV transfer.
+
+## Immediate face slider preview — 2026-11-10
+
+Owner requested instant geometry feedback while dragging, with Apply reserved
+for staging. Unit-control deltas from the existing export generator now blend
+directly into the WebGL head each frame; no per-drag backend/texture rebuild.
+Preview stays separate from project data/history. Revert restores staged values;
+Apply stages, Save persists. Pose and scene refresh retain the preview, while
+fighter/outfit/state changes clear it. Imported-sculpt locking is explained
+beside the sliders. Pending previews cannot be captured/exported as head art.
+
+147 Python tests and 7 Node tests pass, including Python/JS deformation parity.
+Actual Qt input events updated rendered vertices on the next frame (16.7 ms
+observed), without staging or writing the project. Rapid inputs, Revert, Apply
+parity, Undo, pose/scene refresh and Save passed in an isolated project.
+Private evidence: logs/live-face-desktop.txt and live-face test workspace.
+No runtime/geometry export contract change; native pilot evidence remains valid.
+
+## Facial authoring — 2026-11-09
+
+Isolated `feature/face-authoring` work extends the custom meshes/modpack roadmap
+on the CAF texture/UI feature base. Basic controls expose face type, eye
+shape/color, eyebrow shape/color, nose, lips and ears from verified original
+resources. Unknown choices/bytes remain preserved. Story saves use native fields.
+
+Experimental Advanced controls provide nine absolute proportion sliders. Expert
+exports/imports a 710-vertex position-only OBJ template, preserving topology,
+UVs, original rig and neck seam. Project v5 stores per-outfit sculpts with
+Undo/Reset/save/copy support. CAF v4 exports hash-bound coordinates through the
+companion `feature/caf-face-geometry` runtime. The runtime compares all reference
+vertices before applying its original morph evaluator and verifies target
+coordinates plus unchanged peer buffers. See [Face authoring](docs/face-authoring.md).
+
+Integrated checks: 146 Python tests passed, 3 skipped; 4 pose tests passed.
+Actual Qt preset/slider/history/save/reopen checks passed; original OBJ round-trip
+error below 5e-8. Windows native two-CAF menu/combat pilot verified identities,
+710 imported vertices within 1.5377998e-05 native units, unchanged peer buffers,
+77 presentation intervals and no crash/watchdog/unresolved call. Isolated saves
+restored identically. Complete mod export passed the runtime API. The first
+overlong test display name correctly failed the existing native title budget.
+
+Limits: original normals/rig and accessories retained; no arbitrary topology,
+automatic rig/UV transfer or accessory refitting. Broader facial animation,
+outfit/rematch, external DCC and cross-platform gameplay qualification remains
+pending. Keep Advanced/Expert experimental. Original Tupac packages/playtest
+roots are unchanged; all generated geometry, projects and captures stay private.
+No merge or packaged release is authorized. Follow-up: owner review and the
+broader qualification matrix before promoting sculpting beyond the pilot.
+## Retail/owned fighter studio — 2026-11-09
+
+Owner approved the DMX pilot with a Memphis Bleek-compatible appearance, Teck
+combat/stats, supplied voice and conditional supplied finisher/intro/victory.
+The first outfit is shirtless and Vendetta-inspired; a second outfit comes later.
+Work is isolated from the Tupac authoring/runtime branches and playtest data.
+
+Implemented a separate portable retail project schema and studio: verified
+75-fighter catalog, independent original body/combat donors, ordinary one-fighter
+resource import, scoped texture identities (including shared injury names),
+native stats, explicit resource fallbacks, static preview, RGB/HD atlas and
+complete UI-art import, staged metadata/history, save/reopen and validated ZIPs.
+Existing CAF/profile formats remain intact. Static preview filters collapsed
+source placeholders for framing only. Arbitrary Blender reimport remains deferred.
+
+Validation:140 Python tests pass (3 platform skips),4 Node tests;17 real Windows
+Qt/WebChannel steps pass through actual native ZIP export and persistent reopen.
+The companion runtime's61 focused tests cover appearance/PNG/template/alpha/HD,
+packages and managed launch. Original Memphis body plus Teck combat exports after
+explicitly scoping shared-name injury textures. Native DMX intro/Blazin activation,
+voice and combat run without crashes/watchdogs/unresolved calls and restore the
+guarded save root identically. A450-second native run reaches a decisive result
+against Pockets with zero faults and identical guarded restoration. Full MSVC
+unit suite:2487pass/57skip/1standard slow exclusion. Final paired-finisher/DMX
+victory and exact-head CI evidence are recorded in the source PRs.
+
+Two hosted full-atlas imagegen outputs were rejected under the sexual category.
+The owner then explicitly selected the existing local ComfyUI workflow. A4x
+Real-ESRGAN upscale plus SDXL strength0.12/30steps produces a2048-square body
+candidate with exact original material alpha. Its5.54MiB PNG exposed the UI-only
+4MiB admission limit; body PNGs now have a separate16MiB cap, still bounded by
+the combined64MiB/96MiB portable project budgets. The actual HD project/ZIP
+compiles and installs with30HD layer files. Selector/loading/titlecard generation
+also succeeded; all artwork remains an unapproved private candidate.
+Source-only Workshop PR4/runtime PR218 are open. All source art, projects, packs,
+captures, saves and game binaries remain private; no merge or packaged release.
+See docs/retail-fighter-projects.md and the companion runtime's retail contract.
+
+## Complete fighter UI artwork — 2026-11-09
+
+Owner approved roadmap modpack authoring for selector/loading portraits,
+titlecards, result icons and grid states. Audited Method Man/Blaze costumes and
+Pockets against original movies: 24 distinct roles across 2/3/4-player layouts.
+The UI artwork tab provides six master imports plus all advanced slots, independent
+UI donor, retail-reference import, native/2×/4× output and effective-art preview.
+Version4 embeds exact PNGs with shared defaults and sparse outfit overrides.
+Undo/Reset/review/save/copy/variant/export preserve the complete collection;
+old project formats and profile workflows retain their contracts.
+
+The companion typed PNG compiler preserves original geometry/actions/material
+controls, compiles all layouts, and stages verified HD replacement tiles after
+selected texture packs for this launch without changing persisted settings.
+Missing art uses the UI donor; retail grid placeholders derive from result icons.
+Source and output budgets, hash checks and conflicts fail before ZIP publication.
+
+Validation:124 Python tests pass (3 platform skips), plus4 Node tests. A real
+Windows Qt/WebChannel workflow passes23 steps through full native export and
+save/reopen. All24 roles compile for all3 outfits. Managed native launch passes
+with the HD layer and3 CAF recipes/extras:16 present samples, median120/min108
+per2s; zero crashes/watchdogs/unresolved calls; identical guarded saves.
+Selector/loading/result native acceptance and current-head CI are recorded in
+the source PR handoff. Windows evidence does not claim macOS/Linux gameplay.
+
+The requested Tupac UI imagegen attempt was rejected at input; no image was
+generated. Per owner instruction the private pilot uses Pockets placeholders,
+with the original3 Tupac outfit textures. HD output is deterministic resampling,
+not restored source detail. Private logs/ui-art-ui-proof1 and UI preview receipts
+retain evidence; no art, captures, saves or binaries enter Git. Source PR updates
+only; no merge or packaged release.
+
+## Three-outfit custom fighter implementation — 2026-11-09
+
+Owner requested one custom fighter with three outfits, following retail Blaze
+and D-Mob. Work is in progress on the isolated Workshop/runtime feature branches.
+The source archive supplies shirtless, red jersey and black tank art. Original
+single-outfit project/pack and original saves remain read-only inputs.
+
+Plan: version3 projects keep one shared fighter identity/combat configuration,
+a default appearance and up to two additional named outfits with stable IDs,
+independent appearance/atlases/portrait. Existing v1/v2 stay readable. Outfit
+switching preserves all staged changes; Undo/Reset/save/copy/variant/export cover
+the whole collection. Native menus retain one roster cell and use the original
+three-choice clothing UI. A typed runtime-owned selector command carries the
+chosen ordinal per participant; stock selectors/semantic fighter IDs stay intact.
+No extra public fighter identities or raw package bytecode are introduced.
+
+Implemented: collection schema/validation, staged editor/history/preview, Project
+controls and complete CAF v3 export with per-outfit typed portrait references.
+111 Python tests pass (3 platform skips), plus4 Node pose tests. Twenty real
+Windows Qt/WebChannel steps pass: switching, rename, copy/remove, Undo/Reset,
+three actual WebGL portrait captures and save/reopen of the complete collection.
+The resulting three-outfit pack passes the actual runtime compiler/inventory.
+The native selector displays three choices and the correct black-tank portrait;
+index2 builds bodyA/face4/core101 under the original canonical100 identity, with
+zero crashes/watchdogs/unresolved calls and identical guarded-save restoration.
+
+The original CCharacter constructor reads additional CLOTH datasets from the
+retail roster stream; the owned runtime initializes one normal dataset and fills
+additional canonical datasets locally. Its visual-only aliases and bounded outfit
+commands do not create ledger/progress identities. Native red-jersey gameplay/result acceptance passes seven combat checks and two
+Options-save generations with identical guarded restoration. Detailed gameplay,
+results, rematch/cancellation and final CI evidence are maintained in the companion PR
+acceptance work. Native Windows evidence does not claim macOS/Linux gameplay.
+Four native package CI jobs pass at9f7cd7c: Windows x64, macOS arm64/x64 and
+Linux x64 (run42732816506). No merge or packaged release is included.
+Private logs/outfits holds source/art
+provenance, plan, desktop receipt and export validation; no assets are tracked.
+
+## Editable Blazin' assignments — 2026-11-09
+
+Owner approved a four-slot menu for Story CAFs and standalone CAF projects,
+using the complete original-game move pool, with room for future custom moves.
+Implemented a named catalog from the verified SODB DisplayName/choice schema;
+all82 retail choices are available independent of styles/unlocks. Provider-qualified
+stable keys and source-grouped options decouple the menu from native ordinals.
+Custom animation providers remain a future versioned resource/runtime extension.
+
+Four selectors stage an explicit complete selection; duplicates are allowed.
+Profile writes affect only16 payload bytes at0x120, using normal backup/stale-file
+checks. Projects retain retail record identities and may remove their override
+with Use inherited moves. Undo/Reset, close/discard protection, named change
+review, project conversion/copy/variant/export and existing texture bindings are
+preserved. Unknown/unassigned values remain untouched until explicitly replaced;
+missing original assets disable selection. No editor animation playback is claimed.
+
+Validation:98 Python tests pass (3 platform skips), plus4 Node pose tests.
+Seventeen real Qt/WebChannel steps pass on marked disposable data: draft versus
+Apply, all four menus, duplicate choices, Undo/Reset, profile save/reload,
+CAF-to-project conversion, inheritance, textured project edit/copy/reopen.
+Decoded saved profile comparison confirms no bytes outside the four references
+changed. The UI-edited textured project passes the actual CAF v2 compiler/export.
+Native acceptance and updated cross-platform CI are in progress. Original saves,
+projects, artwork and captures remain private; the existing2Pac delivery keeps
+its original assignments. No merge or release is included.
+
+## Texture-mod fighter pilot — 2026-11-09
+
+Owner approved general-purpose roadmap work for native texture import and fighter
+modpack authoring. This source branch builds on merged Workshop PR2. Existing
+version 1 projects and full-profile workflows remain available; no release or
+merge is included in this change.
+
+Implemented project version 2: exact embedded 256×256 PNG atlases, appearance
+binding, RGB-only preview, staged import/clear/reset, saved retail finisher
+identities, and hash-bound CAF v2 export through the companion runtime compiler.
+Source-profile conversion now preserves all four verified finisher assignments
+instead of dropping them. Partial/unknown assignments are refused. The existing
+Project tab provides native atlas controls; D1/D2 injury variants are retained
+and exported but are not simulated in the current static preview.
+
+Added experimental read-only PCSX2 snapshot inspection/recovery. The observed
+layout is validated; SODB identities translate equipped items and finishers to
+the player's Xbox dump. Archive/output/window bounds, CRC, conflicting-copy and
+ambiguous-database refusal apply. No console Story-save conversion is implied.
+
+Validation: 86 Python tests pass, 3 platform skips; four Node pose tests pass.
+Nine real Qt/WebChannel atlas/portrait/persistence checks pass on marked disposable
+Windows data. The private pilot recovers body A/0, Kickboxing → Streetfighting →
+Wrestling (combined101), five training stats50, 16 matching equipped items and
+four finishers (native choices52,38,30,39). It exports and compiles through the
+companion CAF v2 runtime based on Recomp PR213 head81ce1d7.
+
+Native Windows selection/portrait and one complete match versus retail Crack
+pass seven combat/result assertions, two acknowledged Options-save generations,
+and byte-identical restoration of the copied save root. Five imported RGB
+atlases apply to the context-owned native visual. Captured torso/jeans/normal-face
+RGB matches source PNGs exactly; native alpha is retained. An initial conversion
+failure and incorrect Morton layout were detected, retained as failed evidence,
+and fixed before the passing run. Four finisher assignments are verified at
+native setup; playing every Blazin' cinematic is not claimed.
+
+HD image restoration remains pending at the owner's request after imagegen
+refused the face edit. Supplied textures are unchanged. Higher resolution,
+arbitrary meshes, granular moves and animation playback remain deferred.
+Exact assets, hashes, native logs and captures remain private. Cross-platform
+packaging CI and broader owner/game acceptance are separate gates.
+
+## Status â€” 2026-11-07
 
 Local beta source is published at
 https://github.com/vyanhursky/defjam-ffny-fighter-workshop on `develop/0.1`, the
@@ -26,7 +409,7 @@ temporary clothing visibility, explicit Equip, backups and full-profile import.
 The Windows package has been rebuilt and its new default pose/controls rendered
 successfully on copied profile data. The local test shortcut targets this build.
 
-- Mapped and implemented cash/development, five training stats0–50, five retail
+- Mapped and implemented cash/development, five training stats0â€“50, five retail
   styles and55 combinations with dependent bonus correction, and CAF appearance.
 - Full-profile export/import and duplication, atomic save with original backup,
   stale-source checks, kernel writer locks and preservation of unknown bytes.
@@ -56,7 +439,7 @@ successfully on copied profile data. The local test shortcut targets this build.
 ## Decisions and limits
 
 Existing Recomp profiles only, full-profile transfer and Story-preserving
-replication. New IDs conservatively use1–7 uppercase letters/digits. No fresh
+replication. New IDs conservatively use1â€“7 uppercase letters/digits. No fresh
 Story-profile creation. All mapped retail items; XML-only right-wrist resources
 have no proven valid retail-save encoding, so preserve rather than invent values.
 Neutral static face preview preserves features; animation/expression/lighting
@@ -96,7 +479,7 @@ Windows packaging in a restricted workspace needs the documented normal-shell
 `icacls` step: the Python build subprocess can lack the relabel privilege. Only
 the generated application folder is relabeled; no system policy is changed.
 
-## macOS/Linux compatibility — 2026-11-07
+## macOS/Linux compatibility â€” 2026-11-07
 
 Work is on `codex/macos-linux`, based on beta commit `84b3171`. No source push or
 packaged release has been performed by this porting session.
@@ -132,7 +515,7 @@ then qualify representative packaged workflows on Linux/Intel and test edited
 profiles in the game. Maintain the owner acceptance/release gate. Public docs
 contain no private data paths; local receipts and copied saves stay outside Git.
 
-## Installer data default and Recomp icon — 2026-11-07
+## Installer data default and Recomp icon â€” 2026-11-07
 
 Owner requested macOS discovery of the installer's default data directory and
 reuse of the Def Jam Recomp app icon. Normal Mac startup reads
@@ -158,7 +541,7 @@ matches the reused source byte for byte. Checksum-verified ZIP relocation,
 strict deep signature verification and frozen WebGL/WebChannel startup pass,
 including icon_loaded=true. No native Windows/Linux run is claimed here.
 
-## Native CI publication — 2026-11-07
+## Native CI publication â€” 2026-11-07
 
 Owner authorized source push and native Windows/macOS/Linux CI. The source is
 pushed on `codex/macos-linux`, PR #1 into `develop/0.1`. No release is tagged.
@@ -173,7 +556,7 @@ with --ignore-gpu-blocklist only in the offline CI smoke steps, retaining the
 actual WebGL 2 requirement and browser sandbox. Record the renderer in receipts.
 The native application keeps its ordinary graphics defaults.
 
-## Native CI results and handoff — 2026-11-07
+## Native CI results and handoff â€” 2026-11-07
 
 Source is pushed in PR #1 on `codex/macos-linux` into `develop/0.1`:
 https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/1
@@ -199,7 +582,7 @@ Next: use the PR's current-head check links and native package artifacts for
 review. No tagged release was created. Full owner acceptance, physical GPU and
 Wayland checks, and broader native game qualification remain distinct gates.
 
-## PR #1 merged — 2026-11-07
+## PR #1 merged â€” 2026-11-07
 
 Owner approved and PR #1 merged into `develop/0.1` at `5bbcccc`. The final PR
 head `3878375` passed all four native CI jobs in run 42445695324: Windows x64,
@@ -211,7 +594,7 @@ removed after synchronization. No tagged release was created. Next work remains
 owner acceptance and the broader native editor/game checks documented above;
 CI package/startup evidence does not replace those checks.
 
-## README screenshot approval — 2026-11-07
+## README screenshot approval â€” 2026-11-07
 
 Owner requested four examples for the develop/0.1 README, with candidate review
 before publishing: main window, stats/cash, fighting-style combinations and
@@ -224,7 +607,7 @@ The owner approved all four exact candidates. They are committed under
 docs/media with SHA-256 pins and an artwork exception in AGENTS.md; the main
 README shows the approved gallery. No original assets or saves are committed.
 
-## 0.1 Beta 1 release authorization and handoff — 2026-11-07
+## 0.1 Beta 1 release authorization and handoff â€” 2026-11-07
 
 Owner requested `v0.1.0-beta.1` with native binaries. Python package version is
 already 0.1.0b1; the human-readable tag is v0.1.0-beta.1. The release is a GitHub
@@ -243,7 +626,7 @@ native game acceptance, physical GPU and Wayland qualifications distinct from
 the native package/startup evidence. No fresh save creation or named-fighter
 moveset override is claimed.
 
-## Beta draft staging — 2026-11-07
+## Beta draft staging â€” 2026-11-07
 
 The approved gallery/release source is a7a7e354df78b5eab6ecabbcf0c03430d129e910;
 its native build run 42447467964 passed all four targets. Slow local artifact
@@ -267,7 +650,7 @@ unpublished drafts. The draft stayed unpublished. Resolve its numeric ID from
 the authenticated release list, allow retries only for an unpublished draft
 of the same source SHA, and verify all uploaded digests before publication.
 
-## 0.1 Beta 1 published — 2026-11-07
+## 0.1 Beta 1 published â€” 2026-11-07
 
 Published https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/tag/v0.1.0-beta.1
 as a prerelease, not Latest. Tag/application source: a7a7e354df78b5eab6ecabbcf0c03430d129e910.
@@ -288,9 +671,9 @@ Next: beta feedback using copied saves, then broader editor/game/GPU/Wayland
 qualification. No original saves, raw game assets or compiled game executable
 were published; the exact approved screenshots/icon retain their artwork exception.
 
-## Standalone projects and CAF mod export — development preview, 2026-11-08
+## Standalone projects and CAF mod export â€” development preview, 2026-11-08
 
-Owner approved roadmap steps1–3 with public Custom Fighter R&D and in-game
+Owner approved roadmap steps1â€“3 with public Custom Fighter R&D and in-game
 acceptance. Local branch codex/fighter-projects starts from develop/0.1 at834c2bb;
 the released Beta1 is unchanged. No push or new release was requested.
 
@@ -363,7 +746,7 @@ Ready for review as source-only local feature branches in persistent repositorie
 Windows/Linux gameplay and the matching runtime/launcher integration. No source push or
 release publication this turn.
 
-## PR publication and cross-platform CI — 2026-11-09
+## PR publication and cross-platform CI â€” 2026-11-09
 
 Owner authorized publishing codex/fighter-projects into develop/0.1 and the
 companion recomp codex/workshop-caf-export into research/custom-fighter-mods.

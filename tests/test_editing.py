@@ -127,6 +127,7 @@ def test_preview_overlays_never_enter_pending_edits_or_export(profile, tmp_path)
     editor.edits = {"cash": 1000}
     editor.history = [{"cash": 900}]
     appearance = Appearance.__new__(Appearance)
+    appearance.face_options = []
     appearance.by_key = {"try-on": {"key": "12:test", "value": 0x10000123, "color": 1}}
     appearance.outfit = lambda fields: copy.deepcopy(fields)
     editor.appearance = appearance

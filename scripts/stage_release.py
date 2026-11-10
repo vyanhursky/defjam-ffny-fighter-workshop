@@ -116,7 +116,7 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
                 'source_repository':'https://github.com/vyanhursky/defjam-ffny-fighter-workshop',
                 'source_commit':EXPECTED_SHA,'ci_run_id':RUN_ID,'ci_run_url':run['html_url'],
                 'workflow':'.github/workflows/desktop.yml','publisher_commit':os.environ.get('GITHUB_SHA'),'packages':records,'approved_readme_images':media,
-                'scope':'Standalone workshop editor packages, not game executables. Game artwork in icons and approved documentation captures is outside the project MIT license.'}
+                'scope':'Standalone workshop editor packages, not game executables. Game artwork in icons and approved documentation captures is outside the project software license.'}
     (output/'provenance.json').write_text(json.dumps(provenance,indent=2)+'\n')
     print('Release assets assembled:',output,flush=True)
 

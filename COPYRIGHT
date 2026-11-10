@@ -1,0 +1,19 @@
+Def Jam FFNY Fighter Workshop
+Copyright (c) 2026 Vlad Yanhursky
+SPDX-License-Identifier: GPL-3.0-only
+Source: https://github.com/vyanhursky/defjam-ffny-fighter-workshop
+
+The Workshop's original software and documentation are licensed under the GNU
+General Public License, version 3 only. See LICENSE for the complete terms.
+Redistributors must preserve applicable copyright and license notices and comply
+with the GPL's corresponding-source requirements.
+
+Third-party components retain their own copyright notices and licenses. In
+particular, the vendored decoder foundation and Three.js remain MIT licensed.
+See THIRD_PARTY.md and the licenses accompanying those components.
+
+Game artwork, player saves, imported assets and fighter mod artwork are outside
+this software license. No rights to third-party game assets are granted here.
+
+This change applies to the Workshop from the GPLv3 licensing commit onward.
+Previously published MIT versions remain available under their original terms.

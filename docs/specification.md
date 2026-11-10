@@ -51,11 +51,112 @@ the referenced viewer are not required, but faithful loading of existing faces i
    styles, duplicated identity and Story progress. Hash originals before/after.
 6. Owner testing and native Windows/macOS/Linux packaged-app acceptance.
 
+## Approved retail fighter movesets — 2026-11-10
+
+The owner requested an alternative to CAF style combinations: select a named
+retail fighter's complete moveset for a project or directly edited Story CAF.
+This explicitly extends the original beta profile-only scope with companion
+runtime support. Derive choices and stable symbols from the player's original
+database, deduplicating costumes that share a motion core. Preserve the CAF's
+appearance, training, career bytes and separately editable Blazin' assignments.
+Keep its CAF combination available when switching back. Project v6 and CAF v5
+declare the selection explicitly; earlier formats retain their interpretation.
+See [Retail movesets](retail-movesets.md).
+
 ## Roadmap (deferred)
 
 Granular movesets, animation player, custom meshes/textures, custom animations,
 custom fight voices and fighter modpack authoring. Do not investigate the separate
 Custom Fighter R&D worktree as part of this beta.
+
+## Approved facial authoring milestone — 2026-11-09
+
+The owner requested original face/feature presets for Story CAFs and standalone
+fighters, proportion sliders and prioritized imported face geometry. This
+activates the relevant custom meshes/modpack roadmap scope. Preserve the profile
+editor and saves. Arbitrary sculpt data belongs to a versioned project/runtime
+contract, never unknown Story bytes. See [Face authoring](face-authoring.md) for
+controls, template spec, native pilot evidence and experimental limits.
+## Approved retail/owned fighter pilot — 2026-11-09
+
+The owner approved a Vendetta-inspired shirtless DMX project using the
+Memphis Bleek-compatible appearance with Teck combat/stats. Preserve supplied
+DMX voice, finisher, intro and victory resources when the complete compiler and
+native checks support them; otherwise use explicit donor fallbacks. A second
+outfit comes later. Target Rich Original Detail HD artwork. Reuse the existing
+UI-art compiler and isolate work from the active Tupac branches and playtests.
+
+Implement a separate retail project kind and studio with original model/combat
+donors, ordinary resource import, portable embedded assets, stat/resource/UI/atlas
+editing and fully validated ZIP export. This targets existing fighter modpack
+authoring and custom texture/model-resource admission, not a general DCC editor.
+See [retail fighter projects](retail-fighter-projects.md). Original game data,
+generated artwork, projects, packs and native evidence stay private.
+
+## Approved four-slot Blazin' editor — 2026-11-09
+
+The owner requested editable assignments, analogous to fighting styles, for both
+Story CAFs and standalone CAF projects. Offer all verified original-game Blazin'
+moves, including character moves, without style or shop-unlock filtering. Allow
+duplicates. Stage all four assignments together; use normal Undo/Reset, named
+change review, profile backup and project save/copy/export. Existing unknown
+references must remain untouched until explicitly replaced.
+
+The menu consumes provider-qualified stable keys and named source groups, not
+native row ordinals. This leaves a route for future custom Blazin' providers.
+Original native saves and CAF v2 currently encode retail references only; actual
+custom animation resources require an explicit future contract/runtime capability.
+Source animation playback is now an approved development feature; see the
+performance milestone below for supported codecs and preview limits.
+
+## Approved complete fighter UI artwork — 2026-11-09
+
+Extend roadmap fighter modpack authoring with editable selector/loading portraits,
+stylized titlecards, result icons and normal/selected grid icons. Audit retail
+Method Man/Blaze layouts rather than treating one portrait as all presentation.
+Support six master roles and all 24 native 2/3/4-player variants, shared default
+art with per-outfit overrides, exact embedded PNGs and compatible HD output.
+Keep UI donor/layout independent of combat identity, preserve old projects and
+Story profile workflows, and validate complete packs through the shared runtime.
+Use original Pockets placeholders when the requested Tupac generation is refused.
+Source PR updates are authorized; artwork, saves, captures and game binaries stay
+private. This does not authorize a packaged release or merge.
+
+## Approved multi-outfit fighter projects — 2026-11-09
+
+Extend roadmap fighter modpack authoring with one stable fighter and one roster
+entry offering up to three outfits, like the original Blaze and D-Mob selectors.
+Project version 3 retains the default appearance at the root and adds named
+outfits with stable IDs. Stats, styles and Blazin' assignments are shared;
+appearance, imported atlases and portraits are outfit-specific. Existing project
+versions and Story profile workflows retain their contracts.
+
+Project controls copy, rename, switch and remove additional outfits. Switching
+preserves staged edits; Undo/Reset, change review, save/copy/variant and export
+cover the complete project. Each appearance validates its own texture bindings.
+Export declares CAF v3, reuses normal typed portrait resources and validates the
+whole pack with the companion runtime before publishing its ZIP. The native
+selector chooses outfits independently per participant without adding progress
+identities. Portrait aliases are temporary UI paths, never fighter/save IDs.
+Native gameplay, cancellation and rematch acceptance remain separate from codec
+and static model tests. This does not change the original Story save format or
+add arbitrary outfit counts/custom animation support.
+
+## Texture-mod fighter pilot — 2026-11-09
+
+Owner requested recovering an existing texture-mod CAF, proving its stock body
+and retail moveset in-game, then restoring its textures to match the HD fighter
+and portrait packs. The first outfit is the saved shirtless outfit. Work uses
+isolated source/data workspaces and preserves the released profile editor.
+
+The enabling roadmap feature is custom textures and fighter modpack authoring:
+hash-bound atlas assets, explicit UV/alpha-preserving mapping, preview and
+fighter-specific runtime ownership. Granular moves and custom animation are
+not required to reproduce the existing retail CAF style combination.
+
+Experimental read-only PS2 snapshot recovery is documented in
+[PS2 CAF recovery](ps2-caf-recovery.md). Only independently validated fighter
+fields are eligible for a new project; no Story-save conversion is implied.
 
 ## Approved next milestone — 2026-11-08
 
@@ -67,3 +168,26 @@ Test actual native selection/combat on research/custom-fighter-mods using
 disposable saves. Projects exclude Story progression and currency; existing
 profile export remains available. Required runtime extensions must be explicit,
 with their actual tested source recorded. No merge, push or release is implied.
+
+## Approved performance milestone — 2026-11-10
+
+The owner selected exportable projects first for voice editing, independent
+entrance/victory sequences, real source animation playback and AI personalities.
+Preserve Story-save workflows. Project v7 shares these settings across outfits;
+the companion CAF v6 runtime owns their native resource bindings. Use original
+catalogs and event ordinals, bounded PCM16 WAV overrides, per-difficulty native
+AI slots and verified source rig/weight mapping. Unsupported playback codecs
+remain explicit exclusions. Full native/cross-platform acceptance is deferred
+for joint testing at the owner's request; focused checks are still required.
+See [Performance editor](performance-editor.md).
+
+## Approved retail appearance deployment — 2026-11-10
+
+Support replacing an existing retail fighter's appearance and adding selectable
+outfits to its original roster identity. Keep the existing standalone mode and
+portable project round trips. Outfit variants share combat, voice, stats and
+retail progress ownership; native clothing capacity remains three in total.
+The owner requested a private Pockets red-pants override and extra-outfit test
+through ordinary ZIP installation, fighter selection and battle. See
+[Retail appearance deployment](retail-overrides-outfits.md) for the contract and
+current scope. Native evidence remains separate from project/compiler checks.

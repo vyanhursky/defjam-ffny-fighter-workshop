@@ -3,6 +3,7 @@ import {OrbitControls} from './vendor/OrbitControls.js';
 import {poseMesh} from './poses.mjs';
 
 const $ = id => document.getElementById(id);
+$('retail-editor').onclick=()=>call('open_retail_editor');
 let bridge, current=null, serial=0, busyCount=0, options=[], selectionKey=null, previewEpoch=0;
 let auditionKey=null, categoryEpoch=0, previewTimer=null, sceneData=null, atlasTextures=[];
 const pending=new Map();

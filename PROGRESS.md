@@ -1,5 +1,37 @@
 # Progress and handoff
 
+## Retail/owned fighter studio — 2026-11-09
+
+Owner approved the DMX pilot with a Memphis Bleek-compatible appearance, Teck
+combat/stats, supplied voice and conditional supplied finisher/intro/victory.
+The first outfit is shirtless and Vendetta-inspired; a second outfit comes later.
+Work is isolated from the Tupac authoring/runtime branches and playtest data.
+
+Implemented a separate portable retail project schema and studio: verified
+75-fighter catalog, independent original body/combat donors, ordinary one-fighter
+resource import, scoped texture identities (including shared injury names),
+native stats, explicit resource fallbacks, static preview, RGB/HD atlas and
+complete UI-art import, staged metadata/history, save/reopen and validated ZIPs.
+Existing CAF/profile formats remain intact. Static preview filters collapsed
+source placeholders for framing only. Arbitrary Blender reimport remains deferred.
+
+Validation:139 Python tests pass (3 platform skips),4 Node tests;17 real Windows
+Qt/WebChannel steps pass through actual native ZIP export and persistent reopen.
+The companion runtime's49 focused tests cover appearance/PNG/template/alpha/HD,
+packages and managed launch. Original Memphis body plus Teck combat exports after
+explicitly scoping shared-name injury textures. Native DMX intro/Blazin activation,
+voice and combat run without crashes/watchdogs/unresolved calls and restore the
+guarded save root identically. Final paired-finisher/result acceptance, complete
+native unit evidence and hosted cross-platform CI are recorded in the source PRs.
+
+Two full-atlas imagegen outputs were rejected under the sexual category; no HD
+body restoration was produced. Selector/loading/titlecard generation succeeded;
+the private pilot embeds unapproved HD UI candidates and original body pixels.
+The CLI/API fallback requires an explicit owner choice; no API key is configured
+in this session. All source art, projects, packs, captures, saves and game binaries
+remain private. Source-only development work; no merge or packaged release.
+See docs/retail-fighter-projects.md and the companion runtime's retail contract.
+
 ## Complete fighter UI artwork — 2026-11-09
 
 Owner approved roadmap modpack authoring for selector/loading portraits,

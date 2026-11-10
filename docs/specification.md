@@ -57,6 +57,22 @@ Granular movesets, animation player, custom meshes/textures, custom animations,
 custom fight voices and fighter modpack authoring. Do not investigate the separate
 Custom Fighter R&D worktree as part of this beta.
 
+## Approved retail/owned fighter pilot — 2026-11-09
+
+The owner approved a Vendetta-inspired shirtless DMX project using the
+Memphis Bleek-compatible appearance with Teck combat/stats. Preserve supplied
+DMX voice, finisher, intro and victory resources when the complete compiler and
+native checks support them; otherwise use explicit donor fallbacks. A second
+outfit comes later. Target Rich Original Detail HD artwork. Reuse the existing
+UI-art compiler and isolate work from the active Tupac branches and playtests.
+
+Implement a separate retail project kind and studio with original model/combat
+donors, ordinary resource import, portable embedded assets, stat/resource/UI/atlas
+editing and fully validated ZIP export. This targets existing fighter modpack
+authoring and custom texture/model-resource admission, not a general DCC editor.
+See [retail fighter projects](retail-fighter-projects.md). Original game data,
+generated artwork, projects, packs and native evidence stay private.
+
 ## Approved four-slot Blazin' editor — 2026-11-09
 
 The owner requested editable assignments, analogous to fighting styles, for both

@@ -118,3 +118,12 @@ def test_body_png_budget_is_independent_of_ui_art_budget():
     value=base64.b64encode(encoded).decode()
     assert retail.texture_bytes(value)==encoded
     with pytest.raises(SaveError,match='too large'):projects.portrait_bytes(value)
+
+
+def test_a_retail_project_saved_before_deployment_targets_existed_opens_and_is_stamped_current(tmp_path):
+    document = retail.new('retail/example')
+    document['schema'] = retail.EARLIER_SCHEMAS[0]
+    assert 'deployment' not in document
+    loaded = retail.validate(document)
+    assert loaded['schema'] == retail.SCHEMA
+    assert projects.validate(copy.deepcopy(document))['schema'] == retail.SCHEMA

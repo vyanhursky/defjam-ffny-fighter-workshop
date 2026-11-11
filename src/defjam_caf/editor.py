@@ -90,12 +90,11 @@ class Editor:
             if self.edits["finishers"] is None:
                 document["fighter"].pop("finishers", None)
             else:
-                document["schema"] = projects.SCHEMA2
                 document["fighter"]["finishers"] = self.edits["finishers"][:]
         if self.portrait_edit is not None:
             document["portrait"] = self.portrait_edit
         if self.texture_edit is not None:
-            document.update(schema=projects.SCHEMA2, textures=copy.deepcopy(self.texture_edit))
+            document["textures"] = copy.deepcopy(self.texture_edit)
         if 'textures' in document:
             # Imported RGB remains the author's override across appearance
             # changes. Rebind the same bytes to the newly staged outfit.
@@ -246,7 +245,7 @@ class Editor:
     def changes(self):
         if self.profile is None and self.project is None:
             return []
-        if self.project is not None and (self.outfit_draft is not None or self.project["schema"] in (projects.SCHEMA3,projects.SCHEMA4,projects.SCHEMA5,projects.SCHEMA6,projects.SCHEMA7)):
+        if self.project is not None and (self.outfit_draft is not None or {"outfits", "outfit_name"} & set(self.project)):
             return self.outfit_changes()
         before, after = read_fields(self.base().payload), read_fields(self.current().payload)
         result = []
@@ -461,7 +460,7 @@ class Editor:
                     settings[section]['clips']=copy.deepcopy(document.get('performance',{}).get('voice',{}).get('clips',{}))
                 performance.validate(settings)
                 self.performance_link.call('workshop-check',settings)
-            document['schema']=projects.SCHEMA7;document['performance']=performance.validate(settings)
+            document['performance']=performance.validate(settings)
             candidate=projects.validate(document)
             if candidate==self.project_document():return self.snapshot()
             self.remember();self.outfit_draft=candidate;self.edits={}
@@ -479,7 +478,7 @@ class Editor:
                 return self.stage({'styles':args['styles']})
             document=self.project_document()
             if row:
-                document['schema']=projects.SCHEMA7 if document['schema']==projects.SCHEMA7 else projects.SCHEMA6;document['fighter']['retail_moveset']=row['key']
+                document['fighter']['retail_moveset']=row['key']
             else:
                 document['fighter'].pop('retail_moveset',None);document['fighter']['styles']=args['styles']
             candidate=projects.validate(document)
@@ -508,12 +507,10 @@ class Editor:
                 if view.get('face_sculpt') and not view['face_sculpt']['sliders']:
                     raise SaveError('Clear the imported sculpt before using sliders; export it first to preserve your work')
                 view['face_sculpt'] = face_geometry.sliders(reference, args['values'])
-                view['schema'] = projects.SCHEMA5
             else:
                 with Path(args['path']).open('rb') as stream:
                     raw = stream.read(face_geometry.MAX_OBJ+1)
                 view['face_sculpt'] = face_geometry.import_obj(raw, reference)
-                view['schema'] = projects.SCHEMA5
             candidate = projects.validate(outfits.replace_view(document, self.active_outfit, view))
             self.remember()
             self.outfit_draft, self.edits = candidate, {}

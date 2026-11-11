@@ -90,8 +90,8 @@ support and is refused at export rather than silently applied globally.
 
 ## Portable contract
 
-Existing `ffny-retail-fighter-project-1` projects keep their standalone meaning.
-Version 2 adds `deployment: {mode, target}`, with `mode` equal to `add`, `override`
+Projects saved under `ffny-retail-fighter-project-1` keep their standalone meaning
+(no deployment section). The current schema adds an optional `deployment: {mode, target}`, with `mode` equal to `add`, `override`
 or `outfit`, and a stable target such as `retail/pockets`. Non-add deployments
 must inherit that target and cannot override combat resources or stats.
 

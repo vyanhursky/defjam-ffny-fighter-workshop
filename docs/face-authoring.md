@@ -65,11 +65,11 @@ native units and origin. The bottom 12% of the reference head's Y extent is
 protected (1e-6 tolerance). Each axis displacement is limited to 0.6 native units.
 These bounds do not guarantee good anatomy or accessory fit.
 
-Project version 5 stores per-outfit `face_sculpt`: `ffny-face-sculpt-1`, the
+Projects may store a per-outfit `face_sculpt` (an optional section): `ffny-face-sculpt-1`, the
 body/geometry preset basis, canonical reference fingerprint, per-mesh float3
-deltas and slider values. Versions 1–4 remain supported. Export regenerates the
+deltas and slider values. Export regenerates the
 reference from original assets, checks its fingerprint/collar, and emits a
-hash-bound `caf-face-coordinates-1` resource through CAF v4. The native adapter
+hash-bound `caf-face-coordinates-1` resource through the `caf-fighter-1` recipe. The native adapter
 compares every reference XYZ with the assembled head before invoking the original
 Coordinates morph evaluator. It checks resulting vertices and other loaded CAFs'
 buffer hashes. Old runtimes explicitly refuse the new format.

@@ -21,7 +21,7 @@ def test_import_upgrades_copy_preserves_exact_source_and_v1_parent(tmp_path):
     original = projects.from_fields(fields()[0], 'Example')
     before = projects.encoded(original)
     restored = projects.with_atlas(original, 'a', png())
-    assert restored['schema'] == projects.SCHEMA2 and projects.encoded(original) == before
+    assert restored['schema'] == projects.SCHEMA and projects.encoded(original) == before
     assert projects.atlas_bytes(restored['textures']['atlases']['a']) == png()
     assert restored['identity'] == original['identity']
     path = tmp_path / 'art.ffnyfighter'
@@ -51,7 +51,6 @@ def test_invalid_atlas_does_not_change_parent(slot, image):
 
 def test_editor_tracks_assets_for_close_reset_save_reopen_and_copy(tmp_path):
     document = projects.from_fields(fields()[0], 'Example')
-    document['schema'] = projects.SCHEMA2
     document['fighter']['finishers'] = ['00000001', '00000002', '00000003', '00000004']
     path = tmp_path / 'fighter.ffnyfighter'
     projects.write(path, document)
@@ -181,11 +180,11 @@ def test_export_declares_matching_runtime_and_unchanged_atlas_bytes(tmp_path, mo
     destination = tmp_path / 'export.zip'
     fighter_mod.export_mod(document, destination, runtime, data, tmp_path / 'work')
     prefix = document['identity']['pack'] + '/'
-    capability = 'caf-fighter-2' if version2 else 'caf-fighter-1'
+    capability = fighter_mod.RECIPE_FORMAT
     with zipfile.ZipFile(destination) as archive:
         manifest = json.loads(archive.read(prefix + 'fighters.json'))
         assert manifest['resources'][0]['source']['format'] == capability
-        assert (capability + ' support') in archive.read(prefix + 'README.md').decode()
+        assert ('supports ' + capability) in archive.read(prefix + 'README.md').decode()
         if version2:
             recipe = json.loads(archive.read(prefix + 'fighter.json'))
             assert recipe['atlases']['a']['sha256'] == hashlib.sha256(png()).hexdigest()

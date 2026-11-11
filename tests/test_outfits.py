@@ -38,7 +38,7 @@ def test_export_keeps_one_fighter_and_all_outfit_atlases_and_portrait_references
     with zipfile.ZipFile(destination) as archive:
         manifest=json.loads(archive.read(prefix+'fighters.json'));raw=archive.read(prefix+'fighter.json');recipe=json.loads(raw)
         assert len(manifest['fighters'])==1 and len(manifest['resources'])==4
-        assert manifest['resources'][0]['source']['format']=='caf-fighter-3'
+        assert manifest['resources'][0]['source']['format']=='caf-fighter-1'
         assert manifest['resources'][0]['source']['selection']['sha256']==hashlib.sha256(raw).hexdigest()
         assert len(recipe['outfits'])==2 and len(set(recipe['portraits'].values()))==3
         assert 'stats' not in recipe['outfits'][0] and 'finishers' not in recipe['outfits'][0]
@@ -54,7 +54,7 @@ def test_upgrade_copies_outfit_assets_with_one_shared_identity_and_combat():
     document = outfits.rename(document, second, 'Red jersey')
     document, third = outfits.add(document, second)
     assert projects.validate(document) is document
-    assert document['schema'] == projects.SCHEMA3 and document['identity'] == original['identity']
+    assert document['schema'] == projects.SCHEMA and document['identity'] == original['identity']
     assert projects.encoded(original) == saved and len(outfits.entries(document)) == 3
     assert outfits.view(document, third)['textures'] == original['textures']
     assert 'stats' not in document['outfits'][0] and 'styles' not in document['outfits'][0]
@@ -69,7 +69,7 @@ def test_upgrade_copies_outfit_assets_with_one_shared_identity_and_combat():
     lambda d: d['outfits'][0].update(stats={}),
     lambda d: d['outfits'][0]['caf_values'].__setitem__(0, 99),
     lambda d: d['outfits'][0]['caf_colors'].__setitem__(0, 3),
-    lambda d: d.update(schema=projects.SCHEMA2),
+    lambda d: d.update(schema='ffny-fighter-project-8'),
 ])
 def test_malformed_or_stale_outfits_are_refused(damage):
     document, _ = outfits.add(source()); damage(document)
@@ -91,7 +91,7 @@ def test_switching_is_view_only_and_all_staged_outfits_survive_save_copy_reopen(
     e.request('outfit_select', {'id': 'default'})
     assert e.snapshot()['fields']['stats']['health'] == 42
     assert e.snapshot()['dirty']
-    assert projects.read(path)[0]['schema'] == projects.SCHEMA2
+    assert projects.read(path)[0]['schema'] == projects.SCHEMA
     e.request('save', {})
     document = projects.read(path)[0]
     assert document['fighter']['stats']['health'] == 42

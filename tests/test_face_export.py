@@ -14,11 +14,11 @@ def test_sculpt_export_declares_version_and_preserves_per_outfit_assets(tmp_path
     (runtime/'setup/fighter_caf.py').touch();(runtime/'scripts/fighter-contract.py').touch()
     data=tmp_path/'data';(data/'extracted').mkdir(parents=True)
     project=projects.from_fields(fields()[0],'Example')
-    ref=reference();project.update(schema=projects.SCHEMA5,face_sculpt=fg.sliders(ref,{'face_width':.5}))
+    ref=reference();project.update(face_sculpt=fg.sliders(ref,{'face_width':.5}))
     project,second=outfits.add(project)
     project['outfits'][0]['face_sculpt']=fg.empty(ref)
     if retail:
-        project['schema']=projects.SCHEMA6;project['fighter']['retail_moveset']='retail/blaze'
+        project['fighter']['retail_moveset']='retail/blaze'
     from defjam_caf import appearance
     monkeypatch.setattr(appearance,'Appearance',lambda cache:SimpleNamespace())
     monkeypatch.setattr(fg,'template',lambda *a:ref)
@@ -27,7 +27,7 @@ def test_sculpt_export_declares_version_and_preserves_per_outfit_assets(tmp_path
     prefix=project['identity']['pack']+'/'
     with zipfile.ZipFile(path) as archive:
         manifest=json.loads(archive.read(prefix+'fighters.json'))
-        assert manifest['resources'][0]['source']['format']==('caf-fighter-5' if retail else 'caf-fighter-4')
+        assert manifest['resources'][0]['source']['format']=='caf-fighter-1'
         recipe=json.loads(archive.read(prefix+'fighter.json'))
         assert recipe.get('retail_moveset')==('retail/blaze' if retail else None)
         nodes=[recipe,*recipe['outfits']]

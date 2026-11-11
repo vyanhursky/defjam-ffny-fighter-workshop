@@ -19,8 +19,6 @@ def view(document, identity=DEFAULT):
     """Flatten a selected outfit for the existing single-CAF editor/preview."""
     result = copy.deepcopy(document)
     result.pop("outfits", None); result.pop("outfit_name", None)
-    if document["schema"] == projects.SCHEMA3:
-        result["schema"] = projects.SCHEMA2
     if identity != DEFAULT:
         selected = next((row for row in document.get("outfits", []) if row["id"] == identity), None)
         projects.require(selected is not None, "This outfit is unavailable")
@@ -48,8 +46,6 @@ def replace_view(document, identity, selected):
     if identity == DEFAULT:
         target = result["fighter"]
         assets = result
-        if result["schema"] not in (projects.SCHEMA3,projects.SCHEMA4,projects.SCHEMA5,projects.SCHEMA6,projects.SCHEMA7):
-            result["schema"] = selected["schema"]
     else:
         target = next((row for row in result.get("outfits", []) if row["id"] == identity), None)
         projects.require(target is not None, "This outfit is unavailable")
@@ -60,14 +56,11 @@ def replace_view(document, identity, selected):
         assets.pop(key, None)
         if key in selected:
             assets[key] = copy.deepcopy(selected[key])
-    if selected['schema'] in (projects.SCHEMA5,projects.SCHEMA6,projects.SCHEMA7):
-        if result['schema'] not in (projects.SCHEMA6,projects.SCHEMA7):result['schema'] = selected['schema']
     return result
 
 
 def upgrade(document):
     result = copy.deepcopy(document)
-    result["schema"] = document['schema'] if document['schema'] in (projects.SCHEMA4,projects.SCHEMA5,projects.SCHEMA6,projects.SCHEMA7) else projects.SCHEMA3
     result.setdefault("outfit_name", "Outfit 1")
     result.setdefault("outfits", [])
     return result

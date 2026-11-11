@@ -13,9 +13,9 @@ does not play fighting animations.
 
 Appearance, imported artwork, training and Blazin' assignments remain separate.
 For projects, the retail selection is shared across all outfits. The previous
-CAF style combination stays in the project for switching back. Project v6 adds
-the stable `retail_moveset` key; exports declare `caf-fighter-5`. Older projects
-and recipes keep their existing formats unless this feature is used.
+CAF style combination stays in the project for switching back. The stable
+`retail_moveset` key is an optional project and recipe section; exports use the
+one recipe format `caf-fighter-1`.
 
 Direct profile editing changes the verified Battle moveset byte at payload
 `0x137` only. It preserves the component CAF styles, bonuses and Story mirror

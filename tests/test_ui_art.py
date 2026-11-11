@@ -22,10 +22,8 @@ def test_old_projects_remain_unchanged_until_explicit_ui_edit():
         assert len(status['roles'])==30 and status['imported']==0
         assert projects.encoded(original)==before
         changed=ui_art.edit(original,'default',role='selector',png=encoded())
-        assert changed['schema']==projects.SCHEMA4 and projects.validate(changed) is changed
+        assert changed['schema']==projects.SCHEMA and projects.validate(changed) is changed
         assert projects.encoded(original)==before
-    invalid=source();invalid['ui_art']={'images':{}}
-    with pytest.raises(SaveError,match='version 4'):projects.validate(invalid)
 
 
 @pytest.mark.parametrize('pack',[
@@ -114,7 +112,7 @@ def test_export_embeds_exact_role_pngs_and_all_outfit_references(tmp_path, monke
     with zipfile.ZipFile(destination) as archive:
         manifest=json.loads(archive.read(prefix+'fighters.json'))
         recipe=json.loads(archive.read(prefix+'fighter.json'))
-        assert manifest['resources'][0]['source']['format']=='caf-fighter-3'
+        assert manifest['resources'][0]['source']['format']=='caf-fighter-1'
         assert set(recipe['portraits'])=={'default',second} and len(recipe['outfits'])==1
         resources=manifest['resources'][1:];assert len(resources)==2
         for resource in resources:

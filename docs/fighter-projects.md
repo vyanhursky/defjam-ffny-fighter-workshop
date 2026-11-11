@@ -10,8 +10,12 @@ own portrait. **Remove** deletes additional outfits; the first outfit is kept.
 Switching preserves staged changes. Stats, fighting styles and Blazin' moves
 apply to every outfit. Undo/Reset and Save cover the complete project.
 
-Multi-outfit projects export as CAF version 3 and require a runtime supporting
-that contract. The game shows one roster cell, then its original clothing-choice
+A fighter project is one schema (`ffny-fighter-project-7`) whose sections are all
+optional: finishers, a retail moveset, textures, a portrait, an outfit collection,
+UI artwork, face sculpts and performance settings. Projects saved by earlier
+builds hold a subset of those sections, so they open unchanged and are saved under
+the current schema. Every export uses the one recipe format `caf-fighter-1`. The
+game shows one roster cell, then its original clothing-choice
 menu. Each outfit has its own selector/loading/result portrait. One fighter
 identity retains shared unlock/progress ownership. Existing single-outfit
 projects keep their earlier formats until outfit controls upgrade them.
@@ -52,7 +56,7 @@ portrait only. Unsaved details and portraits participate in the close/discard
 check. Saving refuses external changes and Save As refuses collisions.
 
 The ZIP uses the existing `fighter-registry-draft-1` contract with a
-`caf-fighter-1` resource (or `caf-fighter-2` when version 2 extras are present). It contains `fighters.json`, a hash-bound `fighter.json`,
+`caf-fighter-1` resource. It contains `fighters.json`, a hash-bound `fighter.json`,
 a README and credits/license text, plus six native portrait rasters when a PNG
 is selected. The player's original files supply the CAF meshes and textures;
 the export contains no Story profile or compiled game executable. Portraits
@@ -76,8 +80,8 @@ restores inherited artwork. The preview identifies the source of the selected ar
 
 The first outfit supplies shared defaults. Other outfits inherit those defaults
 and can override any role or UI setting independently. Undo, Reset, change review,
-Save, copy and variant creation include all art. These edits upgrade the portable
-project to version 4; opening older projects alone does not change their format.
+Save, copy and variant creation include all art. Opening an older project alone
+changes nothing on disk until you save it.
 Story profiles retain their original presentation and do not accept these imports.
 
 Choose the retail UI layout/placeholder donor independently of the combat donor.
@@ -99,7 +103,7 @@ imported source, retain alpha/padding, and activate automatically after selected
 texture packs through a verified, temporary fighter UI layer. This preserves
 high-resolution source detail; increasing the output scale cannot invent detail.
 The exported `eagl-portrait-png-1` resources require the matching runtime update.
-CAF recipes remain version 3; old six-part portrait exports remain supported.
+Old six-part portrait exports remain supported.
 Export compiles every layout before publishing the ZIP, without installing it.
 
 ### Native atlas import and saved finishers (development)
@@ -152,8 +156,8 @@ the editor does not automatically repaint or remap the PNG.
 Clear is staged, Reset restores saved art, and Save project/Save project as
 include all assets. Variant projects retain art and finishers with a new identity.
 
-The matching runtime must support `caf-fighter-2` and the hash-checked
-`fighter-caf-extras.bin` sidecar. Export includes declared PNGs and validates the
+The matching runtime must support `caf-fighter-1` and reads these through the
+extras section of its hash-checked `fighter-caf.bin`. Export includes declared PNGs and validates the
 complete pack through that runtime. The game creates independent owned native
 bitmaps for each CAF, preserves alpha, handles its Xbox Morton layout, and uses
 the original visual teardown. It does not enable a global content-hash texture

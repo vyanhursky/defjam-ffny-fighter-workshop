@@ -47,7 +47,7 @@ def test_project_moveset_is_shared_and_history_save_reopen_preserve_caf_fallback
     e,path=editor(tmp_path);original=copy.deepcopy(e.project);e.request('outfit_add',{})
     second=e.active_outfit
     e.request('fighting_style',dict(mode='retail',fighter='retail/d-mob'))
-    doc=e.project_document();assert doc['schema']==projects.SCHEMA6
+    doc=e.project_document();assert doc['schema']==projects.SCHEMA
     assert doc['fighter']['retail_moveset']=='retail/d-mob' and doc['fighter']['styles']==original['fighter']['styles']
     e.request('outfit_select',{'id':'default'});assert e.snapshot()['retail_movesets']['selected']=='retail/d-mob'
     e.request('save',{});e.open_project(path)
@@ -83,13 +83,13 @@ def test_invalid_profile_retail_core_is_refused(core):
 def test_project6_keeps_art_sculpt_finishers_and_rejects_unversioned_or_bad_mode():
     from test_face_geometry import reference
     from defjam_caf import face_geometry as fg,ui_art
-    p=projects.from_fields(fields()[0],'Example');p.update(schema=projects.SCHEMA6,face_sculpt=fg.empty(reference()))
+    p=projects.from_fields(fields()[0],'Example');p.update(face_sculpt=fg.empty(reference()))
     p['fighter']['retail_moveset']='retail/blaze';p['fighter']['finishers']=['00000001']*4
     assert projects.validate(p)
-    assert ui_art.upgrade(p)['schema']==projects.SCHEMA6
+    assert projects.validate(ui_art.upgrade(p))['schema']==projects.SCHEMA
     p,second=outfits.add(p);assert outfits.view(p,second)['fighter']['retail_moveset']=='retail/blaze'
     for bad in ('bad','retail/../../x',5):
         q=copy.deepcopy(p);q['fighter']['retail_moveset']=bad
         with pytest.raises(SaveError):projects.validate(q)
-    q=copy.deepcopy(p);q['schema']=projects.SCHEMA5
+    q=copy.deepcopy(p);q['schema']='ffny-fighter-project-8'  # a version this build does not know
     with pytest.raises(SaveError):projects.validate(q)

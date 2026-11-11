@@ -57,10 +57,10 @@ can create a new project from a verified CAF without converting its Story save.
 The **Blazin' moves** tab edits four assignments for Story CAFs and projects,
 using the complete original-game pool with normal Apply, Undo, Reset and Save.
 The **Fighting style** tab also selects a named [retail fighter moveset](docs/retail-movesets.md),
-with a matching experimental CAF v5 runtime for projects and directly edited profiles.
+with a matching experimental CAF runtime for projects and directly edited profiles.
 The Project tab supports up to three named outfits with independent appearance,
 textures and portraits, sharing one fighter's stats and moves. Exporting these
-projects requires the matching CAF version 3 runtime.
+projects requires the matching CAF runtime (recipe format `caf-fighter-1`).
 The **UI artwork** tab imports separate selector/loading portraits, titlecards,
 result icons and grid states. Six master roles cover all layouts; 24 advanced
 slots allow individual 2/3/4-player artwork. Projects share defaults across outfits

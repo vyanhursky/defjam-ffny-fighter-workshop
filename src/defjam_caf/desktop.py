@@ -7,7 +7,7 @@ import sys
 import traceback
 
 from PySide6.QtCore import QObject, Signal, Slot, QUrl, QStandardPaths, QTimer, qInstallMessageHandler
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QInputDialog, QMessageBox
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineUrlRequestInterceptor
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -109,6 +109,17 @@ class Bridge(QObject):
                     if len(raw)>limit:raise ValueError('PNG exceeds '+str(limit//1024**2)+' MiB')
                     action,args='retail_'+operation,{**args,'png':base64.b64encode(raw).decode('ascii')}
                 else:raise ValueError('Unsupported retail dialog')
+            if action == "open_folder":
+                # Only folders the Workshop itself reported: the last export's folder or its own backups folder.
+                if args.get("target") == "backups":
+                    folder = self.editor.workspace / "backups"
+                    folder.mkdir(parents=True, exist_ok=True)
+                elif args.get("target") == "export" and self.editor.last_export is not None:
+                    folder = self.editor.last_export.parent
+                else:
+                    raise ValueError("There is no folder to open yet")
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+                return self.response.emit(json.dumps(dict(id=ident, result=None)))
             if action == "boot":
                 if self.initial:
                     action, args = "open_data", {"path": str(self.initial)}

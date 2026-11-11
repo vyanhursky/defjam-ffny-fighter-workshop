@@ -9,7 +9,8 @@ from .container import SaveError
 from .fields import apply_fields, read_fields, STYLE_NAMES, CASH_LIMIT, DEV_LIMIT
 from .profiles import discover
 from .storage import save_profile, export_profile, duplicate, read_archive, install_files
-from . import projects, outfits, ui_art
+from . import projects, outfits, ui_art, backups
+from . import __version__
 
 
 RETAIL_MOVESET_NOTICE = (
@@ -44,6 +45,7 @@ class Editor:
         self.preview_error = None
         self._face_preview_basis = {}
         self.performance_link = None
+        self.last_export = None
         self.project = self.project_path = self.project_hash = None
         self.portrait_edit = None
         self.metadata_edit = None
@@ -178,6 +180,25 @@ class Editor:
             self.profile = None
             self.edits, self.history = {}, []
         return self.snapshot()
+
+    def export_summary(self, path, report):
+        """What the player needs after an export: where it is, what was checked, and what it needs to run."""
+        import hashlib
+        from .fighter_mod import RECIPE_FORMAT
+        document = self.project_document()
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            for block in iter(lambda: stream.read(1 << 20), b""):
+                digest.update(block)
+        count = len(outfits.entries(document))
+        lines = ["Saved to " + str(path),
+                 "%.1f MiB · SHA-256 %s…" % (path.stat().st_size / 1048576, digest.hexdigest()[:16]),
+                 ("Checked against your game files: the whole pack compiled natively."
+                  if report.get("native_compilation") else "The runtime did not report a native compile."),
+                 "%d outfit%s in this fighter." % (count, "" if count == 1 else "s"),
+                 "Needs a game build that supports " + RECIPE_FORMAT + ".",
+                 "To play it: in the launcher, open Mods > Fighters, add this ZIP and enable the pack."]
+        return dict(title="Fighter mod exported", folder="export", lines=lines)
 
     def select_profile(self, name):
         self.discovery = discover(self.data)
@@ -340,6 +361,8 @@ class Editor:
                       preview_error=self.preview_error, preview_available=self.appearance is not None,
                       groups=[], skins=[], issues=self.discovery.issues if self.discovery else [],
                       retail_moveset_save=self.retail_moveset_save())
+        result["version"] = __version__
+        result["backups"] = backups.entries(self.workspace / "backups", self.profile.name) if self.profile and self.project is None else []
         project_view = copy.deepcopy(self.project_source())
         if project_view is not None:
             project_view.pop('performance',None)
@@ -672,7 +695,9 @@ class Editor:
                 raise SaveError("Create or open a fighter project before exporting a mod")
             report = export_mod(self.project_document(), args["path"], args["runtime"], self.data,
                                   self.workspace / "fighter-exports", progress=self.progress, asset_cache=self.cache)
-            return dict(message="Validated Custom Fighter Mod exported to " + args["path"], report=report)
+            self.last_export = Path(args["path"])
+            return dict(message="Validated Custom Fighter Mod exported to " + args["path"], report=report,
+                        summary=self.export_summary(Path(args["path"]), report))
         if action == "open_data":
             return self.open_data(args["path"])
         if action == "snapshot":
@@ -715,8 +740,21 @@ class Editor:
             notice = self.retail_moveset_save()
             if notice and args.get("acknowledge_retail_moveset") is not True:
                 raise SaveError(notice)
+            name = self.profile.name
             backup = save_profile(self.profile, self.current(), self.workspace / "backups")
-            return dict(snapshot=self.select_profile(self.profile.name), message="Saved profile. Backup: " + str(backup))
+            return dict(snapshot=self.select_profile(name), message="Saved profile. Backup: " + str(backup),
+                        summary=dict(title="Profile saved", folder="backups",
+                                     lines=["Saved " + name + ".", "Backup of the previous save: " + backup.name,
+                                            "Restore it any time from Backups in the left column."]))
+        if action == "restore_backup":
+            if self.project is not None or self.profile is None:
+                raise SaveError("Choose a Story profile to restore a backup into")
+            name = self.profile.name
+            before = backups.restore(self.profile, self.workspace / "backups", args.get("id"))
+            return dict(snapshot=self.select_profile(name), message="Restored a backup of " + name,
+                        summary=dict(title="Backup restored", folder="backups",
+                                     lines=["Restored " + name + " from " + args["id"] + ".",
+                                            "The save it replaced was backed up first: " + before.name]))
         if action == "export":
             if self.project is not None:
                 self.project_hash = projects.write(args["path"], self.project_document())
@@ -727,7 +765,11 @@ class Editor:
                 self.texture_edit = None
                 return dict(snapshot=self.snapshot(), message="Saved project copy")
             export_profile(self.profile, self.current(), Path(args["path"]))
-            return dict(message="Exported complete profile to " + args["path"])
+            self.last_export = Path(args["path"])
+            return dict(message="Exported complete profile to " + args["path"],
+                        summary=dict(title="Profile exported", folder="export",
+                                     lines=["Saved to " + args["path"],
+                                            "Import it from the left column to install it as a profile."]))
         if action == "duplicate":
             if self.project is not None:
                 raise SaveError("Use Save project as to copy a standalone fighter")

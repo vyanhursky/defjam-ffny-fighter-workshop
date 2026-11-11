@@ -8,9 +8,13 @@ retains original bytes in projects/ZIPs, and previews full-resolution RGB with
 nearest native material alpha. HD exports explicitly require CAF v7; native-only
 exports retain their previous capability. See docs/hd-caf-atlases.md.
 Validation: 199 Python tests passed, 4 platform skips, including HD save/reopen,
-preview alpha and export capability checks. Matching runtime source/renderer
-fixtures and private project compatibility verification are in progress. Native
-visual/performance and Windows/Linux qualification are not implied.
+preview alpha and export capability checks. Matching runtime fighter checks pass1644/1 skipped; shared renderer fixtures3/3.
+A real Qt/WebChannel session imported a3.0MiB1024 PNG through the file dialog,
+rendered its full-resolution preview and reopened the unchanged approved project
+without overflow or dirty edits. Real own-dump native/HD package exports pass.
+Private evidence: clothing-review-02/compatibility-receipt.json and
+desktop-compatibility-receipt.json in the authoring workspace. Native visual/
+performance and Windows/Linux qualification are not implied.
 
 
 ## GPLv3 licensing and pending PR integration — 2026-11-10

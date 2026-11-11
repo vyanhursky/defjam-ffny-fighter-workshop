@@ -417,7 +417,7 @@ class Editor:
                     continue
                 native = Image.open(io.BytesIO(base64.b64decode(result["textures"][atlas].split(",", 1)[1]))).convert("RGBA")
                 imported = Image.open(io.BytesIO(projects.atlas_bytes(textures["atlases"][atlas]))).convert("RGBA")
-                imported.putalpha(native.getchannel("A"))
+                imported.putalpha(native.getchannel("A").resize(imported.size, Image.Resampling.NEAREST))
                 result["textures"][atlas] = image_uri(imported)
             result["notices"].append("Imported RGB atlases stay applied across appearance changes; original material alpha retained. Clear atlases to restore retail artwork. Injury variants apply in-game; this preview shows the normal face.")
         result["preview_only"] = dict(changes=changes or {}, hide_clothes=hide_clothes)

@@ -21,7 +21,7 @@ SCHEMA4 = "ffny-fighter-project-4"
 SCHEMA5 = "ffny-fighter-project-5"
 SCHEMA6 = "ffny-fighter-project-6"
 SCHEMA7 = "ffny-fighter-project-7"
-MAX_PROJECT = 96 * 1024 * 1024
+MAX_PROJECT = 384 * 1024 * 1024
 ATLAS_SLOTS = ("a", "b", "c", "d", "d1", "d2")
 FIGHTER_FIELDS = ("stats", "styles", "caf_values", "caf_colors")
 SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
@@ -139,12 +139,12 @@ def appearance_hash(fields):
 
 def atlas_bytes(value):
     from PIL import Image
-    require(type(value) is str and len(value) <= 1_400_000, "Atlas PNG is too large")
+    require(type(value) is str and len(value) <= 22_369_624, "Atlas PNG is too large")
     try:
         raw = base64.b64decode(value, validate=True)
-        require(len(raw) <= 1024 * 1024, "Atlas PNG is too large")
+        require(len(raw) <= 16 * 1024 * 1024, "Atlas PNG is too large")
         with Image.open(io.BytesIO(raw)) as image:
-            require(image.format == "PNG" and image.size == (256, 256), "Import a native 256x256 PNG atlas")
+            require(image.format == "PNG" and image.width == image.height and image.width in (256,512,1024,2048), "Import a square 256, 512, 1024 or 2048 PNG atlas")
             image.verify()
     except (ValueError, OSError) as exc:
         raise SaveError("Invalid atlas PNG: " + str(exc)) from exc

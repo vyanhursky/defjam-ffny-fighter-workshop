@@ -98,7 +98,9 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         face = write_face(views[0][1], 'face.json')
         if face:
             fighter['face'] = face
+        hd_atlases = False
         def write_atlases(view, relative):
+            nonlocal hd_atlases
             result = {}
             if not view.get("textures", {}).get("atlases"):
                 return result
@@ -106,6 +108,10 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
             folder.mkdir(parents=True)
             for slot, value in view["textures"]["atlases"].items():
                 png = atlas_bytes(value)
+                import io
+                from PIL import Image
+                with Image.open(io.BytesIO(png)) as image:
+                    hd_atlases |= image.size != (256,256)
                 (folder / (slot + ".png")).write_bytes(png)
                 result[slot] = {"path": relative + "/" + slot + ".png", "sha256": hashlib.sha256(png).hexdigest()}
             return result
@@ -127,7 +133,7 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
                 fighter["outfits"].append(entry)
         recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
         (root / "fighter.json").write_bytes(recipe)
-        capability = "caf-fighter-6" if performance else "caf-fighter-5" if 'retail_moveset' in fighter else "caf-fighter-4" if face_cache is not None else "caf-fighter-3" if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7) else "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
+        capability = "caf-fighter-7" if hd_atlases else "caf-fighter-6" if performance else "caf-fighter-5" if 'retail_moveset' in fighter else "caf-fighter-4" if face_cache is not None else "caf-fighter-3" if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7) else "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
         manifest = {"schema": "fighter-registry-draft-1", "id": pack_id, "version": meta["version"],
                     "requires": {}, "resources": [{"id": "caf", "kind": "caf", "compatibility": {},
                     "source": {"format": capability, "selection": {"path": "fighter.json", "sha256": hashlib.sha256(recipe).hexdigest()}}}],

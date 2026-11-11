@@ -13,6 +13,7 @@ from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineUrlRequestIntercep
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
+from . import remembered
 from .editor import Editor
 from .locations import default_data_directory, initial_data_directory
 
@@ -43,6 +44,16 @@ class Bridge(QObject):
         self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="caf-editor")
         self.busy = 0
 
+    def runtime_folder(self, title):
+        """The runtime checkout, asked for once. A remembered one is reused while it still has its tools."""
+        saved = remembered.recall(self.editor.workspace, "runtime")
+        if saved:
+            return str(saved)
+        path = QFileDialog.getExistingDirectory(self.window, title)
+        if path:
+            remembered.remember(self.editor.workspace, "runtime", path)
+        return path
+
     @Slot(str)
     def dispatch(self, raw):
         try:
@@ -62,9 +73,11 @@ class Bridge(QObject):
                     title={'runtime':'Select compatible Custom Fighter runtime checkout','data':'Select Recomp data directory','import':'Select ordinary fighter pack folder'}[operation]
                     path=QFileDialog.getExistingDirectory(self.window,title)
                     if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                    if operation=='runtime':remembered.remember(self.editor.workspace,'runtime',path)
                     if operation=='data':
                         data=Path(path).resolve()
                         if not (data/'extracted').is_dir():raise ValueError('Choose the data directory containing extracted')
+                        remembered.remember(self.editor.workspace,'data',data)
                         session.data=data
                         session.catalog=None
                         return self.response.emit(json.dumps(dict(id=ident,result=session.snapshot())))
@@ -106,6 +119,7 @@ class Bridge(QObject):
                 path = QFileDialog.getExistingDirectory(self.window, "Select Recomp data directory", str(self.editor.data or default_data_directory() or Path.home()))
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                remembered.remember(self.editor.workspace, "data", path)
                 action, args = "open_data", {"path": path}
             elif action == "choose_export":
                 if self.editor.profile is None:
@@ -123,7 +137,7 @@ class Bridge(QObject):
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = ("open_project" if opening else "export" if action == "choose_project_copy" else "new_project"), {"path": path}
             elif action == 'choose_performance_tools':
-                runtime = QFileDialog.getExistingDirectory(self.window, 'Select compatible Custom Fighter runtime source checkout')
+                runtime = self.runtime_folder('Select compatible Custom Fighter runtime source checkout')
                 if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))
                 action,args='performance_connect',dict(runtime=runtime)
             elif action == 'choose_voice_clip':
@@ -134,7 +148,7 @@ class Bridge(QObject):
                 if len(audio)>8*1024**2:raise ValueError('Voice clip exceeds 8 MiB')
                 action,args='performance_clip',dict(target=args['target'],wav=base64.b64encode(audio).decode('ascii'))
             elif action == "choose_mod_export":
-                runtime = QFileDialog.getExistingDirectory(self.window, "Select Custom Fighter runtime source checkout")
+                runtime = self.runtime_folder("Select Custom Fighter runtime source checkout")
                 if not runtime:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 path, _ = QFileDialog.getSaveFileName(self.window, "Export validated Custom Fighter Mod", "fighter-mod.zip", "Fighter mod (*.zip)")
@@ -150,7 +164,7 @@ class Bridge(QObject):
                     return self.response.emit(json.dumps(dict(id=ident,result=None)))
                 action,args = ('face_import' if opening else 'face_export'),dict(path=path)
             elif action=='choose_ui_retail':
-                runtime=QFileDialog.getExistingDirectory(self.window,'Select Custom Fighter runtime for retail UI references')
+                runtime=self.runtime_folder('Select Custom Fighter runtime for retail UI references')
                 if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))
                 action,args='ui_retail',{'runtime':runtime}
             elif action in {"choose_project_portrait", "choose_project_atlas",'choose_ui_art'}:
@@ -306,7 +320,7 @@ def main(argv=None):
         qInstallMessageHandler(lambda kind, context, message: print(f"[QT] {message}", flush=True))
     app = QApplication(sys.argv[:1])
     # Automated package checks without --data stay independent of installed saves.
-    initial = args.data if args.smoke_test else initial_data_directory(args.data)
+    initial = args.data if args.smoke_test else initial_data_directory(args.data) or remembered.recall(workspace, "data")
     window = Window(workspace, initial)
     if args.retail:
         # The retail studio needs the game directory, not a CAF cache/profile.

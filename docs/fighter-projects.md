@@ -3,8 +3,8 @@
 This workflow is under development after 0.1 Beta 1. It requires the matching
 Custom Fighter runtime extension; the released Beta 1 editor/game do not provide it.
 
-On **Project & mod**, **Fighter outfits** switches between up to three named
-outfits. **Copy as new** clones the selected appearance, textures and portrait;
+The **Outfit** selector above the viewer switches between up to three named
+outfits; **Details & export** renames, adds and removes them. **Copy as new outfit** clones the selected appearance, textures and portrait;
 edit the copy's clothing and import matching complete atlases, then capture its
 own portrait. **Remove** deletes additional outfits; the first outfit is kept.
 Switching preserves staged changes. Stats, fighting styles and Blazin' moves
@@ -21,7 +21,7 @@ identity retains shared unlock/progress ownership. Existing single-outfit
 projects keep their earlier formats until outfit controls upgrade them.
 
 1. Open your Recomp data directory and select an existing Story fighter.
-2. On **Project & mod**, choose **Create project from this fighter** and save a
+2. On **Details & export**, choose **Create project from this fighter** and save a
    `.ffnyfighter` file. Staged fighter changes are included. Your original profile
    remains untouched.
 3. Edit appearance, training stats and retail fighting styles as usual. **Save
@@ -70,7 +70,7 @@ appearance encodings and combinations with sourced non-portrait components.
 
 ### Complete UI artwork (development)
 
-Open **UI artwork** in a standalone project. Import transparent PNGs for six
+Open **Menu artwork** in a standalone project. Import transparent PNGs for six
 master roles: selector portrait, loading portrait, result icon, titlecard, normal
 grid icon and selected grid icon. A master fills all relevant layouts. The 24
 advanced roles provide independent selector/result portraits, selector/result/
@@ -124,7 +124,7 @@ original game database (82 moves in the verified dump). Character finishers and
 CAF moves share the full pool, independent of styles and Story unlocks. Duplicate
 choices are allowed. Pick all four, then **Apply Blazin' moves** to stage them.
 Review slot/name changes, use Undo or Reset as needed, then Save. Browsing a
-dropdown alone does not alter the fighter. Supported source-track playback is available in the Animation tab; see the performance editor limits.
+dropdown alone does not alter the fighter. Supported source-track playback is available under Advanced in the Entrance & victory tab; see the performance editor limits.
 
 For a Story CAF, saving updates only its four assignment references, with the
 normal original backup and stale-save protection. Creating a standalone project
@@ -144,7 +144,7 @@ animation index in the menu.
 
 ### Atlas workflow
 
-Under **Project & mod → Texture atlases**, choose an atlas and import its PNG.
+Under **Textures → Texture atlases**, choose an atlas and import its PNG.
 The preview uses its RGB while retaining the original material alpha. A–D are
 the four composed CAF atlases; D1/D2 are native facial injury variants. Import
 complete flattened atlases for the selected outfit. The project binds them to

@@ -1,5 +1,19 @@
 # Progress and handoff
 
+## Workshop layout, messages and backups — 2026-11-11
+
+Acts on the 2026-11-10 UI review (quick wins and the first structural steps; the three-mode restructure is not
+done). Tabs now follow the work: Appearance, Textures, Stats & cash, Moves (style and Blazin' together), Voice,
+Entrance & victory (the clip viewer is under Advanced), AI, Menu artwork, Details & export. The outfit selector sits
+beside the fighter name; outfit names stage on change and the redundant "Save project & details" is gone, so one Save
+writes a project. Results persist: a Messages log in the footer keeps every message and error, and saving a profile,
+restoring a backup, exporting a profile and exporting a mod each open a summary with an Open folder button (the mod
+summary shows size, SHA-256, the native-compile result, outfit count and the game build it needs). Profile backups are
+listed in the left column with a Restore action; a restore first backs up the save it replaces. Ctrl+S saves and
+Ctrl+Z undoes. The retail studio's texture-shape list loads its preview when Textures opens and explains an empty list.
+Developer wording ("CAF v4/v5 runtime") became "a game build that supports it". Validation: 224 Python tests passed,
+3 skipped (9 new backup tests); driven in the real Qt app over its debugging port on the 2Pac project.
+
 ## HD CAF atlas imports — 2026-11-10
 
 Owner requested the 256px import restriction be removed for HD fighters, using

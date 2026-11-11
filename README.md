@@ -61,7 +61,7 @@ with a matching experimental CAF runtime for projects and directly edited profil
 The Project tab supports up to three named outfits with independent appearance,
 textures and portraits, sharing one fighter's stats and moves. Exporting these
 projects requires the matching CAF runtime (recipe format `caf-fighter-1`).
-The **UI artwork** tab imports separate selector/loading portraits, titlecards,
+The **Menu artwork** tab imports separate selector/loading portraits, titlecards,
 result icons and grid states. Six master roles cover all layouts; 24 advanced
 slots allow individual 2/3/4-player artwork. Projects share defaults across outfits
 and support local overrides, original retail placeholders and 2×/4× HD UI output.

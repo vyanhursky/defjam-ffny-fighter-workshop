@@ -10,14 +10,23 @@ let bridge, current=null, serial=0, busyCount=0, options=[], selectionKey=null, 
 let auditionKey=null, categoryEpoch=0, previewTimer=null, sceneData=null, atlasTextures=[];
 let faceDraft=null,faceFrame=null,faceSceneEpoch=-1;
 const pending=new Map();
-function toast(message,error=false){$('toast').textContent=message;$('toast').classList.toggle('error',error);$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,error?12000:6500);}
+window.__cafAct=(...args)=>act(...args);
+const messageLog=[];
+function record(message,error=false){messageLog.push({time:new Date(),message,error});if(messageLog.length>100)messageLog.shift();$('log-open').textContent=error?'Messages ●':'Messages';}
+function toast(message,error=false){record(message,error);$('toast').textContent=message;$('toast').classList.toggle('error',error);$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,error?12000:6500);}
 function call(action,args={},label=null){
   const id=String(++serial);
   if(label){busyCount++;$('busy-label').textContent=label;$('busy').hidden=false;}
   return new Promise((resolve,reject)=>{pending.set(id,{resolve,reject,label});bridge.dispatch(JSON.stringify({id,action,args}));});
 }
-function fail(error){toast(error.message||String(error),true);$('status-message').textContent='Operation could not be completed';}
-async function act(action,args={},label=null){try{const result=await call(action,args,label);if(result?.snapshot)renderState(result.snapshot);else if(result?.profiles)renderState(result);if(result?.message){toast(result.message);$('status-message').textContent=result.message;}return result;}catch(e){fail(e);return null;}}
+function fail(error){toast(error.message||String(error),true);$('status-message').textContent='Operation could not be completed · see Messages';$('status-message').classList.add('error');}
+function showResult(summary){$('result-title').textContent=summary.title;$('result-lines').replaceChildren(...summary.lines.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));$('result-folder').hidden=!summary.folder;$('result-folder').dataset.target=summary.folder||'';$('result').showModal();}
+$('result-close').onclick=()=>$('result').close();
+$('result-folder').onclick=()=>act('open_folder',{target:$('result-folder').dataset.target});
+$('log-open').onclick=()=>{$('log-lines').replaceChildren(...(messageLog.length?[...messageLog].reverse().map(row=>{const li=document.createElement('li');li.className=row.error?'error':'';const time=document.createElement('time');time.textContent=row.time.toLocaleTimeString();li.append(time,row.message);return li;}):[Object.assign(document.createElement('li'),{textContent:'Nothing yet.'})]));$('log-dialog').showModal();};
+$('log-close').onclick=()=>$('log-dialog').close();
+$('log-clear').onclick=()=>{messageLog.length=0;$('log-open').textContent='Messages';$('log-dialog').close();};
+async function act(action,args={},label=null){try{$('status-message').classList.remove('error');const result=await call(action,args,label);if(result?.snapshot)renderState(result.snapshot);else if(result?.profiles)renderState(result);if(result?.message){toast(result.message);$('status-message').textContent=result.message;}if(result?.summary)showResult(result.summary);return result;}catch(e){fail(e);return null;}}
 function makeOptions(select,items,value){select.replaceChildren(...items.map(x=>new Option(x.label,String(x.value))));if(value!==undefined)select.value=String(value);select.disabled=!items.length;}
 function discard(){return !current?.dirty||confirm('Discard unsaved changes to this fighter?');}
 function projectDetails(){const metadata={};for(const key of ['name','author','version','description','license','donor'])metadata[key]=$('project-'+key).value;return {metadata,identity:{pack:$('project-pack').value,fighter:$('project-fighter').value}};}
@@ -35,8 +44,10 @@ function renderState(state){
   for(const p of state.profiles){const b=document.createElement('button');b.className='profile-card'+(!state.project&&p.name===state.selected?' selected':'');const mon=document.createElement('span');mon.className='profile-monogram';mon.textContent=p.name.slice(0,2);const text=document.createElement('span'),name=document.createElement('strong'),sub=document.createElement('small');name.textContent=p.name;sub.textContent=p.has_fighter?'Story fighter':'No Story fighter';text.append(name,sub);b.append(mon,text);b.onclick=()=>{if(discard())act('select_profile',{name:p.name},'Loading profile…');};$('profiles').append(b);}
   $('profile-note').textContent=state.issues.length?`${state.issues.length} save folder(s) could not be loaded. ${state.issues.map(x=>x.error).join('; ')}`:state.data?`${state.profiles.length} profiles found. Your global Options are kept separate.`:'Profiles are discovered from your local save data.';
   $('save').disabled=!state.dirty;$('undo').disabled=!state.undo;$('reset').disabled=!state.dirty;
-  for(const id of ['export','duplicate'])$(id).disabled=!state.selected||Boolean(state.project);$('save').textContent=state.project?'Save project':'Save changes';
+  for(const id of ['export','duplicate'])$(id).disabled=!state.selected||Boolean(state.project);$('save').textContent=state.project?'Save project':'Save changes';document.querySelector('.save-actions .two-cols').style.display=state.project?'none':'';
   $('import').disabled=!state.data;
+  if(state.version)$('version').textContent=state.version.replace(/b(\d+)$/,' beta $1');
+  renderBackups(state);
   $('changes').replaceChildren(...(state.changes.length?state.changes:['No changes yet.']).map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
   $('status-message').textContent=state.dirty?`${state.changes.length} pending change(s) · review before saving`:'Ready · changes stay local';
   const f=state.fields;
@@ -61,14 +72,14 @@ function renderState(state){
   $('project-path').textContent=state.project_path||'Create a project to author a Custom Fighter Mod.';
   for(const key of ['name','author','version','description','license','donor']){const input=$('project-'+key);input.value=state.project?.metadata[key]||'';input.disabled=!state.project;}
   for(const key of ['pack','fighter']){$('project-'+key).value=state.project?.identity[key]||'';$('project-'+key).disabled=!state.project;}
-  for(const id of ['save-project-details','project-copy','export-mod','capture-portrait','import-portrait','import-atlas','clear-atlases','atlas-slot'])$(id).disabled=!state.project;
+  for(const id of ['project-copy','export-mod','capture-portrait','import-portrait','import-atlas','clear-atlases','atlas-slot'])$(id).disabled=!state.project;
   makeOptions($('outfit-select'),(state.outfits||[]).map((row,i)=>({value:row.id,label:`${i+1}. ${row.name}`})),state.active_outfit);
-  $('outfit-select').disabled=!state.project;
+  $('outfit-select').disabled=!state.project;$('outfit-switch').hidden=!state.project;
   $('outfit-name').value=state.outfits?.find(row=>row.id===state.active_outfit)?.name||'';
-  $('outfit-name').disabled=$('rename-outfit').disabled=!state.project;
+  $('outfit-name').disabled=!state.project;
   $('add-outfit').disabled=!state.project||(state.outfits?.length||0)>=3;
   $('remove-outfit').disabled=!state.project||state.active_outfit==='default';
-  $('outfit-status').textContent=state.project?'Stats, fighting styles and Blazin’ moves are shared. Appearance, textures and portraits belong to the selected outfit.':'Create or open a fighter project to add outfits.';
+  $('outfit-status').textContent=state.project?'Stats, moves and voice are shared. Appearance, textures, portrait and menu artwork belong to the selected outfit.':'Create or open a fighter project to add outfits.';
   renderBlazin(state);
   renderUIArt(state);
   renderFacePresets(state);
@@ -76,6 +87,10 @@ function renderState(state){
   performanceUI.render(state);
   loadCategory().catch(fail);
   queuePreview(0);
+}
+function renderBackups(state){
+  const rows=state.backups||[];$('backups-box').hidden=!state.selected||Boolean(state.project);
+  $('backups').replaceChildren(...(rows.length?rows.slice(0,4).map(row=>{const line=document.createElement('div');line.className='backup-row';const when=new Date(row.when);const text=document.createElement('span');text.textContent=when.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+when.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});const button=document.createElement('button');button.textContent='Restore';button.onclick=()=>{if(!discard())return;if(confirm('Restore '+state.selected+' from the backup of '+when.toLocaleString()+'?\n\nYour current save is backed up first. Close the game before restoring.'))act('restore_backup',{id:row.id},'Restoring backup…');};line.append(text,button);return line;}):[Object.assign(document.createElement('div'),{className:'backup-row',textContent:'No backups of this profile yet.'})]));
 }
 function renderMovesets(state){
   const data=state.retail_movesets||{};
@@ -88,7 +103,7 @@ function updateMovesetMode(){
   const retail=$('moveset-mode').value==='retail';
   $('caf-style-controls').hidden=retail;$('retail-style-controls').hidden=!retail;
   $('apply-styles').disabled=!readyFighter()||(retail&&!current?.retail_movesets?.options?.length);
-  if(retail)$('moveset-status').textContent='Retail movesets require the companion CAF v5 runtime. Story career styles and training are preserved.';
+  if(retail)$('moveset-status').textContent='Retail movesets need a game build that supports them. Story career styles and training are preserved.';
   const row=current?.retail_movesets?.options.find(row=>row.key===$('retail-moveset').value);
   $('moveset').textContent=retail?(row?row.label+' · retail moveset':'Unavailable original moveset'):current?.fields?.styles.map(i=>current.style_names[i]).join(' + ')||'No fighting style assigned.';
 }
@@ -269,10 +284,9 @@ $('import-atlas').onclick=()=>act('choose_project_atlas',{slot:$('atlas-slot').v
 $('clear-atlases').onclick=()=>act('project_atlas_clear',{},'Clearing imported atlases…');
 $('outfit-select').onchange=()=>act('outfit_select',{id:$('outfit-select').value},'Switching outfit…');
 $('add-outfit').onclick=()=>act('outfit_add',{},'Copying outfit…');
-$('rename-outfit').onclick=()=>act('outfit_rename',{name:$('outfit-name').value});
+$('outfit-name').onchange=()=>act('outfit_rename',{name:$('outfit-name').value});
 $('remove-outfit').onclick=()=>{if(confirm('Remove this outfit from the project? Save writes the change.'))act('outfit_remove');};
 $('project-copy').onclick=()=>act('choose_project_copy',{},'Saving project copy…');
-$('save-project-details').onclick=()=>act('project_metadata',projectDetails(),'Saving project & details…');
 for(const key of ['name','author','version','description','license','donor','pack','fighter'])$('project-'+key).oninput=async()=>{try{const state=await call('project_metadata_draft',projectDetails());current=state;window.__cafState=state;$('save').disabled=!state.dirty;$('reset').disabled=!state.dirty;$('save-status').textContent=state.dirty?'● Unsaved changes':'● Saved project';$('save-status').classList.toggle('dirty',state.dirty);$('changes').replaceChildren(...state.changes.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));}catch(e){fail(e);}};
 $('export-mod').onclick=()=>act('choose_mod_export',{},'Validating and exporting fighter mod…');
 $('export-face').onclick=()=>act('choose_face_export',{},'Exporting head template…');
@@ -294,6 +308,12 @@ $('inherit-blazin').onclick=()=>act('blazin_inherit');
 for(const id of ['front','back','face','fit'])$(id).onclick=()=>frame(id);
 $('pose').onchange=()=>{performanceUI.stop();applyPose();};$('lighting').onchange=applyLighting;$('no-clothes').onchange=()=>{queuePreview(0);updateViewState();};
 applyLighting();
+document.addEventListener('keydown',event=>{
+  if(!(event.ctrlKey||event.metaKey)||event.altKey)return;
+  const typing=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)&&document.activeElement.type!=='range';
+  if(event.key==='s'){event.preventDefault();if(!$('save').disabled)$('save').click();}
+  else if(event.key==='z'&&!event.shiftKey&&!typing){event.preventDefault();if(!$('undo').disabled)$('undo').click();}
+});
 
 new QWebChannel(qt.webChannelTransport,channel=>{
   bridge=channel.objects.editor;

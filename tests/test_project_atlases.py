@@ -189,3 +189,46 @@ def test_export_declares_matching_runtime_and_unchanged_atlas_bytes(tmp_path, mo
             recipe = json.loads(archive.read(prefix + 'fighter.json'))
             assert recipe['atlases']['a']['sha256'] == hashlib.sha256(png()).hexdigest()
             assert archive.read(prefix + 'atlases/a.png') == png()
+
+
+@pytest.mark.parametrize('edge',[512,1024,2048])
+def test_hd_atlas_persistence_and_preview_native_alpha(tmp_path,edge):
+    from types import SimpleNamespace
+    source=png((edge,edge))
+    document=projects.with_atlas(projects.from_fields(fields()[0],'HD'),'a',source)
+    path=tmp_path/'hd.ffnyfighter';projects.write(path,document)
+    editor=Editor(tmp_path/'work');editor.open_project(path)
+    native=Image.new('RGBA',(256,256),(1,2,3,133))
+    native.putpixel((128,128),(1,2,3,219))
+    stream=io.BytesIO();native.save(stream,format='PNG')
+    uri='data:image/png;base64,'+base64.b64encode(stream.getvalue()).decode()
+    editor.appearance=SimpleNamespace(outfit=lambda _: {})
+    editor.cache=SimpleNamespace(compose=lambda _: {'textures':{'a':uri},'notices':[]})
+    preview=editor.preview()
+    image=Image.open(io.BytesIO(base64.b64decode(preview['textures']['a'].split(',')[1])))
+    assert image.size==(edge,edge)
+    assert image.getpixel((0,0))==(200,80,30,133)
+    assert image.getpixel((edge//2,edge//2))==(200,80,30,219)
+    assert projects.atlas_bytes(projects.read(path)[0]['textures']['atlases']['a'])==source
+
+
+@pytest.mark.parametrize('size',[(257,257),(512,256),(4096,4096)])
+def test_hd_atlas_rejects_unsupported_dimensions(size):
+    with pytest.raises(SaveError,match='square'):
+        projects.with_atlas(projects.from_fields(fields()[0],'HD'),'a',png(size))
+
+
+def test_hd_export_uses_the_one_recipe_format_and_preserves_pixels(tmp_path,monkeypatch):
+    import json,zipfile
+    from defjam_caf import fighter_mod
+    runtime=tmp_path/'runtime';(runtime/'setup').mkdir(parents=True);(runtime/'scripts').mkdir()
+    (runtime/'setup/fighter_caf.py').touch();(runtime/'scripts/fighter-contract.py').touch()
+    data=tmp_path/'data';(data/'extracted').mkdir(parents=True)
+    source=png((1024,1024));document=projects.with_atlas(projects.from_fields(fields()[0],'HD'),'a',source)
+    monkeypatch.setattr(fighter_mod,'contract',lambda *a,**k:{'ok':True,'native_compilation':True})
+    output=tmp_path/'hd.zip';fighter_mod.export_mod(document,output,runtime,data,tmp_path/'work')
+    prefix=document['identity']['pack']+'/'
+    with zipfile.ZipFile(output) as archive:
+        manifest=json.loads(archive.read(prefix+'fighters.json'))
+        assert manifest['resources'][0]['source']['format']=='caf-fighter-1'
+        assert archive.read(prefix+'atlases/a.png')==source

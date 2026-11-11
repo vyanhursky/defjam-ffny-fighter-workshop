@@ -156,11 +156,11 @@ class Bridge(QObject):
             elif action in {"choose_project_portrait", "choose_project_atlas",'choose_ui_art'}:
                 import base64
                 atlas = action == "choose_project_atlas"
-                title = "Import 256x256 RGB atlas" if atlas else "Import fighter UI artwork" if action=='choose_ui_art' else "Import fighter portrait"
+                title = "Import 256–2048px square RGB atlas" if atlas else "Import fighter UI artwork" if action=='choose_ui_art' else "Import fighter portrait"
                 path, _ = QFileDialog.getOpenFileName(self.window, title, "", "PNG image (*.png)")
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                limit = 1024 * 1024 if atlas else 4 * 1024 * 1024
+                limit = 16 * 1024 * 1024 if atlas else 4 * 1024 * 1024
                 with Path(path).open("rb") as stream:
                     raw = stream.read(limit + 1)
                 if len(raw) > limit:

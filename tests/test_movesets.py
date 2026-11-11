@@ -67,7 +67,12 @@ def test_profile_moveset_edits_only_battle_core_and_save_reopen_preserves_career
     assert e.current().payload[0x137]==5 and e.profile.path.read_bytes()==original
     e.request('undo',{});assert e.current().payload==payload
     e.request('fighting_style',dict(mode='retail',fighter='retail/d-mob'))
-    e.request('save',{});e.select_profile(profile.name)
+    # The save is refused until the player acknowledges what a retail core in a real save means.
+    assert e.snapshot()['retail_moveset_save'] and any('retail-moveset support' in c for c in e.snapshot()['changes'])
+    with pytest.raises(SaveError,match='Story save'):e.request('save',{})
+    with pytest.raises(SaveError,match='Story save'):e.request('save',{'acknowledge_retail_moveset':'yes'})
+    assert e.profile.path.read_bytes()==original and not list((tmp_path/'work').glob('backups/*'))
+    e.request('save',{'acknowledge_retail_moveset':True});e.select_profile(profile.name)
     assert e.current().payload[0x137]==51 and e.snapshot()['retail_movesets']['selected']=='retail/d-mob'
     e.request('fighting_style',dict(mode='retail',fighter='retail/blaze'))
     e.request('fighting_style',dict(mode='caf',styles=[1,4]))
@@ -93,3 +98,13 @@ def test_project6_keeps_art_sculpt_finishers_and_rejects_unversioned_or_bad_mode
         with pytest.raises(SaveError):projects.validate(q)
     q=copy.deepcopy(p);q['schema']='ffny-fighter-project-8'  # a version this build does not know
     with pytest.raises(SaveError):projects.validate(q)
+
+
+def test_a_save_that_does_not_add_a_retail_moveset_needs_no_acknowledgement(profile,tmp_path):
+    e,_=editor(tmp_path);e.data=profile.path.parents[4];e.select_profile(profile.name)
+    e.request('fighting_style',dict(mode='caf',styles=[1,4]))
+    assert e.snapshot()['retail_moveset_save'] is None
+    e.request('save',{})
+    # A profile that already holds a retail core can be saved again for another reason without a new warning.
+    e.request('fighting_style',dict(mode='retail',fighter='retail/blaze'));e.request('save',{'acknowledge_retail_moveset':True})
+    assert e.snapshot()['retail_moveset_save'] is None

@@ -12,6 +12,12 @@ from .storage import save_profile, export_profile, duplicate, read_archive, inst
 from . import projects, outfits, ui_art
 
 
+RETAIL_MOVESET_NOTICE = (
+    "This writes an original fighter's moveset into your real Story save. Only game builds with the Story "
+    "retail-moveset adapter understand it; builds without it, including Recomp v1.1.1 and v1.2.0-beta.1, have not "
+    "been tested with such a save. A backup is made first. Change the moveset back to a CAF combination to undo it.")
+
+
 class Editor:
     def group_label(self, slot):
         if slot == 25:
@@ -197,6 +203,19 @@ class Editor:
             return self.blazin.profile_keys(apply_fields(self.base(), edits).payload)
         return [None] * 4
 
+    def retail_moveset_save(self):
+        """The notice a Story save needs acknowledged, or None.
+
+        A retail moveset core (1..86) in a real Story save is only understood by game builds that carry the Story
+        retail-moveset adapter. Older builds have not been tested with such a save, so the player must say they
+        know before the save is written. The check lives here, not in the page, so no front end can skip it."""
+        if self.profile is None or self.project is not None:
+            return None
+        before, after = read_fields(self.base().payload)['combined_style'], read_fields(self.current().payload)['combined_style']
+        if before == after or not 1 <= after <= 86:
+            return None
+        return RETAIL_MOVESET_NOTICE
+
     def stage(self, changes):
         if 'moveset_core' in changes:
             if self.project is not None or not self.movesets or changes['moveset_core'] not in self.movesets.by_core:
@@ -267,6 +286,8 @@ class Editor:
         if before['combined_style']!=after['combined_style']:
             core=after['combined_style'];row=self.movesets.by_core.get(core) if self.movesets else None
             result.append('Moveset: '+(row['label'] if row else 'CAF combination'))
+            if self.retail_moveset_save():
+                result.append('This save will need a game build with retail-moveset support (see the warning before saving)')
         for slot, (old, new) in enumerate(zip(before_moves, self.blazin_keys())):
             if old != new:
                 result.append(f"Blazin' slot {slot + 1}: " + (self.blazin.label(new) if self.blazin else str(new)))
@@ -317,7 +338,8 @@ class Editor:
                       fields=None, changes=[], dirty=False, undo=False,
                       style_names=STYLE_NAMES, limits=dict(cash=CASH_LIMIT, development=DEV_LIMIT),
                       preview_error=self.preview_error, preview_available=self.appearance is not None,
-                      groups=[], skins=[], issues=self.discovery.issues if self.discovery else [])
+                      groups=[], skins=[], issues=self.discovery.issues if self.discovery else [],
+                      retail_moveset_save=self.retail_moveset_save())
         project_view = copy.deepcopy(self.project_source())
         if project_view is not None:
             project_view.pop('performance',None)
@@ -690,6 +712,9 @@ class Editor:
                 self.portrait_edit = self.metadata_edit = None
                 self.texture_edit = None
                 return dict(snapshot=self.snapshot(), message="Saved fighter project")
+            notice = self.retail_moveset_save()
+            if notice and args.get("acknowledge_retail_moveset") is not True:
+                raise SaveError(notice)
             backup = save_profile(self.profile, self.current(), self.workspace / "backups")
             return dict(snapshot=self.select_profile(self.profile.name), message="Saved profile. Backup: " + str(backup))
         if action == "export":

@@ -1,5 +1,16 @@
 # Progress and handoff
 
+## Beta 2 candidate — 2026-11-12
+
+Release branch `release/v0.1.0-beta.2` (Python package 0.1.0b2, notes docs/releases/v0.1.0-beta.2.md) = the
+`integration/beta2-candidate` branch (PR #10 one project schema and one CAF recipe format with the A3 acknowledgement
+and remembered folders, PR #9 HD atlases ported onto that one format; the earlier "HD exports require CAF v7" line below
+is superseded: there is no CAF v7 in the candidate) plus the layout, Game setup and Home screen work above. Pairs with
+Recomp v1.2.0-beta.2: recipes from earlier Workshop builds are refused by that runtime. 237 Python tests passed, 3 skipped.
+Not done or not verified: macOS and Linux desktop packages run by hand, the native unsaved-changes prompt, Ctrl+S and
+Ctrl+Z, retail export with a real body import and the 3D preview in the final build, the three-mode restructure and the
+pre-export checklist. Nothing is merged, tagged or published; packaged assets need the owner's go-ahead.
+
 ## Workshop layout, messages and backups — 2026-11-11
 
 Acts on the 2026-11-10 UI review (quick wins and the first structural steps; the three-mode restructure is not

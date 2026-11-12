@@ -1,5 +1,14 @@
 # Progress and handoff
 
+## Beta 2 published — 2026-11-12
+
+Owner authorized merging, tagging and publishing after the Recomp v1.2.0-beta.2 results. PR #11 merged (merge commit 4d507da, #9 and #10 included);
+annotated `v0.1.0-beta.2` at 4d507da; native build run 43306951088 passed all four targets (the first macOS arm64 attempt on the PR was
+cancelled for lack of a hosted runner and passed when re-run); Stage beta release run 43308110080 attached four packages, four sidecars,
+SHA256SUMS and provenance; SHA256SUMS equal GitHub's digests. Published as a prerelease, not Latest, at 21:15 UTC. The staging workflow's
+hardcoded title "0.1 Beta 1" now follows the tag (bdacaba); the README links point at Beta 2 (d0d1542). Packaged macOS and Linux apps were built
+and startup-checked by CI only, not run by hand. Pairs with Recomp v1.2.0-beta.2.
+
 ## Beta 2 candidate — 2026-11-12
 
 Release branch `release/v0.1.0-beta.2` (Python package 0.1.0b2, notes docs/releases/v0.1.0-beta.2.md) = the

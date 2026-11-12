@@ -3,6 +3,7 @@ import {OrbitControls} from './vendor/OrbitControls.js';
 import {poseMesh} from './poses.mjs';
 import {blendFace,faceDraft as makeFaceDraft} from './face-preview.mjs';
 import {performanceEditor} from './performance.mjs';
+import {gameSetup} from './setup.mjs';
 
 const $ = id => document.getElementById(id);
 $('retail-editor').onclick=()=>call('open_retail_editor');
@@ -19,7 +20,7 @@ function call(action,args={},label=null){
   if(label){busyCount++;$('busy-label').textContent=label;$('busy').hidden=false;}
   return new Promise((resolve,reject)=>{pending.set(id,{resolve,reject,label});bridge.dispatch(JSON.stringify({id,action,args}));});
 }
-function fail(error){toast(error.message||String(error),true);$('status-message').textContent='Operation could not be completed · see Messages';$('status-message').classList.add('error');}
+function fail(error){if(/Game setup/.test(error.message||''))setup.open(current?.setup);toast(error.message||String(error),true);$('status-message').textContent='Operation could not be completed · see Messages';$('status-message').classList.add('error');}
 function showResult(summary){$('result-title').textContent=summary.title;$('result-lines').replaceChildren(...summary.lines.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));$('result-folder').hidden=!summary.folder;$('result-folder').dataset.target=summary.folder||'';$('result').showModal();}
 $('result-close').onclick=()=>$('result').close();
 $('result-folder').onclick=()=>act('open_folder',{target:$('result-folder').dataset.target});
@@ -27,6 +28,8 @@ $('log-open').onclick=()=>{$('log-lines').replaceChildren(...(messageLog.length?
 $('log-close').onclick=()=>$('log-dialog').close();
 $('log-clear').onclick=()=>{messageLog.length=0;$('log-open').textContent='Messages';$('log-dialog').close();};
 async function act(action,args={},label=null){try{$('status-message').classList.remove('error');const result=await call(action,args,label);if(result?.snapshot)renderState(result.snapshot);else if(result?.profiles)renderState(result);if(result?.message){toast(result.message);$('status-message').textContent=result.message;}if(result?.summary)showResult(result.summary);return result;}catch(e){fail(e);return null;}}
+const setup=gameSetup({call,act});
+$('setup-open').onclick=()=>setup.open(current?.setup);
 function makeOptions(select,items,value){select.replaceChildren(...items.map(x=>new Option(x.label,String(x.value))));if(value!==undefined)select.value=String(value);select.disabled=!items.length;}
 function discard(){return !current?.dirty||confirm('Discard unsaved changes to this fighter?');}
 function projectDetails(){const metadata={};for(const key of ['name','author','version','description','license','donor'])metadata[key]=$('project-'+key).value;return {metadata,identity:{pack:$('project-pack').value,fighter:$('project-fighter').value}};}
@@ -46,6 +49,7 @@ function renderState(state){
   $('save').disabled=!state.dirty;$('undo').disabled=!state.undo;$('reset').disabled=!state.dirty;
   for(const id of ['export','duplicate'])$(id).disabled=!state.selected||Boolean(state.project);$('save').textContent=state.project?'Save project':'Save changes';document.querySelector('.save-actions .two-cols').style.display=state.project?'none':'';
   $('import').disabled=!state.data;
+  {const chip=setup.chip(state.setup);$('setup-open').textContent=chip.text;$('setup-open').className='chip '+chip.state;setup.offer(state.setup);}
   if(state.version)$('version').textContent=state.version.replace(/b(\d+)$/,' beta $1');
   renderBackups(state);
   $('changes').replaceChildren(...(state.changes.length?state.changes:['No changes yet.']).map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
@@ -67,12 +71,12 @@ function renderState(state){
   for(const el of document.querySelectorAll('.tab-content input,.tab-content select,.tab-content button'))el.disabled=!readyFighter()||(el.closest('#tab-appearance')&&!state.preview_available);
   $('cash').disabled=$('development').disabled=Boolean(state.project)||!readyFighter();
   $('new-project').disabled=!readyFighter();
-  $('portrait-status').textContent=state.portrait_available?'Project portrait selected':'Portraits currently inherit the presentation donor.';
-  $('atlas-status').textContent=state.atlas_slots?.length?'Imported: '+state.atlas_slots.join(', ').toUpperCase():'Using original CAF textures.';
+  $('portrait-status').textContent=state.portrait_available?'This outfit has its own portrait.':'No portrait of its own yet: it uses the portrait of the fighter it was based on.';
+  $('atlas-status').textContent=state.project?`${state.atlas_slots?.length||0} of 6 sheets use your artwork.`:'Open a fighter project to import artwork.';
   $('project-path').textContent=state.project_path||'Create a project to author a Custom Fighter Mod.';
   for(const key of ['name','author','version','description','license','donor']){const input=$('project-'+key);input.value=state.project?.metadata[key]||'';input.disabled=!state.project;}
   for(const key of ['pack','fighter']){$('project-'+key).value=state.project?.identity[key]||'';$('project-'+key).disabled=!state.project;}
-  for(const id of ['project-copy','export-mod','capture-portrait','import-portrait','import-atlas','clear-atlases','atlas-slot'])$(id).disabled=!state.project;
+  for(const id of ['project-copy','export-mod','capture-portrait','import-portrait','clear-atlases'])$(id).disabled=!state.project;
   makeOptions($('outfit-select'),(state.outfits||[]).map((row,i)=>({value:row.id,label:`${i+1}. ${row.name}`})),state.active_outfit);
   $('outfit-select').disabled=!state.project;$('outfit-switch').hidden=!state.project;
   $('outfit-name').value=state.outfits?.find(row=>row.id===state.active_outfit)?.name||'';
@@ -83,6 +87,8 @@ function renderState(state){
   renderBlazin(state);
   renderUIArt(state);
   renderFacePresets(state);
+  renderAtlases(state);
+  syncFace(state);
   renderMovesets(state);
   performanceUI.render(state);
   loadCategory().catch(fail);
@@ -92,6 +98,59 @@ function renderBackups(state){
   const rows=state.backups||[];$('backups-box').hidden=!state.selected||Boolean(state.project);
   $('backups').replaceChildren(...(rows.length?rows.slice(0,4).map(row=>{const line=document.createElement('div');line.className='backup-row';const when=new Date(row.when);const text=document.createElement('span');text.textContent=when.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+when.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});const button=document.createElement('button');button.textContent='Restore';button.onclick=()=>{if(!discard())return;if(confirm('Restore '+state.selected+' from the backup of '+when.toLocaleString()+'?\n\nYour current save is backed up first. Close the game before restoring.'))act('restore_backup',{id:row.id},'Restoring backup…');};line.append(text,button);return line;}):[Object.assign(document.createElement('div'),{className:'backup-row',textContent:'No backups of this profile yet.'})]));
 }
+const ATLAS_SLOTS=[
+  ['a','Body','A','Skin and body artwork.'],
+  ['b','Apparel & accessories','B','Shirts, jackets, hats, jewellery and other worn items.'],
+  ['c','Lower body','C','Pants, shoes and legs.'],
+  ['d','Face','D','The face: skin, eyes, brows and mouth.'],
+  ['d1','Face · injury 1','D1','Face artwork used when the fighter takes damage.'],
+  ['d2','Face · injury 2','D2','The heavier-damage version of the face.']];
+function renderAtlases(state){
+  const have=new Set(state.atlas_slots||[]);
+  $('atlas-rows').replaceChildren(...ATLAS_SLOTS.map(([slot,name,letter,about])=>{
+    const row=document.createElement('div');row.className='atlas-row'+(have.has(slot)?' custom':'');
+    const title=document.createElement('div'),bold=document.createElement('b'),mark=document.createElement('span');
+    bold.textContent=`${name} · ${letter}`;mark.className='state';mark.textContent=have.has(slot)?'  YOUR PNG':'  ORIGINAL ARTWORK';title.append(bold,mark);
+    const small=document.createElement('small');small.textContent=about;
+    const buttons=document.createElement('div');buttons.className='buttons';
+    const choose=document.createElement('button');choose.textContent=have.has(slot)?'Replace PNG…':'Import PNG…';choose.disabled=!state.project;
+    choose.onclick=()=>act('choose_project_atlas',{slot},'Importing texture atlas…');buttons.append(choose);
+    if(have.has(slot)){const back=document.createElement('button');back.className='quiet';back.textContent='Use original';back.onclick=()=>act('project_atlas_clear',{slot});buttons.append(back);}
+    row.append(title,small,buttons);return row;}));
+  $('clear-atlases').disabled=!state.project||!have.size;
+}
+function syncPortrait(){const mode=document.querySelector('input[name=portrait-source]:checked').value;$('capture-portrait').hidden=mode!=='capture';$('import-portrait').hidden=mode!=='import';}
+for(const radio of document.querySelectorAll('input[name=portrait-source]'))radio.onchange=syncPortrait;
+syncPortrait();
+function faceMethod(){return document.querySelector('input[name=face-method]:checked').value;}
+function syncFace(state){
+  const sculpt=state?.face_sculpt||{},project=Boolean(state?.project);
+  const radios=Object.fromEntries([...document.querySelectorAll('input[name=face-method]')].map(radio=>[radio.value,radio]));
+  const locked={presets:Boolean(sculpt.present),sliders:!project||Boolean(sculpt.imported),mesh:!project};
+  let method=faceMethod();
+  if(sculpt.imported)method='mesh';else if(sculpt.present)method='sliders';
+  if(locked[method])method='presets';
+  for(const [name,radio] of Object.entries(radios)){radio.disabled=locked[name]||!readyFighter();radio.closest('.choice-opt').classList.toggle('locked',locked[name]);}
+  radios[method].checked=true;
+  for(const panel of document.querySelectorAll('.face-panel'))panel.hidden=panel.dataset.face!==method;
+  $('face-method-note').textContent=!project?'Standalone fighter projects also offer proportion sliders and imported head meshes.'
+    :sculpt.imported?'This outfit uses an imported head mesh, so presets and sliders are off.'
+    :sculpt.present?'This outfit has slider changes saved, so the original presets are off.':'Each outfit uses one method at a time.';
+  $('face-method-clear').hidden=!sculpt.present;$('face-method-clear').disabled=!sculpt.present;
+}
+for(const radio of document.querySelectorAll('input[name=face-method]'))radio.onchange=()=>syncFace(current);
+$('face-method-clear').onclick=()=>act('face_clear');
+function choiceFor(select,descriptions){
+  const wrap=document.createElement('div');wrap.className='choice';wrap.setAttribute('role','radiogroup');
+  for(const option of select.options){
+    const label=document.createElement('label'),input=document.createElement('input'),text=document.createElement('span'),bold=document.createElement('b'),small=document.createElement('small');
+    label.className='choice-opt';input.type='radio';input.name='choice-'+select.id;input.value=option.value;bold.textContent=option.textContent;small.textContent=descriptions[option.value]||'';
+    input.onchange=()=>{select.value=input.value;select.dispatchEvent(new Event('change'));};text.append(bold,small);label.append(input,text);wrap.append(label);
+  }
+  const holder=select.closest('label');holder.style.display='none';holder.after(wrap);
+  return ()=>{for(const input of wrap.querySelectorAll('input')){input.checked=input.value===select.value;input.disabled=select.disabled||!readyFighter();}};
+}
+const syncMovesetChoice=choiceFor($('moveset-mode'),{caf:'Build your moves from up to three of the game\'s fighting styles.',retail:'Use all of one original fighter\'s moves, including their special attacks.'});
 function renderMovesets(state){
   const data=state.retail_movesets||{};
   makeOptions($('retail-moveset'),(data.options||[]).map(row=>({value:row.key,label:row.label})),data.selected||data.options?.[0]?.key);
@@ -100,6 +159,7 @@ function renderMovesets(state){
   updateMovesetMode();
 }
 function updateMovesetMode(){
+  syncMovesetChoice();
   const retail=$('moveset-mode').value==='retail';
   $('caf-style-controls').hidden=retail;$('retail-style-controls').hidden=!retail;
   $('apply-styles').disabled=!readyFighter()||(retail&&!current?.retail_movesets?.options?.length);
@@ -280,7 +340,6 @@ $('open-project').onclick=()=>{if(discard())act('choose_project',{},'Opening fig
 $('new-project').onclick=()=>act('choose_new_project',{},'Creating standalone fighter project…');
 $('capture-portrait').onclick=()=>{if(faceDraft){fail(new Error('Apply or revert the face preview before capturing its portrait.'));return;}if(!window.__cafPreview?.ready||auditionKey||$('no-clothes').checked){fail(new Error('Finish or cancel try-on and show the full outfit before capturing its portrait.'));return;}const size=renderer.getSize(new THREE.Vector2()),ratio=renderer.getPixelRatio(),scale=Math.min(1,1024/Math.max(size.x,size.y));renderer.setPixelRatio(1);renderer.setSize(Math.round(size.x*scale),Math.round(size.y*scale),false);renderer.render(scene,camera);const png=renderer.domElement.toDataURL('image/png');renderer.setPixelRatio(ratio);renderer.setSize(size.x,size.y,false);renderer.render(scene,camera);act('project_portrait',{png});};
 $('import-portrait').onclick=()=>act('choose_project_portrait',{},'Importing portrait PNG…');
-$('import-atlas').onclick=()=>act('choose_project_atlas',{slot:$('atlas-slot').value},'Importing texture atlas…');
 $('clear-atlases').onclick=()=>act('project_atlas_clear',{},'Clearing imported atlases…');
 $('outfit-select').onchange=()=>act('outfit_select',{id:$('outfit-select').value},'Switching outfit…');
 $('add-outfit').onclick=()=>act('outfit_add',{},'Copying outfit…');

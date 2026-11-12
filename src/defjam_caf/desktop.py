@@ -13,7 +13,7 @@ from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineUrlRequestIntercep
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
-from . import remembered
+from . import remembered, runtimes
 from .editor import Editor
 from .locations import default_data_directory, initial_data_directory
 
@@ -44,15 +44,10 @@ class Bridge(QObject):
         self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="caf-editor")
         self.busy = 0
 
-    def runtime_folder(self, title):
-        """The runtime checkout, asked for once. A remembered one is reused while it still has its tools."""
-        saved = remembered.recall(self.editor.workspace, "runtime")
-        if saved:
-            return str(saved)
-        path = QFileDialog.getExistingDirectory(self.window, title)
-        if path:
-            remembered.remember(self.editor.workspace, "runtime", path)
-        return path
+    def runtime_folder(self, feature):
+        """The game version chosen once in Game setup. Refused up front, in plain words, when it cannot do the job,
+        so nobody picks an output file for an export that was never going to work."""
+        return str(runtimes.require(self.editor.runtime, feature, self.editor.recipe_format())["path"])
 
     @Slot(str)
     def dispatch(self, raw):
@@ -109,6 +104,12 @@ class Bridge(QObject):
                     if len(raw)>limit:raise ValueError('PNG exceeds '+str(limit//1024**2)+' MiB')
                     action,args='retail_'+operation,{**args,'png':base64.b64encode(raw).decode('ascii')}
                 else:raise ValueError('Unsupported retail dialog')
+            if action == "choose_setup_folder":
+                start = remembered.recall(self.editor.workspace, "app") or runtimes.default_folder() or Path.home()
+                path = QFileDialog.getExistingDirectory(self.window, "Choose your Def Jam Recompiled folder, or a source checkout", str(start))
+                if not path:
+                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                action, args = "setup_scan", {"folder": path}
             if action == "open_folder":
                 # Only folders the Workshop itself reported: the last export's folder or its own backups folder.
                 if args.get("target") == "backups":
@@ -148,7 +149,7 @@ class Bridge(QObject):
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = ("open_project" if opening else "export" if action == "choose_project_copy" else "new_project"), {"path": path}
             elif action == 'choose_performance_tools':
-                runtime = self.runtime_folder('Select compatible Custom Fighter runtime source checkout')
+                runtime = self.runtime_folder('tools')
                 if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))
                 action,args='performance_connect',dict(runtime=runtime)
             elif action == 'choose_voice_clip':
@@ -159,7 +160,7 @@ class Bridge(QObject):
                 if len(audio)>8*1024**2:raise ValueError('Voice clip exceeds 8 MiB')
                 action,args='performance_clip',dict(target=args['target'],wav=base64.b64encode(audio).decode('ascii'))
             elif action == "choose_mod_export":
-                runtime = self.runtime_folder("Select Custom Fighter runtime source checkout")
+                runtime = self.runtime_folder("export")
                 if not runtime:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 path, _ = QFileDialog.getSaveFileName(self.window, "Export validated Custom Fighter Mod", "fighter-mod.zip", "Fighter mod (*.zip)")
@@ -175,7 +176,7 @@ class Bridge(QObject):
                     return self.response.emit(json.dumps(dict(id=ident,result=None)))
                 action,args = ('face_import' if opening else 'face_export'),dict(path=path)
             elif action=='choose_ui_retail':
-                runtime=self.runtime_folder('Select Custom Fighter runtime for retail UI references')
+                runtime=self.runtime_folder('menu')
                 if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))
                 action,args='ui_retail',{'runtime':runtime}
             elif action in {"choose_project_portrait", "choose_project_atlas",'choose_ui_art'}:

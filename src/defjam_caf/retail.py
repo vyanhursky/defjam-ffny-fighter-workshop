@@ -224,9 +224,14 @@ class Session:
 
     def api(self, arguments, temporary):
         from .fighter_mod import contract
-        projects.require(self.runtime is not None,'Choose the compatible runtime checkout first')
+        from . import runtimes
+        runtime=runtimes.require(self.shared_runtime(),'retail',self.owner.recipe_format())['path']
         workspace=self.owner.workspace/'retail';workspace.mkdir(parents=True,exist_ok=True)
-        return contract(self.runtime,arguments,temporary,workspace)
+        return contract(Path(runtime),arguments,temporary,workspace)
+
+    def shared_runtime(self):
+        """The game version chosen once in Game setup, unless this studio was pointed elsewhere explicitly."""
+        return self.runtime or self.owner.runtime
 
     def game(self):
         data=self.data or self.owner.data
@@ -247,13 +252,23 @@ class Session:
         if view is not None:
             view['asset_count']=len(view.pop('assets'))
         data=self.data or self.owner.data
-        return {'retail':True,'data':str(data) if data else None,'runtime':str(self.runtime) if self.runtime else None,
+        runtime=self.shared_runtime()
+        return {'retail':True,'data':str(data) if data else None,'runtime':str(runtime) if runtime else None,
+            'setup':self.owner.setup_view(),
             'donors':rows,'document':view,'path':str(self.path) if self.path else None,'dirty':self.effective()!=self.saved,
             'undo':bool(self.history) or self.draft is not None,'roles':[{'id':r,'name':ui_art.MASTERS.get(r,r.replace('_',' '))} for r in ui_art.ROLES]}
 
     def request(self, action, args):
         workspace=self.owner.workspace/'retail';workspace.mkdir(parents=True,exist_ok=True)
-        if action=='snapshot':return self.snapshot()
+        if action=='snapshot':
+            # With a game version and data folder already chosen, the retail catalog loads without a second setup step.
+            if self.catalog is None and self.shared_runtime() is not None and (self.data or self.owner.data) is not None:
+                try:
+                    from . import runtimes
+                    if runtimes.describe(self.shared_runtime(),self.owner.recipe_format())['features']['retail']:
+                        args={'runtime':str(self.shared_runtime())};action='configure'
+                except Exception:pass
+            if action=='snapshot':return self.snapshot()
         if action=='draft':
             projects.require(self.document is not None and set(args)=={'metadata','identity'} and all(type(v) is dict for v in args.values()),'Invalid project details draft')
             projects.require(set(args['metadata'])<=set(self.document['metadata']) and set(args['identity'])=={'pack','fighter'},'Unknown project details draft fields')

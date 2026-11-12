@@ -9,7 +9,7 @@ from .container import SaveError
 from .fields import apply_fields, read_fields, STYLE_NAMES, CASH_LIMIT, DEV_LIMIT
 from .profiles import discover
 from .storage import save_profile, export_profile, duplicate, read_archive, install_files
-from . import projects, outfits, ui_art, backups
+from . import projects, outfits, ui_art, backups, runtimes, remembered
 from . import __version__
 
 
@@ -46,6 +46,7 @@ class Editor:
         self._face_preview_basis = {}
         self.performance_link = None
         self.last_export = None
+        self.runtime = remembered.recall(self.workspace, "runtime")
         self.project = self.project_path = self.project_hash = None
         self.portrait_edit = None
         self.metadata_edit = None
@@ -180,6 +181,23 @@ class Editor:
             self.profile = None
             self.edits, self.history = {}, []
         return self.snapshot()
+
+    def recipe_format(self):
+        from .fighter_mod import RECIPE_FORMAT
+        return RECIPE_FORMAT
+
+    def setup_view(self):
+        """What the Game setup dialog and the header chip show: the data folder and the chosen game version."""
+        runtime = runtimes.describe(self.runtime, self.recipe_format()) if self.runtime else None
+        folder = remembered.recall(self.workspace, "app") or runtimes.default_folder()
+        return dict(data=str(self.data) if self.data else None, runtime=runtime, folder=str(folder) if folder else None,
+                    ready=bool(self.data and runtime and runtime["usable"]))
+
+    def need_runtime(self, args, feature):
+        """The runtime an action should use: an explicit one (tests, scripts) or the one chosen in Game setup."""
+        runtime = args.get("runtime") or self.runtime
+        runtimes.require(runtime, feature, self.recipe_format())
+        return Path(runtime)
 
     def export_summary(self, path, report):
         """What the player needs after an export: where it is, what was checked, and what it needs to run."""
@@ -362,6 +380,7 @@ class Editor:
                       groups=[], skins=[], issues=self.discovery.issues if self.discovery else [],
                       retail_moveset_save=self.retail_moveset_save())
         result["version"] = __version__
+        result["setup"] = self.setup_view()
         result["backups"] = backups.entries(self.workspace / "backups", self.profile.name) if self.profile and self.project is None else []
         project_view = copy.deepcopy(self.project_source())
         if project_view is not None:
@@ -471,7 +490,7 @@ class Editor:
         if action == 'performance_connect':
             from .performance_api import Link
             if self.data is None:raise SaveError('Open your game data directory first')
-            self.performance_link = Link(args['runtime'],self.data,self.workspace)
+            self.performance_link = Link(self.need_runtime(args,'tools'),self.data,self.workspace)
             return self.snapshot()
         if action in ('performance_audio','performance_animation'):
             if self.performance_link is None:raise SaveError('Connect compatible fighter tools first')
@@ -580,7 +599,7 @@ class Editor:
                 self.workspace.mkdir(parents=True,exist_ok=True)
                 with tempfile.TemporaryDirectory(prefix='ui-reference-',dir=self.workspace) as temporary:
                     output=Path(temporary)/'reference'
-                    report=contract(Path(args['runtime']),['export-ui-reference','--game',str((Path(self.data)/'extracted').resolve()),
+                    report=contract(self.need_runtime(args,'menu'),['export-ui-reference','--game',str((Path(self.data)/'extracted').resolve()),
                         '--donor',effective['donor'],'--portrait-out',str(output)],temporary,self.workspace)
                     pack={'donor':effective['donor'],'hd_scale':effective['hd_scale'],'images':{}}
                     for role,spec in report['source']['images'].items():
@@ -641,6 +660,10 @@ class Editor:
             if action == "project_atlas_clear":
                 fields = read_fields(self.current().payload)
                 textures = {"appearance_sha256": projects.appearance_hash(fields), "atlases": {}}
+                if args.get("slot"):
+                    shown = self.texture_edit if self.texture_edit is not None else (self.active_view() or {}).get("textures", {})
+                    kept = {key: value for key, value in shown.get("atlases", {}).items() if key != args["slot"]}
+                    textures = {"appearance_sha256": shown.get("appearance_sha256", textures["appearance_sha256"]), "atlases": kept}
             else:
                 raw = args["png"]
                 if raw.startswith("data:image/png;base64,"):
@@ -693,11 +716,30 @@ class Editor:
             from .fighter_mod import export_mod
             if self.project is None:
                 raise SaveError("Create or open a fighter project before exporting a mod")
-            report = export_mod(self.project_document(), args["path"], args["runtime"], self.data,
+            report = export_mod(self.project_document(), args["path"], self.need_runtime(args, "export"), self.data,
                                   self.workspace / "fighter-exports", progress=self.progress, asset_cache=self.cache)
             self.last_export = Path(args["path"])
             return dict(message="Validated Custom Fighter Mod exported to " + args["path"], report=report,
                         summary=self.export_summary(Path(args["path"]), report))
+        if action == "setup_scan":
+            folder = args.get("folder") or remembered.recall(self.workspace, "app") or runtimes.default_folder()
+            if not folder or not Path(folder).is_dir():
+                return dict(folder=None, candidates=[], data=None, current=None)
+            return runtimes.scan(folder, self.recipe_format())
+        if action == "setup_use":
+            runtime = Path(args["runtime"]).resolve()
+            row = runtimes.describe(runtime, self.recipe_format())
+            if not row["usable"]:
+                raise SaveError("That is not a game version: scripts/fighter-contract.py is missing")
+            self.runtime = runtime
+            remembered.remember(self.workspace, "runtime", runtime)
+            if args.get("folder"):
+                remembered.remember(self.workspace, "app", args["folder"])
+            data = args.get("data")
+            if data and remembered.data_ok(data) and (self.data is None or Path(data).resolve() != Path(self.data).resolve()):
+                remembered.remember(self.workspace, "data", data)
+                return self.open_data(data)
+            return self.snapshot()
         if action == "open_data":
             return self.open_data(args["path"])
         if action == "snapshot":

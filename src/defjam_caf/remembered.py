@@ -9,7 +9,7 @@ from pathlib import Path
 from .storage import atomic_bytes
 
 FILE = "remembered.json"
-KEYS = ("data", "runtime")
+KEYS = ("data", "runtime", "app")
 
 
 def _read(workspace):
@@ -21,15 +21,19 @@ def _read(workspace):
 
 
 def runtime_ok(path):
-    path = Path(path)
-    return (path / "setup/fighter_caf.py").is_file() and (path / "scripts/fighter-contract.py").is_file()
+    """Any game version or checkout that has the contract script; what it can do is runtimes.inspect's business."""
+    return (Path(path) / "scripts/fighter-contract.py").is_file()
+
+
+def app_ok(path):
+    return Path(path).is_dir()
 
 
 def data_ok(path):
     return (Path(path) / "extracted").is_dir()
 
 
-CHECKS = {"data": data_ok, "runtime": runtime_ok}
+CHECKS = {"data": data_ok, "runtime": runtime_ok, "app": app_ok}
 
 
 def recall(workspace, key):

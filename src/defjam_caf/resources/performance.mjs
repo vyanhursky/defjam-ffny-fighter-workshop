@@ -23,7 +23,7 @@ export function performanceEditor(api){
     const enabled=Boolean(s.project&&catalog);
     for(const id of ['tab-voice','tab-presentation','tab-ai'])for(const el of $(id).querySelectorAll('input,select,button'))el.disabled=!enabled;
     $('performance-connect').disabled=!s.data;
-    $('performance-status').textContent=!s.project?'Create or open a standalone project to author performance. Story saves retain their existing workflow.':!catalog?'Connect compatible runtime tools to read the original catalogs.':`${catalog.banks.length} voice banks · ${catalog.cinematics.length} sequences · ${catalog.ai.length} AI profiles. Shared across all outfits.`;
+    $('performance-status').textContent=!s.project?'Create or open a standalone project to author performance. Story saves retain their existing workflow.':!catalog?'Load the original voice and animation catalogs. This uses the game version chosen in Game setup.':`${catalog.banks.length} voice banks · ${catalog.cinematics.length} sequences · ${catalog.ai.length} AI profiles. Shared across all outfits.`;
     if(!catalog)return;
     options('voice-preset',catalog.fighters,settings.voice?.preset||s.project?.metadata.donor);
     for(const category of categories){

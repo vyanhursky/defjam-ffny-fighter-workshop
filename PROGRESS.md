@@ -14,6 +14,16 @@ Ctrl+Z undoes. The retail studio's texture-shape list loads its preview when Tex
 Developer wording ("CAF v4/v5 runtime") became "a game build that supports it". Validation: 224 Python tests passed,
 3 skipped (9 new backup tests); driven in the real Qt app over its debugging port on the 2Pac project.
 
+Playtest feedback, same day. Game setup: one dialog, shared by the editor and the retail studio and opened on first run,
+takes the Recomp app folder (auto-detected from LOCALAPPDATA on Windows), lists its installed versions or a source
+checkout, shows what each can do (export, voice/animation tools, retail menu import, retail studio) and also fills in the
+data folder. The choice is remembered; an action a version cannot do fails up front in plain words (the installed 1.2.0
+app lacks all four; the retail studio previously failed late with a raw fighter-contract usage dump). Header buttons gained
+tooltips naming the file type and the usual folder. Textures now lists each atlas sheet by plain name with its own state and
+import/revert; the portrait source and the face method (presets, sliders, imported mesh) and the moveset source are one-of-N
+choice cards, with the locked options greyed and explained. Not built: the launch-time workflow chooser; a five-workflow
+draft is waiting for owner confirmation. 230 Python tests passed (6 new for runtime discovery).
+
 ## HD CAF atlas imports — 2026-11-10
 
 Owner requested the 256px import restriction be removed for HD fighters, using

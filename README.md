@@ -3,15 +3,15 @@
 A standalone, offline desktop Create-a-Fighter and save editor for **Def Jam:
 Fight for NY Recomp**, targeting Windows, macOS and Linux.
 
-**0.1 Beta 1** — [Download the prerelease](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/tag/v0.1.0-beta.1).
+**0.1 Beta 2** — [Download the prerelease](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/tag/v0.1.0-beta.2).
 Standalone packages include Python and Qt; no Python installation is required.
 
 | Platform | Download |
 | --- | --- |
-| Windows x64 | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.1/defjam-ffny-fighter-workshop-0.1.0b1-windows-x64.zip) |
-| macOS Apple Silicon | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.1/defjam-ffny-fighter-workshop-0.1.0b1-macos-arm64.zip) |
-| macOS Intel | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.1/defjam-ffny-fighter-workshop-0.1.0b1-macos-x64.zip) |
-| Linux x64 | [tar.gz](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.1/defjam-ffny-fighter-workshop-0.1.0b1-linux-x64.tar.gz) |
+| Windows x64 | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.2/defjam-ffny-fighter-workshop-0.1.0b2-windows-x64.zip) |
+| macOS Apple Silicon | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.2/defjam-ffny-fighter-workshop-0.1.0b2-macos-arm64.zip) |
+| macOS Intel | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.2/defjam-ffny-fighter-workshop-0.1.0b2-macos-x64.zip) |
+| Linux x64 | [tar.gz](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.2/defjam-ffny-fighter-workshop-0.1.0b2-linux-x64.tar.gz) |
 
 Checksums accompany each package. Windows functional checks, all 29 local Apple
 Silicon editor checks, and native build/startup CI on all four targets pass.
@@ -65,8 +65,8 @@ The **Menu artwork** tab imports separate selector/loading portraits, titlecards
 result icons and grid states. Six master roles cover all layouts; 24 advanced
 slots allow individual 2/3/4-player artwork. Projects share defaults across outfits
 and support local overrides, original retail placeholders and 2×/4× HD UI output.
-This requires the companion Custom Fighter runtime extension and is not part
-of the Beta 1 downloads above. See [the project/export workflow](docs/fighter-projects.md).
+Exported fighters need Recomp v1.2.0-beta.2 or newer (Fighter Mod Support); Beta 1 of
+this editor did not include them. See [the project/export workflow](docs/fighter-projects.md).
 
 ## Screenshots
 

@@ -83,7 +83,7 @@ jobs:
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/workshop-release/releases.json"
           release_id=$(python publisher/scripts/stage_release.py --source release-source --staging "$RUNNER_TEMP/workshop-release" --source-sha "$RELEASE_SHA" --run-id "$RELEASE_RUN" --tag "$RELEASE_TAG" --find-draft "$RUNNER_TEMP/workshop-release/releases.json")
           if [ -z "$release_id" ]; then
-            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --target "$RELEASE_SHA" --title '0.1 Beta 1' --notes-file "release-source/docs/releases/$RELEASE_TAG.md" --prerelease --draft --latest=false
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --target "$RELEASE_SHA" --title "0.1 Beta ${RELEASE_TAG##*beta.}" --notes-file "release-source/docs/releases/$RELEASE_TAG.md" --prerelease --draft --latest=false
           fi
           gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/workshop-release/assets/"* --repo "$GITHUB_REPOSITORY" --clobber
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/workshop-release/releases.json"

@@ -99,7 +99,7 @@ def test_project_selection_save_copy_variant_reopen_and_inherit_preserve_identit
     editor.request('save', {})
     updated = projects.read(path)[0]
     expected = [f'{n:08x}' for n in (77, 88, 99, 111)]
-    assert updated['schema'] == projects.SCHEMA2 and updated['fighter']['finishers'] == expected
+    assert updated['schema'] == projects.SCHEMA and updated['fighter']['finishers'] == expected
     assert updated['identity'] == project['identity']
     copy_path = tmp_path / 'copy.ffnyfighter'; editor.request('export', {'path': str(copy_path)})
     assert projects.read(copy_path)[0]['fighter']['finishers'] == expected
@@ -117,7 +117,7 @@ def test_project_selection_save_copy_variant_reopen_and_inherit_preserve_identit
 
 
 def test_missing_assets_and_unknown_saved_selections_are_preserved(tmp_path):
-    doc = projects.from_fields(fields()[0], 'Example'); doc['schema'] = projects.SCHEMA2
+    doc = projects.from_fields(fields()[0], 'Example'); doc['schema'] = projects.EARLIER_SCHEMAS[1]  # a project saved by an earlier build
     doc['fighter']['finishers'] = ['deadbeef'] * 4
     path = tmp_path / 'fighter.ffnyfighter'; projects.write(path, doc)
     editor = Editor(tmp_path); editor.open_project(path)

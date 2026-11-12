@@ -51,9 +51,10 @@ The steps below describe a new standalone fighter.
    resources and assets, Story saves, private source paths and game executables.
    Native gameplay, resource cleanup and art approval remain separate checks.
 
-Standalone retail projects use `ffny-retail-fighter-project-1`; replacement and
-extra-outfit projects use version 2 with a deployment purpose/target. Existing CAF project versions
-and profile workflows keep their existing formats. This milestone implements
+Retail projects use `ffny-retail-fighter-project-2`; a deployment purpose/target
+is an optional section (standalone projects omit it), and projects saved under
+`ffny-retail-fighter-project-1` open unchanged. CAF projects and profile
+workflows are separate. This milestone implements
 retail/owned fighter modpack authoring and texture import. Generic Blender/GLB
 mesh reimport, sculpting and animation authoring/playback remain deferred in
 the retail studio. An extra-outfit project adds one appearance to an existing

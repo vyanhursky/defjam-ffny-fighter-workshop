@@ -70,7 +70,7 @@ def main():
         if not error:
             try:
                 document=projects.read(saved)[0]
-                assert document['schema']==projects.SCHEMA4 and document['identity']==original['identity'] and document['fighter']==original['fighter']
+                assert document['schema']==projects.SCHEMA and document['identity']==original['identity'] and document['fighter']==original['fighter']
                 assert len(document['ui_art']['images'])==24 and document['ui_art']['donor']=='retail/pockets'
                 assert all('ui_art' not in row for row in document['outfits'])
                 assert projects.read(args.project)[1]==original_hash and archive.is_file()

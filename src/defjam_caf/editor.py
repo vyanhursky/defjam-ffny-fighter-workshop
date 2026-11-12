@@ -9,7 +9,14 @@ from .container import SaveError
 from .fields import apply_fields, read_fields, STYLE_NAMES, CASH_LIMIT, DEV_LIMIT
 from .profiles import discover
 from .storage import save_profile, export_profile, duplicate, read_archive, install_files
-from . import projects, outfits, ui_art
+from . import projects, outfits, ui_art, backups, runtimes, remembered
+from . import __version__
+
+
+RETAIL_MOVESET_NOTICE = (
+    "This writes an original fighter's moveset into your real Story save. Only game builds with the Story "
+    "retail-moveset adapter understand it; builds without it, including Recomp v1.1.1 and v1.2.0-beta.1, have not "
+    "been tested with such a save. A backup is made first. Change the moveset back to a CAF combination to undo it.")
 
 
 class Editor:
@@ -38,6 +45,8 @@ class Editor:
         self.preview_error = None
         self._face_preview_basis = {}
         self.performance_link = None
+        self.last_export = None
+        self.runtime = remembered.recall(self.workspace, "runtime")
         self.project = self.project_path = self.project_hash = None
         self.portrait_edit = None
         self.metadata_edit = None
@@ -90,12 +99,11 @@ class Editor:
             if self.edits["finishers"] is None:
                 document["fighter"].pop("finishers", None)
             else:
-                document["schema"] = projects.SCHEMA2
                 document["fighter"]["finishers"] = self.edits["finishers"][:]
         if self.portrait_edit is not None:
             document["portrait"] = self.portrait_edit
         if self.texture_edit is not None:
-            document.update(schema=projects.SCHEMA2, textures=copy.deepcopy(self.texture_edit))
+            document["textures"] = copy.deepcopy(self.texture_edit)
         if 'textures' in document:
             # Imported RGB remains the author's override across appearance
             # changes. Rebind the same bytes to the newly staged outfit.
@@ -174,6 +182,51 @@ class Editor:
             self.edits, self.history = {}, []
         return self.snapshot()
 
+    def recipe_format(self):
+        from .fighter_mod import RECIPE_FORMAT
+        return RECIPE_FORMAT
+
+    def setup_view(self):
+        """What the Game setup dialog and the header chip show: the data folder and the chosen game version."""
+        runtime = runtimes.describe(self.runtime, self.recipe_format()) if self.runtime else None
+        folder = remembered.recall(self.workspace, "app") or runtimes.default_folder()
+        data = self.data or remembered.recall(self.workspace, "data")
+        return dict(data=str(data) if data else None, runtime=runtime, folder=str(folder) if folder else None,
+                    ready=bool(data and runtime and runtime["usable"]))
+
+    def close_project(self):
+        """Leave the open fighter project so a workflow can start clean. Story profiles reload from the data folder."""
+        self.project = self.project_path = self.project_hash = None
+        self.active_outfit = outfits.DEFAULT
+        self.outfit_draft = self.portrait_edit = self.metadata_edit = self.texture_edit = None
+        self.edits, self.history = {}, []
+        return self.open_data(self.data) if self.data else self.snapshot()
+
+    def need_runtime(self, args, feature):
+        """The runtime an action should use: an explicit one (tests, scripts) or the one chosen in Game setup."""
+        runtime = args.get("runtime") or self.runtime
+        runtimes.require(runtime, feature, self.recipe_format())
+        return Path(runtime)
+
+    def export_summary(self, path, report):
+        """What the player needs after an export: where it is, what was checked, and what it needs to run."""
+        import hashlib
+        from .fighter_mod import RECIPE_FORMAT
+        document = self.project_document()
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            for block in iter(lambda: stream.read(1 << 20), b""):
+                digest.update(block)
+        count = len(outfits.entries(document))
+        lines = ["Saved to " + str(path),
+                 "%.1f MiB · SHA-256 %s…" % (path.stat().st_size / 1048576, digest.hexdigest()[:16]),
+                 ("Checked against your game files: the whole pack compiled natively."
+                  if report.get("native_compilation") else "The runtime did not report a native compile."),
+                 "%d outfit%s in this fighter." % (count, "" if count == 1 else "s"),
+                 "Needs a game build that supports " + RECIPE_FORMAT + ".",
+                 "To play it: in the launcher, open Mods > Fighters, add this ZIP and enable the pack."]
+        return dict(title="Fighter mod exported", folder="export", lines=lines)
+
     def select_profile(self, name):
         self.discovery = discover(self.data)
         self.profile = next((p for p in self.discovery.profiles if p.name == name), None)
@@ -197,6 +250,19 @@ class Editor:
         if self.blazin and self.profile:
             return self.blazin.profile_keys(apply_fields(self.base(), edits).payload)
         return [None] * 4
+
+    def retail_moveset_save(self):
+        """The notice a Story save needs acknowledged, or None.
+
+        A retail moveset core (1..86) in a real Story save is only understood by game builds that carry the Story
+        retail-moveset adapter. Older builds have not been tested with such a save, so the player must say they
+        know before the save is written. The check lives here, not in the page, so no front end can skip it."""
+        if self.profile is None or self.project is not None:
+            return None
+        before, after = read_fields(self.base().payload)['combined_style'], read_fields(self.current().payload)['combined_style']
+        if before == after or not 1 <= after <= 86:
+            return None
+        return RETAIL_MOVESET_NOTICE
 
     def stage(self, changes):
         if 'moveset_core' in changes:
@@ -246,7 +312,7 @@ class Editor:
     def changes(self):
         if self.profile is None and self.project is None:
             return []
-        if self.project is not None and (self.outfit_draft is not None or self.project["schema"] in (projects.SCHEMA3,projects.SCHEMA4,projects.SCHEMA5,projects.SCHEMA6,projects.SCHEMA7)):
+        if self.project is not None and (self.outfit_draft is not None or {"outfits", "outfit_name"} & set(self.project)):
             return self.outfit_changes()
         before, after = read_fields(self.base().payload), read_fields(self.current().payload)
         result = []
@@ -268,6 +334,8 @@ class Editor:
         if before['combined_style']!=after['combined_style']:
             core=after['combined_style'];row=self.movesets.by_core.get(core) if self.movesets else None
             result.append('Moveset: '+(row['label'] if row else 'CAF combination'))
+            if self.retail_moveset_save():
+                result.append('This save will need a game build with retail-moveset support (see the warning before saving)')
         for slot, (old, new) in enumerate(zip(before_moves, self.blazin_keys())):
             if old != new:
                 result.append(f"Blazin' slot {slot + 1}: " + (self.blazin.label(new) if self.blazin else str(new)))
@@ -318,7 +386,11 @@ class Editor:
                       fields=None, changes=[], dirty=False, undo=False,
                       style_names=STYLE_NAMES, limits=dict(cash=CASH_LIMIT, development=DEV_LIMIT),
                       preview_error=self.preview_error, preview_available=self.appearance is not None,
-                      groups=[], skins=[], issues=self.discovery.issues if self.discovery else [])
+                      groups=[], skins=[], issues=self.discovery.issues if self.discovery else [],
+                      retail_moveset_save=self.retail_moveset_save())
+        result["version"] = __version__
+        result["setup"] = self.setup_view()
+        result["backups"] = backups.entries(self.workspace / "backups", self.profile.name) if self.profile and self.project is None else []
         project_view = copy.deepcopy(self.project_source())
         if project_view is not None:
             project_view.pop('performance',None)
@@ -417,7 +489,7 @@ class Editor:
                     continue
                 native = Image.open(io.BytesIO(base64.b64decode(result["textures"][atlas].split(",", 1)[1]))).convert("RGBA")
                 imported = Image.open(io.BytesIO(projects.atlas_bytes(textures["atlases"][atlas]))).convert("RGBA")
-                imported.putalpha(native.getchannel("A"))
+                imported.putalpha(native.getchannel("A").resize(imported.size, Image.Resampling.NEAREST))
                 result["textures"][atlas] = image_uri(imported)
             result["notices"].append("Imported RGB atlases stay applied across appearance changes; original material alpha retained. Clear atlases to restore retail artwork. Injury variants apply in-game; this preview shows the normal face.")
         result["preview_only"] = dict(changes=changes or {}, hide_clothes=hide_clothes)
@@ -427,7 +499,7 @@ class Editor:
         if action == 'performance_connect':
             from .performance_api import Link
             if self.data is None:raise SaveError('Open your game data directory first')
-            self.performance_link = Link(args['runtime'],self.data,self.workspace)
+            self.performance_link = Link(self.need_runtime(args,'tools'),self.data,self.workspace)
             return self.snapshot()
         if action in ('performance_audio','performance_animation'):
             if self.performance_link is None:raise SaveError('Connect compatible fighter tools first')
@@ -461,7 +533,7 @@ class Editor:
                     settings[section]['clips']=copy.deepcopy(document.get('performance',{}).get('voice',{}).get('clips',{}))
                 performance.validate(settings)
                 self.performance_link.call('workshop-check',settings)
-            document['schema']=projects.SCHEMA7;document['performance']=performance.validate(settings)
+            document['performance']=performance.validate(settings)
             candidate=projects.validate(document)
             if candidate==self.project_document():return self.snapshot()
             self.remember();self.outfit_draft=candidate;self.edits={}
@@ -479,7 +551,7 @@ class Editor:
                 return self.stage({'styles':args['styles']})
             document=self.project_document()
             if row:
-                document['schema']=projects.SCHEMA7 if document['schema']==projects.SCHEMA7 else projects.SCHEMA6;document['fighter']['retail_moveset']=row['key']
+                document['fighter']['retail_moveset']=row['key']
             else:
                 document['fighter'].pop('retail_moveset',None);document['fighter']['styles']=args['styles']
             candidate=projects.validate(document)
@@ -508,19 +580,24 @@ class Editor:
                 if view.get('face_sculpt') and not view['face_sculpt']['sliders']:
                     raise SaveError('Clear the imported sculpt before using sliders; export it first to preserve your work')
                 view['face_sculpt'] = face_geometry.sliders(reference, args['values'])
-                view['schema'] = projects.SCHEMA5
             else:
                 with Path(args['path']).open('rb') as stream:
                     raw = stream.read(face_geometry.MAX_OBJ+1)
                 view['face_sculpt'] = face_geometry.import_obj(raw, reference)
-                view['schema'] = projects.SCHEMA5
             candidate = projects.validate(outfits.replace_view(document, self.active_outfit, view))
             self.remember()
             self.outfit_draft, self.edits = candidate, {}
             self.portrait_edit = self.texture_edit = self.metadata_edit = None
             return dict(snapshot=self.snapshot(), message='Face sculpt staged; Save project preserves it')
         if action.startswith('retail_'):
-            return self.retail.request(action.removeprefix('retail_'), args)
+            if self.retail.data is None and self.data is None:
+                # Opened straight from Home: the remembered data folder is enough for the studio, no fighter editor load.
+                self.retail.data = remembered.recall(self.workspace, "data")
+            result = self.retail.request(action.removeprefix('retail_'), args)
+            if action in ('retail_open', 'retail_save') and self.retail.path is not None and self.retail.document is not None:
+                mode = 'retail-new' if self.retail.document.get('deployment', {}).get('mode', 'add') == 'add' else 'retail-edit'
+                remembered.add_recent(self.workspace, mode, self.retail.path)
+            return result
         if action=='ui_preview':
             if self.project is None:return {'png':None}
             effective=ui_art.resolved(self.project_document(validate=False),self.active_outfit)
@@ -538,7 +615,7 @@ class Editor:
                 self.workspace.mkdir(parents=True,exist_ok=True)
                 with tempfile.TemporaryDirectory(prefix='ui-reference-',dir=self.workspace) as temporary:
                     output=Path(temporary)/'reference'
-                    report=contract(Path(args['runtime']),['export-ui-reference','--game',str((Path(self.data)/'extracted').resolve()),
+                    report=contract(self.need_runtime(args,'menu'),['export-ui-reference','--game',str((Path(self.data)/'extracted').resolve()),
                         '--donor',effective['donor'],'--portrait-out',str(output)],temporary,self.workspace)
                     pack={'donor':effective['donor'],'hd_scale':effective['hd_scale'],'images':{}}
                     for role,spec in report['source']['images'].items():
@@ -599,6 +676,10 @@ class Editor:
             if action == "project_atlas_clear":
                 fields = read_fields(self.current().payload)
                 textures = {"appearance_sha256": projects.appearance_hash(fields), "atlases": {}}
+                if args.get("slot"):
+                    shown = self.texture_edit if self.texture_edit is not None else (self.active_view() or {}).get("textures", {})
+                    kept = {key: value for key, value in shown.get("atlases", {}).items() if key != args["slot"]}
+                    textures = {"appearance_sha256": shown.get("appearance_sha256", textures["appearance_sha256"]), "atlases": kept}
             else:
                 raw = args["png"]
                 if raw.startswith("data:image/png;base64,"):
@@ -619,10 +700,18 @@ class Editor:
             self.remember()
             self.portrait_edit = raw
             return self.snapshot()
+        if action == "home":
+            return dict(setup=self.setup_view(), recents=remembered.recents(self.workspace), version=__version__)
+        if action == "close_project":
+            return self.close_project()
         if action == "new_project":
-            return self.create_project(args["path"])
+            result = self.create_project(args["path"])
+            remembered.add_recent(self.workspace, "caf", args["path"])
+            return result
         if action == "open_project":
-            return self.open_project(args["path"])
+            result = self.open_project(args["path"])
+            remembered.add_recent(self.workspace, "caf", args["path"])
+            return result
         if action == "project_metadata_draft":
             if self.project is None:
                 raise SaveError("Create or open a fighter project first")
@@ -651,9 +740,30 @@ class Editor:
             from .fighter_mod import export_mod
             if self.project is None:
                 raise SaveError("Create or open a fighter project before exporting a mod")
-            report = export_mod(self.project_document(), args["path"], args["runtime"], self.data,
+            report = export_mod(self.project_document(), args["path"], self.need_runtime(args, "export"), self.data,
                                   self.workspace / "fighter-exports", progress=self.progress, asset_cache=self.cache)
-            return dict(message="Validated Custom Fighter Mod exported to " + args["path"], report=report)
+            self.last_export = Path(args["path"])
+            return dict(message="Validated Custom Fighter Mod exported to " + args["path"], report=report,
+                        summary=self.export_summary(Path(args["path"]), report))
+        if action == "setup_scan":
+            folder = args.get("folder") or remembered.recall(self.workspace, "app") or runtimes.default_folder()
+            if not folder or not Path(folder).is_dir():
+                return dict(folder=None, candidates=[], data=None, current=None)
+            return runtimes.scan(folder, self.recipe_format())
+        if action == "setup_use":
+            runtime = Path(args["runtime"]).resolve()
+            row = runtimes.describe(runtime, self.recipe_format())
+            if not row["usable"]:
+                raise SaveError("That is not a game version: scripts/fighter-contract.py is missing")
+            self.runtime = runtime
+            remembered.remember(self.workspace, "runtime", runtime)
+            if args.get("folder"):
+                remembered.remember(self.workspace, "app", args["folder"])
+            data = args.get("data")
+            if data and remembered.data_ok(data) and (self.data is None or Path(data).resolve() != Path(self.data).resolve()):
+                remembered.remember(self.workspace, "data", data)
+                return self.open_data(data)
+            return self.snapshot()
         if action == "open_data":
             return self.open_data(args["path"])
         if action == "snapshot":
@@ -693,8 +803,24 @@ class Editor:
                 self.portrait_edit = self.metadata_edit = None
                 self.texture_edit = None
                 return dict(snapshot=self.snapshot(), message="Saved fighter project")
+            notice = self.retail_moveset_save()
+            if notice and args.get("acknowledge_retail_moveset") is not True:
+                raise SaveError(notice)
+            name = self.profile.name
             backup = save_profile(self.profile, self.current(), self.workspace / "backups")
-            return dict(snapshot=self.select_profile(self.profile.name), message="Saved profile. Backup: " + str(backup))
+            return dict(snapshot=self.select_profile(name), message="Saved profile. Backup: " + str(backup),
+                        summary=dict(title="Profile saved", folder="backups",
+                                     lines=["Saved " + name + ".", "Backup of the previous save: " + backup.name,
+                                            "Restore it any time from Backups in the left column."]))
+        if action == "restore_backup":
+            if self.project is not None or self.profile is None:
+                raise SaveError("Choose a Story profile to restore a backup into")
+            name = self.profile.name
+            before = backups.restore(self.profile, self.workspace / "backups", args.get("id"))
+            return dict(snapshot=self.select_profile(name), message="Restored a backup of " + name,
+                        summary=dict(title="Backup restored", folder="backups",
+                                     lines=["Restored " + name + " from " + args["id"] + ".",
+                                            "The save it replaced was backed up first: " + before.name]))
         if action == "export":
             if self.project is not None:
                 self.project_hash = projects.write(args["path"], self.project_document())
@@ -705,7 +831,11 @@ class Editor:
                 self.texture_edit = None
                 return dict(snapshot=self.snapshot(), message="Saved project copy")
             export_profile(self.profile, self.current(), Path(args["path"]))
-            return dict(message="Exported complete profile to " + args["path"])
+            self.last_export = Path(args["path"])
+            return dict(message="Exported complete profile to " + args["path"],
+                        summary=dict(title="Profile exported", folder="export",
+                                     lines=["Saved to " + args["path"],
+                                            "Import it from the left column to install it as a profile."]))
         if action == "duplicate":
             if self.project is not None:
                 raise SaveError("Use Save project as to copy a standalone fighter")

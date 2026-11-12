@@ -17,8 +17,11 @@ import zipfile
 from . import projects, ui_art
 from .container import SaveError
 
-SCHEMA = 'ffny-retail-fighter-project-1'
-SCHEMA2 = 'ffny-retail-fighter-project-2'
+# One retail project schema; a deployment target is an optional section. Projects saved before it existed
+# (project-1) open unchanged and are stamped current when validated.
+SCHEMA = 'ffny-retail-fighter-project-2'
+EARLIER_SCHEMAS = ('ffny-retail-fighter-project-1',)
+READABLE_SCHEMAS = EARLIER_SCHEMAS + (SCHEMA,)
 MAX_ASSET = 64 * 1024**2
 MAX_TOTAL = 64 * 1024**2
 MAX_TEXTURE = 16 * 1024**2
@@ -85,10 +88,10 @@ def descriptors(value):
 
 
 def validate(document):
-    version2=type(document) is dict and document.get('schema')==SCHEMA2
-    projects.require(type(document) is dict and set(document) == {'schema','identity','metadata','definition','resources','assets','ui_art','textures'}|({'deployment'} if version2 else set())
-                     and document['schema'] in (SCHEMA,SCHEMA2), 'Unsupported retail fighter project fields')
-    if version2:
+    has_deployment=type(document) is dict and 'deployment' in document
+    projects.require(type(document) is dict and set(document) == {'schema','identity','metadata','definition','resources','assets','ui_art','textures'}|({'deployment'} if has_deployment else set())
+                     and document['schema'] in READABLE_SCHEMAS, 'Unsupported retail fighter project fields')
+    if has_deployment:
         deployment=document['deployment']
         projects.require(type(deployment) is dict and set(deployment)=={'mode','target'} and deployment['mode'] in ('add','override','outfit')
             and type(deployment['target']) is str and re.fullmatch(r'retail/[a-z0-9]+(?:-[a-z0-9]+)*',deployment['target']), 'Choose a retail deployment target')
@@ -134,6 +137,7 @@ def validate(document):
         projects.require(re.fullmatch('[A-Za-z0-9_]{4}',name) is not None,'Choose a four-character texture shape')
         used+=len(texture_bytes(value))
     projects.require(used<=MAX_TOTAL,'Combined native assets and PNG artwork exceed 64 MiB')
+    document['schema']=SCHEMA
     return document
 
 
@@ -165,7 +169,7 @@ def import_pack(folder, fighter_id):
     projects.require(fighter.get('inherits','').startswith('retail/'),'Imported fighter needs a retail base')
     document=new(fighter['inherits'],fighter['name']);document['identity']={'pack':manifest['id'],'fighter':fighter_id}
     if fighter.get('outfit_of'):deployment=dict(mode='outfit',target=fighter['outfit_of'])
-    if deployment:document.update(schema=SCHEMA2,deployment=deployment)
+    if deployment:document['deployment']=deployment
     document['metadata']['version']=manifest['version']
     document['definition']={'inherits':fighter['inherits'],'components':copy.deepcopy(fighter['components'])}
     selected={v.split('/',1)[1] for k,v in fighter['components'].items() if k in KINDS and v.startswith(manifest['id']+'/')}
@@ -220,9 +224,14 @@ class Session:
 
     def api(self, arguments, temporary):
         from .fighter_mod import contract
-        projects.require(self.runtime is not None,'Choose the compatible runtime checkout first')
+        from . import runtimes
+        runtime=runtimes.require(self.shared_runtime(),'retail',self.owner.recipe_format())['path']
         workspace=self.owner.workspace/'retail';workspace.mkdir(parents=True,exist_ok=True)
-        return contract(self.runtime,arguments,temporary,workspace)
+        return contract(Path(runtime),arguments,temporary,workspace)
+
+    def shared_runtime(self):
+        """The game version chosen once in Game setup, unless this studio was pointed elsewhere explicitly."""
+        return self.runtime or self.owner.runtime
 
     def game(self):
         data=self.data or self.owner.data
@@ -243,13 +252,23 @@ class Session:
         if view is not None:
             view['asset_count']=len(view.pop('assets'))
         data=self.data or self.owner.data
-        return {'retail':True,'data':str(data) if data else None,'runtime':str(self.runtime) if self.runtime else None,
+        runtime=self.shared_runtime()
+        return {'retail':True,'data':str(data) if data else None,'runtime':str(runtime) if runtime else None,
+            'setup':self.owner.setup_view(),
             'donors':rows,'document':view,'path':str(self.path) if self.path else None,'dirty':self.effective()!=self.saved,
             'undo':bool(self.history) or self.draft is not None,'roles':[{'id':r,'name':ui_art.MASTERS.get(r,r.replace('_',' '))} for r in ui_art.ROLES]}
 
     def request(self, action, args):
         workspace=self.owner.workspace/'retail';workspace.mkdir(parents=True,exist_ok=True)
-        if action=='snapshot':return self.snapshot()
+        if action=='snapshot':
+            # With a game version and data folder already chosen, the retail catalog loads without a second setup step.
+            if self.catalog is None and self.shared_runtime() is not None and (self.data or self.owner.data) is not None:
+                try:
+                    from . import runtimes
+                    if runtimes.describe(self.shared_runtime(),self.owner.recipe_format())['features']['retail']:
+                        args={'runtime':str(self.shared_runtime())};action='configure'
+                except Exception:pass
+            if action=='snapshot':return self.snapshot()
         if action=='draft':
             projects.require(self.document is not None and set(args)=={'metadata','identity'} and all(type(v) is dict for v in args.values()),'Invalid project details draft')
             projects.require(set(args['metadata'])<=set(self.document['metadata']) and set(args['identity'])=={'pack','fighter'},'Unknown project details draft fields')
@@ -264,14 +283,16 @@ class Session:
             return self.snapshot()
         if action in ('new','open','import'):
             if action=='new':document=new(args['donor'])
-            elif action=='open':document,digest=projects.read(args['path']);projects.require(document['schema'] in (SCHEMA,SCHEMA2),'Open CAF projects in the CAF editor')
+            elif action=='open':document,digest=projects.read(args['path']);projects.require(document['schema'] in READABLE_SCHEMAS,'Open CAF projects in the CAF editor')
             else:document=import_pack(args['folder'],args['fighter'])
             self.document=document;self.saved=copy.deepcopy(document) if action=='open' else None
             self.path=Path(args['path']) if action=='open' else None;self.digest=digest if action=='open' else None;self.history=[];self.draft=None
             if action=='new' and args.get('mode','add')!='add':
-                self.document.update(schema=SCHEMA2,deployment=dict(mode=args['mode'],target=args['donor']))
+                self.document['deployment']=dict(mode=args['mode'],target=args['donor'])
                 validate(self.document)
             return self.snapshot()
+        if action=='close':
+            self.document=self.saved=self.path=self.digest=self.draft=None;self.history=[];return self.snapshot()
         projects.require(self.document is not None,'Create or open a retail fighter project')
         if action=='undo':
             if self.draft is not None:self.draft=None
@@ -290,7 +311,7 @@ class Session:
         candidate=self.effective()
         if action=='deployment':
             projects.require(self.catalog and any('retail/'+r['id']==args['target'] for r in self.catalog['fighters']),'Unknown retail target')
-            candidate.update(schema=SCHEMA2,deployment=dict(mode=args['mode'],target=args['target']))
+            candidate['deployment']=dict(mode=args['mode'],target=args['target'])
             if args['mode']!='add':candidate['definition']['inherits']=args['target']
             return self.commit(candidate)
         if action=='details':

@@ -5,14 +5,16 @@ import json
 from pathlib import Path
 import sys
 import traceback
+from urllib.parse import urlencode
 
 from PySide6.QtCore import QObject, Signal, Slot, QUrl, QStandardPaths, QTimer, qInstallMessageHandler
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QInputDialog, QMessageBox
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineUrlRequestInterceptor
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
+from . import remembered, runtimes
 from .editor import Editor
 from .locations import default_data_directory, initial_data_directory
 
@@ -43,6 +45,36 @@ class Bridge(QObject):
         self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="caf-editor")
         self.busy = 0
 
+    def runtime_folder(self, feature):
+        """The game version chosen once in Game setup. Refused up front, in plain words, when it cannot do the job,
+        so nobody picks an output file for an export that was never going to work."""
+        return str(runtimes.require(self.editor.runtime, feature, self.editor.recipe_format())["path"])
+
+    PAGES = {"home": "home.html", "story": "index.html", "caf": "index.html", "retail-new": "retail.html", "retail-edit": "retail.html"}
+    STARTS = {"open", "new", "import"}
+
+    def navigate(self, ident, mode, args):
+        """Move this window to Home or one of the workflows. The page reads what to do from the address fragment."""
+        if mode not in self.PAGES:
+            raise ValueError("Unknown workflow")
+        if self.busy:
+            raise ValueError("Please wait for the current operation to finish.")
+        editor = self.editor
+        unsaved = ((editor.profile or editor.project) and editor.changes()) or editor.retail.snapshot()["dirty"]
+        if unsaved and QMessageBox.question(self.window, "Unsaved changes", "Leave without saving your fighter changes?") != QMessageBox.StandardButton.Yes:
+            return self.response.emit(json.dumps(dict(id=ident, result=False)))
+        if mode.startswith("retail") and self.initial and editor.retail.data is None:
+            editor.retail.data = Path(self.initial).resolve()
+        fragment = {"mode": mode}
+        if args.get("start") in self.STARTS:
+            fragment["start"] = args["start"]
+        if isinstance(args.get("path"), str) and args["path"]:
+            fragment["path"] = args["path"]
+        url = QUrl.fromLocalFile(str(Path(__file__).parent / "resources" / self.PAGES[mode]))
+        url.setFragment(urlencode(fragment))
+        self.response.emit(json.dumps(dict(id=ident, result=True)))
+        self.window.web.setUrl(url)
+
     @Slot(str)
     def dispatch(self, raw):
         try:
@@ -50,11 +82,10 @@ class Bridge(QObject):
             ident, action, args = request["id"], request["action"], request.get("args", {})
             if not isinstance(ident, str) or not isinstance(args, dict):
                 raise ValueError("Invalid editor request")
-            if action in ('open_retail_editor','open_caf_editor'):
-                target='retail.html' if action=='open_retail_editor' else 'index.html'
-                self.response.emit(json.dumps(dict(id=ident,result=None)))
-                self.window.web.setUrl(QUrl.fromLocalFile(str(Path(__file__).parent/'resources'/target)))
-                return
+            if action in ('open_home','open_workflow','open_retail_editor','open_caf_editor'):
+                if action=='open_retail_editor':action,args='open_workflow',{'mode':'retail-edit','start':'new'}
+                if action=='open_caf_editor':action,args='open_workflow',{'mode':'story','start':'open'}
+                return self.navigate(ident,'home' if action=='open_home' else args.get('mode'),args)
             if action.startswith('choose_retail_'):
                 operation=action.removeprefix('choose_retail_')
                 session=self.editor.retail
@@ -62,9 +93,11 @@ class Bridge(QObject):
                     title={'runtime':'Select compatible Custom Fighter runtime checkout','data':'Select Recomp data directory','import':'Select ordinary fighter pack folder'}[operation]
                     path=QFileDialog.getExistingDirectory(self.window,title)
                     if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                    if operation=='runtime':remembered.remember(self.editor.workspace,'runtime',path)
                     if operation=='data':
                         data=Path(path).resolve()
                         if not (data/'extracted').is_dir():raise ValueError('Choose the data directory containing extracted')
+                        remembered.remember(self.editor.workspace,'data',data)
                         session.data=data
                         session.catalog=None
                         return self.response.emit(json.dumps(dict(id=ident,result=session.snapshot())))
@@ -96,6 +129,23 @@ class Bridge(QObject):
                     if len(raw)>limit:raise ValueError('PNG exceeds '+str(limit//1024**2)+' MiB')
                     action,args='retail_'+operation,{**args,'png':base64.b64encode(raw).decode('ascii')}
                 else:raise ValueError('Unsupported retail dialog')
+            if action == "choose_setup_folder":
+                start = remembered.recall(self.editor.workspace, "app") or runtimes.default_folder() or Path.home()
+                path = QFileDialog.getExistingDirectory(self.window, "Choose your Def Jam Recompiled folder, or a source checkout", str(start))
+                if not path:
+                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                action, args = "setup_scan", {"folder": path}
+            if action == "open_folder":
+                # Only folders the Workshop itself reported: the last export's folder or its own backups folder.
+                if args.get("target") == "backups":
+                    folder = self.editor.workspace / "backups"
+                    folder.mkdir(parents=True, exist_ok=True)
+                elif args.get("target") == "export" and self.editor.last_export is not None:
+                    folder = self.editor.last_export.parent
+                else:
+                    raise ValueError("There is no folder to open yet")
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+                return self.response.emit(json.dumps(dict(id=ident, result=None)))
             if action == "boot":
                 if self.initial:
                     action, args = "open_data", {"path": str(self.initial)}
@@ -106,6 +156,7 @@ class Bridge(QObject):
                 path = QFileDialog.getExistingDirectory(self.window, "Select Recomp data directory", str(self.editor.data or default_data_directory() or Path.home()))
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                remembered.remember(self.editor.workspace, "data", path)
                 action, args = "open_data", {"path": path}
             elif action == "choose_export":
                 if self.editor.profile is None:
@@ -123,7 +174,7 @@ class Bridge(QObject):
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = ("open_project" if opening else "export" if action == "choose_project_copy" else "new_project"), {"path": path}
             elif action == 'choose_performance_tools':
-                runtime = QFileDialog.getExistingDirectory(self.window, 'Select compatible Custom Fighter runtime source checkout')
+                runtime = self.runtime_folder('tools')
                 if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))
                 action,args='performance_connect',dict(runtime=runtime)
             elif action == 'choose_voice_clip':
@@ -134,7 +185,7 @@ class Bridge(QObject):
                 if len(audio)>8*1024**2:raise ValueError('Voice clip exceeds 8 MiB')
                 action,args='performance_clip',dict(target=args['target'],wav=base64.b64encode(audio).decode('ascii'))
             elif action == "choose_mod_export":
-                runtime = QFileDialog.getExistingDirectory(self.window, "Select Custom Fighter runtime source checkout")
+                runtime = self.runtime_folder("export")
                 if not runtime:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 path, _ = QFileDialog.getSaveFileName(self.window, "Export validated Custom Fighter Mod", "fighter-mod.zip", "Fighter mod (*.zip)")
@@ -150,17 +201,17 @@ class Bridge(QObject):
                     return self.response.emit(json.dumps(dict(id=ident,result=None)))
                 action,args = ('face_import' if opening else 'face_export'),dict(path=path)
             elif action=='choose_ui_retail':
-                runtime=QFileDialog.getExistingDirectory(self.window,'Select Custom Fighter runtime for retail UI references')
+                runtime=self.runtime_folder('menu')
                 if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))
                 action,args='ui_retail',{'runtime':runtime}
             elif action in {"choose_project_portrait", "choose_project_atlas",'choose_ui_art'}:
                 import base64
                 atlas = action == "choose_project_atlas"
-                title = "Import 256x256 RGB atlas" if atlas else "Import fighter UI artwork" if action=='choose_ui_art' else "Import fighter portrait"
+                title = "Import 256–2048px square RGB atlas" if atlas else "Import fighter UI artwork" if action=='choose_ui_art' else "Import fighter portrait"
                 path, _ = QFileDialog.getOpenFileName(self.window, title, "", "PNG image (*.png)")
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                limit = 1024 * 1024 if atlas else 4 * 1024 * 1024
+                limit = 16 * 1024 * 1024 if atlas else 4 * 1024 * 1024
                 with Path(path).open("rb") as stream:
                     raw = stream.read(limit + 1)
                 if len(raw) > limit:
@@ -197,7 +248,7 @@ class Bridge(QObject):
 
 
 class Window(QMainWindow):
-    def __init__(self, workspace, initial=None):
+    def __init__(self, workspace, initial=None, start_page="home.html"):
         super().__init__()
         icon_name = "defjam.icns" if sys.platform == "darwin" else "defjam.png"
         self.setWindowIcon(QIcon(str(Path(__file__).parent / "resources" / "branding" / icon_name)))
@@ -216,7 +267,7 @@ class Window(QMainWindow):
         self.channel.registerObject("editor", self.bridge)
         self.page.setWebChannel(self.channel)
         self.setCentralWidget(self.web)
-        self.web.setUrl(QUrl.fromLocalFile(str(Path(__file__).parent / "resources" / "index.html")))
+        self.web.setUrl(QUrl.fromLocalFile(str(Path(__file__).parent / "resources" / start_page)))
 
     def closeEvent(self, event):
         if self.bridge.busy:
@@ -306,8 +357,9 @@ def main(argv=None):
         qInstallMessageHandler(lambda kind, context, message: print(f"[QT] {message}", flush=True))
     app = QApplication(sys.argv[:1])
     # Automated package checks without --data stay independent of installed saves.
-    initial = args.data if args.smoke_test else initial_data_directory(args.data)
-    window = Window(workspace, initial)
+    initial = args.data if args.smoke_test else initial_data_directory(args.data) or remembered.recall(workspace, "data")
+    # Home is the front door. Automated checks and screenshots still open the editor page directly.
+    window = Window(workspace, initial, "index.html" if args.smoke_test or args.capture or args.retail else "home.html")
     if args.retail:
         # The retail studio needs the game directory, not a CAF cache/profile.
         window.bridge.initial=None

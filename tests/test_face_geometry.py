@@ -50,10 +50,10 @@ def test_sliders_are_absolute_bounded_and_preserve_neck():
 
 def test_project_v5_preserves_sculpt_across_outfits_art_and_roundtrip(tmp_path):
     project=projects.from_fields(fields()[0],'Example')
-    project.update(schema=projects.SCHEMA5,face_sculpt=fg.empty(reference()))
+    project.update(face_sculpt=fg.empty(reference()))
     path=tmp_path/'face.ffnyfighter';projects.write(path,project)
     loaded=projects.read(path)[0];assert loaded==project
-    assert ui_art.upgrade(project)['schema']==projects.SCHEMA5
+    assert projects.validate(ui_art.upgrade(project))['schema']==projects.SCHEMA
     combined,second=outfits.add(project)
     assert outfits.view(combined,second)['face_sculpt']==project['face_sculpt']
     selected=outfits.view(combined,second);selected.pop('face_sculpt')
@@ -97,7 +97,7 @@ def test_profile_cannot_store_arbitrary_geometry(tmp_path):
 
 def test_preview_exposes_control_basis_without_staging_or_changing_saved_sculpt(tmp_path,monkeypatch):
     ref=reference();project=projects.from_fields(fields()[0],'Example')
-    project.update(schema=projects.SCHEMA5,face_sculpt=fg.sliders(ref,{'face_width':.3}))
+    project.update(face_sculpt=fg.sliders(ref,{'face_width':.3}))
     path=tmp_path/'face.ffnyfighter';projects.write(path,project)
     editor=Editor(tmp_path/'work');editor.open_project(path)
     editor.appearance=SimpleNamespace(outfit=lambda _: {})

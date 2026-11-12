@@ -17,7 +17,7 @@ from .assets import Database
 from .container import SaveError
 from .fields import STAT_KEYS, STYLE_NAMES, combine_styles
 from .profiles import read_bounded
-from .projects import from_fields, require, validate, SCHEMA2
+from .projects import from_fields, require, validate
 
 EE_SIZE = 32 * 1024 * 1024
 MAX_ARCHIVE = 128 * 1024 * 1024
@@ -229,6 +229,5 @@ def project(report, donor="retail/blaze"):
     document = from_fields(report["fields"], report["name"],
                            {"donor": donor, "description": "Experimental PS2 CAF recovery. Original retail parts; native acceptance is recorded separately."})
     if "finishers" in report["fields"]:
-        document["schema"] = SCHEMA2
         document["fighter"]["finishers"] = report["fields"]["finishers"][:]
     return validate(document)

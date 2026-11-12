@@ -1,5 +1,68 @@
 # Progress and handoff
 
+## Beta 2 candidate — 2026-11-12
+
+Release branch `release/v0.1.0-beta.2` (Python package 0.1.0b2, notes docs/releases/v0.1.0-beta.2.md) = the
+`integration/beta2-candidate` branch (PR #10 one project schema and one CAF recipe format with the A3 acknowledgement
+and remembered folders, PR #9 HD atlases ported onto that one format; the earlier "HD exports require CAF v7" line below
+is superseded: there is no CAF v7 in the candidate) plus the layout, Game setup and Home screen work above. Pairs with
+Recomp v1.2.0-beta.2: recipes from earlier Workshop builds are refused by that runtime. 237 Python tests passed, 3 skipped.
+Not done or not verified: macOS and Linux desktop packages run by hand, the native unsaved-changes prompt, Ctrl+S and
+Ctrl+Z, retail export with a real body import and the 3D preview in the final build, the three-mode restructure and the
+pre-export checklist. Nothing is merged, tagged or published; packaged assets need the owner's go-ahead.
+
+## Workshop layout, messages and backups — 2026-11-11
+
+Acts on the 2026-11-10 UI review (quick wins and the first structural steps; the three-mode restructure is not
+done). Tabs now follow the work: Appearance, Textures, Stats & cash, Moves (style and Blazin' together), Voice,
+Entrance & victory (the clip viewer is under Advanced), AI, Menu artwork, Details & export. The outfit selector sits
+beside the fighter name; outfit names stage on change and the redundant "Save project & details" is gone, so one Save
+writes a project. Results persist: a Messages log in the footer keeps every message and error, and saving a profile,
+restoring a backup, exporting a profile and exporting a mod each open a summary with an Open folder button (the mod
+summary shows size, SHA-256, the native-compile result, outfit count and the game build it needs). Profile backups are
+listed in the left column with a Restore action; a restore first backs up the save it replaces. Ctrl+S saves and
+Ctrl+Z undoes. The retail studio's texture-shape list loads its preview when Textures opens and explains an empty list.
+Developer wording ("CAF v4/v5 runtime") became "a game build that supports it". Validation: 224 Python tests passed,
+3 skipped (9 new backup tests); driven in the real Qt app over its debugging port on the 2Pac project.
+
+Playtest feedback, same day. Game setup: one dialog, shared by the editor and the retail studio and opened on first run,
+takes the Recomp app folder (auto-detected from LOCALAPPDATA on Windows), lists its installed versions or a source
+checkout, shows what each can do (export, voice/animation tools, retail menu import, retail studio) and also fills in the
+data folder. The choice is remembered; an action a version cannot do fails up front in plain words (the installed 1.2.0
+app lacks all four; the retail studio previously failed late with a raw fighter-contract usage dump). Header buttons gained
+tooltips naming the file type and the usual folder. Textures now lists each atlas sheet by plain name with its own state and
+import/revert; the portrait source and the face method (presets, sliders, imported mesh) and the moveset source are one-of-N
+choice cards, with the locked options greyed and explained. The launch-time workflow chooser is below. 230 Python tests passed (6 new for runtime discovery).
+
+Home screen, same day (owner confirmed the draft; the fifth workflow, a blank standalone fighter, is dropped for now).
+The window opens on Home with four workflows: Story character editor; Fighter from a Create-a-Fighter; Fighter from a
+retail fighter; Retail fighter editor. Each card has a New/Open pair, shows a plain note when the chosen game version
+cannot do it yet, and a Recent projects list remembers the last six. A workflow is a mode of the existing pages, passed in
+the address fragment: the editor page runs as `story` (Appearance, Stats & cash, Moves, profile actions) or `caf`
+(a banner walks through picking a Create-a-Fighter and creating the project; all tabs once it exists); the retail page runs
+as `retail-new` (start from a retail fighter) or `retail-edit` (replace its look or add an outfit). Every page has a Home
+button, asks before discarding unsaved changes, and a fresh start closes the previous project. `--smoke-test`, `--capture`
+and `--retail` still open their page directly. Not built: folding the two pages into one shell, a pre-export checklist.
+237 Python tests passed (7 new); driven in the real Qt app on a copy of the saves: all four workflows, recents, and the
+Home and Open-project round trip. The unsaved-changes prompt is a native dialog and was not exercised.
+
+## HD CAF atlas imports — 2026-11-10
+
+Owner requested the 256px import restriction be removed for HD fighters, using
+the existing runtime HD system. Source accepts square 256/512/1024/2048 PNGs,
+retains original bytes in projects/ZIPs, and previews full-resolution RGB with
+nearest native material alpha. HD exports explicitly require CAF v7; native-only
+exports retain their previous capability. See docs/hd-caf-atlases.md.
+Validation: 199 Python tests passed, 4 platform skips, including HD save/reopen,
+preview alpha and export capability checks. Matching runtime fighter checks pass1644/1 skipped; shared renderer fixtures3/3.
+A real Qt/WebChannel session imported a3.0MiB1024 PNG through the file dialog,
+rendered its full-resolution preview and reopened the unchanged approved project
+without overflow or dirty edits. Real own-dump native/HD package exports pass.
+Private evidence: clothing-review-02/compatibility-receipt.json and
+desktop-compatibility-receipt.json in the authoring workspace. Native visual/
+performance and Windows/Linux qualification are not implied.
+
+
 ## GPLv3 licensing and pending PR integration — 2026-11-10
 
 Owner approved GPLv3 and merging all pending Workshop/runtime PRs. Original

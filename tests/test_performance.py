@@ -25,7 +25,7 @@ def settings():
 
 def test_embedded_audio_round_trip_and_snapshot_redaction(tmp_path):
     value=performance.set_clip(settings(),'Character:0',wav())
-    p=projects.from_fields(fields()[0],'Example');p['schema']=projects.SCHEMA7;p['performance']=value
+    p=projects.from_fields(fields()[0],'Example');p['performance']=value
     path=tmp_path/'test.ffnyfighter';projects.write(path,p)
     e=Editor(tmp_path/'work');e.open_project(path)
     assert e.snapshot()['performance']['settings']['voice']['clips']['Character:0']['samples']==240
@@ -35,7 +35,7 @@ def test_embedded_audio_round_trip_and_snapshot_redaction(tmp_path):
 
 
 def test_shared_outfit_history_and_source_save_separation(tmp_path):
-    p=projects.from_fields(fields()[0],'Example');p['schema']=projects.SCHEMA7;p['performance']=settings()
+    p=projects.from_fields(fields()[0],'Example');p['performance']=settings()
     p,second=outfits.add(p);path=tmp_path/'test.ffnyfighter';projects.write(path,p)
     e=Editor(tmp_path/'work');e.open_project(path);saved=path.read_bytes()
     e.request('performance_clear',dict(section='intro'))
@@ -62,8 +62,10 @@ def test_refuses_unknown_fields_ranges_and_audio(change):
     with pytest.raises(SaveError):performance.validate(s)
 
 
-def test_old_schema_cannot_smuggle_performance():
-    p=projects.from_fields(fields()[0],'Example');p['performance']=settings()
+def test_performance_is_validated_whatever_schema_the_project_was_saved_under():
+    p=projects.from_fields(fields()[0],'Example');p['schema']=projects.EARLIER_SCHEMAS[0];p['performance']=settings()
+    assert projects.validate(p)['schema']==projects.SCHEMA
+    p['performance']['intro']='../bad'
     with pytest.raises(SaveError):projects.validate(p)
 
 

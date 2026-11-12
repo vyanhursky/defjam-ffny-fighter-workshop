@@ -126,10 +126,10 @@ private. This does not authorize a packaged release or merge.
 
 Extend roadmap fighter modpack authoring with one stable fighter and one roster
 entry offering up to three outfits, like the original Blaze and D-Mob selectors.
-Project version 3 retains the default appearance at the root and adds named
+A project retains the default appearance at the root and may add named
 outfits with stable IDs. Stats, styles and Blazin' assignments are shared;
-appearance, imported atlases and portraits are outfit-specific. Existing project
-versions and Story profile workflows retain their contracts.
+appearance, imported atlases and portraits are outfit-specific. Story profile
+workflows retain their contracts.
 
 Project controls copy, rename, switch and remove additional outfits. Switching
 preserves staged edits; Undo/Reset, change review, save/copy/variant and export

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Home · FFNY Fighter Workshop</title><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="home.css">
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script><script type="module" src="home.js"></script></head>
+<body data-mode="home">
+<header><div class="brand"><span class="badge">FF<span>NY</span></span><div><h1>FIGHTER WORKSHOP</h1><p>DEF JAM: FIGHT FOR NY</p></div></div><div class="header-actions"><span class="beta">LOCAL BETA</span><button id="setup-open" class="chip" title="Where your game and its data are, and which game version the Workshop uses for exports, voice and animation tools and the retail studio.">Game setup</button></div></header>
+<div class="home-wrap"><div class="home">
+<h2>What do you want to do?</h2>
+<p class="home-lead">Pick one. Each choice opens only the tools it needs.</p>
+<div id="home-groups"></div>
+<section id="home-recent" hidden><div class="home-group">RECENT PROJECTS</div><div id="home-recent-list" class="recent"></div></section>
+</div></div>
+<footer><span id="status-message">Ready</span><span id="home-version">Offline · nothing leaves this computer</span></footer>
+<div id="busy" hidden><div class="spinner"></div><strong id="busy-label">Working…</strong></div><div id="toast" role="status" hidden></div>
+</body></html>

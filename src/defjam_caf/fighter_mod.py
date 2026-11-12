@@ -9,7 +9,10 @@ import tempfile
 import zipfile
 
 from .container import SaveError
-from .projects import validate, portrait_bytes, atlas_bytes, require, SCHEMA2, SCHEMA3, SCHEMA4, SCHEMA5, SCHEMA6, SCHEMA7
+from .projects import validate, portrait_bytes, atlas_bytes, require
+
+# The recipe format the runtime accepts (setup/fighter_caf.py FORMAT there). One schema with optional sections.
+RECIPE_FORMAT = "caf-fighter-1"
 
 
 def run_contract(runtime, output, arguments):
@@ -112,25 +115,25 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         default_atlases = write_atlases(views[0][1], "atlases")
         if default_atlases:
             fighter["atlases"] = default_atlases
-        if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7):
-            fighter["outfit_name"] = project.get("outfit_name", "Outfit 1")
-            fighter["outfits"] = []
-            for row, view in views[1:]:
-                entry = dict(id=row["id"], name=row["name"],
-                             **{key: copy.deepcopy(view["fighter"][key]) for key in outfits.APPEARANCE})
-                atlases = write_atlases(view, "outfits/" + row["id"] + "/atlases")
-                if atlases:
-                    entry["atlases"] = atlases
-                face = write_face(view, 'outfits/' + row['id'] + '/face.json')
-                if face:
-                    entry['face'] = face
-                fighter["outfits"].append(entry)
+        # Every export carries its outfit collection, empty for a one-outfit fighter, so the runtime always
+        # presents a Workshop fighter through the same per-outfit path.
+        fighter["outfit_name"] = project.get("outfit_name", "Outfit 1")
+        fighter["outfits"] = []
+        for row, view in views[1:]:
+            entry = dict(id=row["id"], name=row["name"],
+                         **{key: copy.deepcopy(view["fighter"][key]) for key in outfits.APPEARANCE})
+            atlases = write_atlases(view, "outfits/" + row["id"] + "/atlases")
+            if atlases:
+                entry["atlases"] = atlases
+            face = write_face(view, 'outfits/' + row['id'] + '/face.json')
+            if face:
+                entry['face'] = face
+            fighter["outfits"].append(entry)
         recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
         (root / "fighter.json").write_bytes(recipe)
-        capability = "caf-fighter-6" if performance else "caf-fighter-5" if 'retail_moveset' in fighter else "caf-fighter-4" if face_cache is not None else "caf-fighter-3" if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7) else "caf-fighter-2" if project["schema"] == SCHEMA2 else "caf-fighter-1"
         manifest = {"schema": "fighter-registry-draft-1", "id": pack_id, "version": meta["version"],
                     "requires": {}, "resources": [{"id": "caf", "kind": "caf", "compatibility": {},
-                    "source": {"format": capability, "selection": {"path": "fighter.json", "sha256": hashlib.sha256(recipe).hexdigest()}}}],
+                    "source": {"format": RECIPE_FORMAT, "selection": {"path": "fighter.json", "sha256": hashlib.sha256(recipe).hexdigest()}}}],
                     "fighters": [{"id": fighter_id, "name": meta["name"], "inherits": meta["donor"],
                                   "components": {"caf": pack_id + "/caf"}}], "overrides": []}
         if performance:
@@ -140,8 +143,8 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
                 '--workshop-out',str(root/'performance')],temporary,workspace)
             manifest['resources'].extend(generated['resources'])
             manifest['fighters'][0]['components'].update(generated['components'])
+        role_art = any('ui_art' in node for node in [project, *project.get('outfits', [])])
         for row, view in views:
-            role_art=project['schema'] in (SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7) and any('ui_art' in node for node in [project,*project.get('outfits',[])])
             if "portrait" not in view and not role_art:
                 continue
             is_default = row["id"] == outfits.DEFAULT
@@ -178,8 +181,7 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
             manifest["resources"].append({"id": portrait_id, "kind": "portrait", "compatibility": {}, "source": source})
             if is_default:
                 manifest["fighters"][0]["components"]["portrait"] = pack_id + "/" + portrait_id
-            if project["schema"] in (SCHEMA3,SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7):
-                fighter.setdefault("portraits", {})[row["id"]] = pack_id + "/" + portrait_id
+            fighter.setdefault("portraits", {})[row["id"]] = pack_id + "/" + portrait_id
         # Outfit portrait references are part of the hash-bound CAF recipe.
         recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
         (root / "fighter.json").write_bytes(recipe)
@@ -188,10 +190,10 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         portrait_note = "Authored outfit portraits/thumbnails use the project's PNGs, converted through original UI templates." if any('portrait' in view for _, view in views) else "Portraits/thumbnails inherit the presentation donor."
         if role_art:
             portrait_note = "UI artwork uses embedded PNGs for selector/loading portraits, titlecards, result icons and grid states in all three player layouts. Missing roles inherit the UI donor. HD output requires the matching runtime's per-launch Fighter UI texture layer."
-        extras_note = ("Atlas and finisher overrides require the runtime's hash-checked fighter-caf-extras.bin support.\n"
+        extras_note = ("Atlas and finisher overrides are carried in the runtime's hash-checked fighter-caf.bin.\n"
                        "Declared native atlases replace RGB only; original material alpha is retained.\n"
-                       "Saved finisher identities resolve against the player's original database.\n") if capability != "caf-fighter-1" else ""
-        if capability in ("caf-fighter-3", "caf-fighter-4", "caf-fighter-5", "caf-fighter-6"):
+                       "Saved finisher identities resolve against the player's original database.\n") if ('finishers' in fighter or fighter.get('atlases') or any(o.get('atlases') for o in fighter['outfits'])) else ""
+        if len(views) > 1:
             extras_note += "One roster entry exposes up to three outfits through the native clothing selector.\nCombat settings are shared; appearance, atlases and portraits are outfit-specific.\n"
         if face_cache is not None:
             extras_note += 'Experimental template sculpt: bounded head positions only; original rig, UVs and normals retained. Native startup verifies the assembled head before applying it.\n'
@@ -199,7 +201,7 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
             extras_note += 'Retail moveset: '+fighter['retail_moveset']+'. Appearance and training remain authored by this CAF recipe.\n'
         if performance:
             extras_note += 'Performance overrides (shared by all outfits): '+', '.join(performance)+'. Voice clips and AI edits are included as typed resources.\n'
-        (root / "README.md").write_text(f"# {meta['name']}\n\n{meta['description']}\n\nAuthor: {meta['author'] or 'Unspecified'}\nVersion: {meta['version']}\n\nRequires Custom Fighter runtime with {capability} support.\n{extras_note}CAF appearance, training stats and retail style combination come from fighter.json.\nUnchanged voice, AI and presentation settings inherit {meta['donor']}.\n{portrait_note}\nNo Story save or currency is included. The player's own game files supply the CAF parts.\n", encoding="utf-8")
+        (root / "README.md").write_text(f"# {meta['name']}\n\n{meta['description']}\n\nAuthor: {meta['author'] or 'Unspecified'}\nVersion: {meta['version']}\n\nRequires a Custom Fighter runtime that supports {RECIPE_FORMAT}.\n{extras_note}CAF appearance, training stats and retail style combination come from fighter.json.\nUnchanged voice, AI and presentation settings inherit {meta['donor']}.\n{portrait_note}\nNo Story save or currency is included. The player's own game files supply the CAF parts.\n", encoding="utf-8")
         (root / "LICENSE.txt").write_text(meta["license"] or "No additional license granted. Original game assets are supplied locally by the player.\n", encoding="utf-8")
         progress("Validating the complete fighter pack against your game files…")
         report = contract(runtime, ["validate", "--pack", str(root), "--game", str(game)], temporary, workspace)

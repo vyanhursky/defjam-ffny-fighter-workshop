@@ -139,3 +139,38 @@ def test_new_variant_from_standalone_project_keeps_credits_but_gets_new_identity
     saved=projects.read(variant)[0]
     assert saved['identity']!=p['identity'] and saved['metadata']==p['metadata']
     assert saved['fighter']['stats']['health']==27 and projects.read(path)[0]==p
+
+
+@pytest.mark.parametrize('earlier', projects.EARLIER_SCHEMAS)
+def test_projects_saved_under_an_earlier_schema_open_unchanged_and_save_as_current(tmp_path, earlier):
+    f, _ = fields(); p = projects.from_fields(f, 'Example')
+    p['schema'] = earlier
+    path = tmp_path / 'old.ffnyfighter'
+    raw = (json.dumps(p, indent=2, sort_keys=True) + '\n').encode()
+    path.write_bytes(raw)
+    loaded, digest = projects.read(path)
+    assert loaded['schema'] == projects.SCHEMA and loaded['fighter'] == p['fighter']
+    # The disk digest still names the bytes that were read, so a concurrent edit is still caught.
+    assert digest == projects.sha(raw)
+    projects.write(path, loaded, digest)
+    assert json.loads(path.read_text())['schema'] == projects.SCHEMA
+
+
+def test_unknown_project_versions_are_refused(tmp_path):
+    f, _ = fields(); p = projects.from_fields(f, 'Example')
+    for schema in ('ffny-fighter-project-0', 'ffny-fighter-project-8', 'other'):
+        p['schema'] = schema
+        with pytest.raises(SaveError):
+            projects.validate(p)
+
+
+def test_every_optional_section_is_accepted_on_a_project_with_no_other_section():
+    f, _ = fields()
+    for section, value in (('outfit_name', 'Outfit 1'), ):
+        p = projects.from_fields(f, 'Example'); p[section] = value
+        with pytest.raises(SaveError):   # outfits need both their name and their list
+            projects.validate(p)
+    p = projects.from_fields(f, 'Example'); p.update(outfit_name='Outfit 1', outfits=[])
+    assert projects.validate(p)['schema'] == projects.SCHEMA
+    p = projects.from_fields(f, 'Example'); p['fighter']['finishers'] = ['00000001'] * 4
+    assert projects.validate(p)['fighter']['finishers'] == ['00000001'] * 4

@@ -291,6 +291,8 @@ class Session:
                 self.document['deployment']=dict(mode=args['mode'],target=args['donor'])
                 validate(self.document)
             return self.snapshot()
+        if action=='close':
+            self.document=self.saved=self.path=self.digest=self.draft=None;self.history=[];return self.snapshot()
         projects.require(self.document is not None,'Create or open a retail fighter project')
         if action=='undo':
             if self.draft is not None:self.draft=None

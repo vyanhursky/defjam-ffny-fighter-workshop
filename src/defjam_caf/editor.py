@@ -190,8 +190,17 @@ class Editor:
         """What the Game setup dialog and the header chip show: the data folder and the chosen game version."""
         runtime = runtimes.describe(self.runtime, self.recipe_format()) if self.runtime else None
         folder = remembered.recall(self.workspace, "app") or runtimes.default_folder()
-        return dict(data=str(self.data) if self.data else None, runtime=runtime, folder=str(folder) if folder else None,
-                    ready=bool(self.data and runtime and runtime["usable"]))
+        data = self.data or remembered.recall(self.workspace, "data")
+        return dict(data=str(data) if data else None, runtime=runtime, folder=str(folder) if folder else None,
+                    ready=bool(data and runtime and runtime["usable"]))
+
+    def close_project(self):
+        """Leave the open fighter project so a workflow can start clean. Story profiles reload from the data folder."""
+        self.project = self.project_path = self.project_hash = None
+        self.active_outfit = outfits.DEFAULT
+        self.outfit_draft = self.portrait_edit = self.metadata_edit = self.texture_edit = None
+        self.edits, self.history = {}, []
+        return self.open_data(self.data) if self.data else self.snapshot()
 
     def need_runtime(self, args, feature):
         """The runtime an action should use: an explicit one (tests, scripts) or the one chosen in Game setup."""
@@ -581,7 +590,14 @@ class Editor:
             self.portrait_edit = self.texture_edit = self.metadata_edit = None
             return dict(snapshot=self.snapshot(), message='Face sculpt staged; Save project preserves it')
         if action.startswith('retail_'):
-            return self.retail.request(action.removeprefix('retail_'), args)
+            if self.retail.data is None and self.data is None:
+                # Opened straight from Home: the remembered data folder is enough for the studio, no fighter editor load.
+                self.retail.data = remembered.recall(self.workspace, "data")
+            result = self.retail.request(action.removeprefix('retail_'), args)
+            if action in ('retail_open', 'retail_save') and self.retail.path is not None and self.retail.document is not None:
+                mode = 'retail-new' if self.retail.document.get('deployment', {}).get('mode', 'add') == 'add' else 'retail-edit'
+                remembered.add_recent(self.workspace, mode, self.retail.path)
+            return result
         if action=='ui_preview':
             if self.project is None:return {'png':None}
             effective=ui_art.resolved(self.project_document(validate=False),self.active_outfit)
@@ -684,10 +700,18 @@ class Editor:
             self.remember()
             self.portrait_edit = raw
             return self.snapshot()
+        if action == "home":
+            return dict(setup=self.setup_view(), recents=remembered.recents(self.workspace), version=__version__)
+        if action == "close_project":
+            return self.close_project()
         if action == "new_project":
-            return self.create_project(args["path"])
+            result = self.create_project(args["path"])
+            remembered.add_recent(self.workspace, "caf", args["path"])
+            return result
         if action == "open_project":
-            return self.open_project(args["path"])
+            result = self.open_project(args["path"])
+            remembered.add_recent(self.workspace, "caf", args["path"])
+            return result
         if action == "project_metadata_draft":
             if self.project is None:
                 raise SaveError("Create or open a fighter project first")

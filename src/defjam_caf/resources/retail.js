@@ -2,6 +2,23 @@ import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {gameSetup} from './setup.mjs';
 const $=id=>document.getElementById(id),pending=new Map();let serial=0,bridge,state,shapeRows=[],epoch=0,detailDraft=null,draftTimer;
+// Home chooses the workflow: retail-new (a new fighter from a retail fighter) or retail-edit (change a retail fighter).
+const params=new URLSearchParams(location.hash.slice(1)),workflow=params.get('mode')==='retail-edit'?'retail-edit':'retail-new',startKind=params.get('start')||'',startPath=params.get('path')||'';
+document.body.dataset.mode=workflow;
+function applyWorkflow(){
+  const edit=workflow==='retail-edit',purpose=$('deployment-mode');
+  $('mode-title').textContent=edit?'RETAIL FIGHTER EDITOR':'FIGHTER FROM A RETAIL FIGHTER';
+  document.querySelector('.retail-left .eyebrow').textContent=edit?'CHANGE A RETAIL FIGHTER':'START A NEW FIGHTER';
+  $('base-donor').closest('label').firstChild.textContent=edit?'Fighter to change':'Start from this fighter';
+  purpose.closest('label').firstChild.textContent='What do you want to do?';
+  for(const option of purpose.options){option.hidden=option.disabled=edit?option.value==='add':option.value!=='add';option.textContent={add:'New standalone fighter',override:'Replace how it looks',outfit:'Add an extra outfit'}[option.value];}
+  purpose.closest('label').hidden=!edit;$('new').textContent=edit?'Start changing this fighter':'Start new fighter';
+  for(const node of [$('deployment-target').closest('label'),$('apply-deployment'),$('deployment-status')])node.hidden=!edit||!state?.document;
+}
+async function startFlow(){
+  if(state?.document)await act('retail_close');
+  if(startKind==='open'){if(startPath)await act('retail_open',{path:startPath},'Opening fighter project…');else await act('choose_retail_open');}
+}
 function call(action,args={}){const id=String(++serial);return new Promise((resolve,reject)=>{pending.set(id,{resolve,reject});bridge.dispatch(JSON.stringify({id,action,args}));});}
 function status(text,error=false){$('status-message').textContent=text;$('toast').textContent=text;$('toast').classList.toggle('error',error);$('toast').hidden=false;clearTimeout(status.timer);status.timer=setTimeout(()=>$('toast').hidden=true,10000);}
 async function act(action,args={},label='Updating fighter…'){if(pending.size)return null;$('busy-label').textContent=label;$('busy').hidden=false;try{if(detailDraft){await call('retail_draft',detailDraft);detailDraft=null;}const result=await call(action,args);if(result?.retail)render(result);if(result?.snapshot)render(result.snapshot);if(result?.message)status(result.message);return result;}catch(e){if(/Game setup/.test(e.message))setup.open(state?.setup);status(e.message,true);return null;}finally{$('busy').hidden=true;}}
@@ -18,7 +35,7 @@ function render(s){state=s;window.__retailState=s;const d=s.document,selected=d?
   for(const id of ['name','author','version','description','license']){$(id).value=d?.metadata[id]||'';$(id).disabled=!d;}
   for(const id of ['pack','fighter']){$(id).value=d?.identity[id]||'';$(id).disabled=!d;}
   for(const id of ['save','copy','details','combat','body','apply-stats','ui-import','ui-clear','ui-settings','preview','export','texture','clear-texture'])$(id).disabled=!d;
-  $('deployment-mode').value=d?.deployment?.mode||'add';$('apply-deployment').disabled=!d;
+  $('deployment-mode').value=d?.deployment?.mode||(workflow==='retail-edit'?'override':'add');applyWorkflow();$('apply-deployment').disabled=!d;
   const appearanceOnly=d?.deployment&&d.deployment.mode!=='add';
   $('deployment-status').textContent=d?.deployment?.mode==='override'?'Replaces the existing retail appearance. No extra roster cell is created.':d?.deployment?.mode==='outfit'?'Adds this appearance to the target’s clothing selector. Original outfit stays available; combat, voice and stats remain shared.':'Creates a separate fighter in the roster.';
   for(const id of ['combat','apply-stats'])$(id).disabled=!d||appearanceOnly;
@@ -37,7 +54,7 @@ function showArt(){const d=state?.document,role=$('role').value,raw=d?.ui_art.im
 $('role').onchange=showArt;
 for(const id of ['name','author','version','description','license','pack','fighter'])$(id).oninput=()=>{const metadata={};for(const key of ['name','author','version','description','license'])metadata[key]=$(key).value;detailDraft={metadata,identity:{pack:$('pack').value,fighter:$('fighter').value}};if(state){state.dirty=true;$('saved').textContent='● Unsaved changes';}clearTimeout(draftTimer);const send=async()=>{if(!detailDraft)return;if(pending.size){draftTimer=setTimeout(send,150);return;}const draft=detailDraft;try{await call('retail_draft',draft);if(detailDraft===draft)detailDraft=null;}catch(e){status(e.message,true);}};draftTimer=setTimeout(send,120);};
 for(const button of document.querySelectorAll('[data-panel]'))button.onclick=()=>{for(const section of document.querySelectorAll('[data-content]'))section.hidden=section.dataset.content!==button.dataset.panel;for(const item of document.querySelectorAll('[data-panel]'))item.classList.toggle('active',item===button);if(button.dataset.panel==='textures'&&!shapeRows.length&&state?.document?.definition.components.appearance&&!$('preview').disabled)$('preview').click();};
-$('caf').onclick=()=>act('open_caf_editor');
+$('home').onclick=()=>act('open_home');window.__retailAct=(...args)=>act(...args);
 $('new').onclick=()=>{if(discard())act('retail_new',{donor:$('base-donor').value,mode:$('deployment-mode').value});};$('open').onclick=()=>{if(discard())act('choose_retail_open');};$('import').onclick=()=>{if(discard())act('choose_retail_import',{},'Importing fighter assets…');};
 $('save').onclick=()=>act('choose_retail_save');$('copy').onclick=()=>act('choose_retail_copy');$('undo').onclick=()=>act('retail_undo');$('reset').onclick=()=>{if(discard())act('retail_reset');};
 $('details').onclick=()=>{const metadata={};for(const k of ['name','author','version','description','license'])metadata[k]=$(k).value;act('retail_details',{metadata,identity:{pack:$('pack').value,fighter:$('fighter').value}});};
@@ -57,4 +74,4 @@ $('preview').onclick=async()=>{const mine=++epoch,result=await act('retail_previ
   bounds=result.bounds;shapeRows=result.shapes.map(r=>({id:r.name,name:r.name+' · '+r.width+'×'+r.height}));options('shape',shapeRows);$('shape').disabled=!state?.document;frame();$('preview-note').textContent=result.notices.join(' · ');window.__retailPreview={ready:true,meshes:result.meshes.length,shapes:result.shapes};
 };
 new ResizeObserver(()=>{const box=$('viewport');renderer.setSize(box.clientWidth,box.clientHeight,false);camera.aspect=box.clientWidth/Math.max(1,box.clientHeight);camera.updateProjectionMatrix();}).observe($('viewport'));renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
-new QWebChannel(qt.webChannelTransport,channel=>{bridge=channel.objects.editor;bridge.response.connect(raw=>{const r=JSON.parse(raw),task=pending.get(r.id);if(!task)return;pending.delete(r.id);if(r.error)task.reject(new Error(r.error));else task.resolve(r.result);});act('retail_snapshot');});
+new QWebChannel(qt.webChannelTransport,channel=>{bridge=channel.objects.editor;bridge.response.connect(raw=>{const r=JSON.parse(raw),task=pending.get(r.id);if(!task)return;pending.delete(r.id);if(r.error)task.reject(new Error(r.error));else task.resolve(r.result);});act('retail_snapshot').then(startFlow);});

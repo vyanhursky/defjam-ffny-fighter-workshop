@@ -49,6 +49,40 @@ def recall(workspace, key):
         return None
 
 
+RECENT_LIMIT = 6
+RECENT_MODES = ("caf", "retail-new", "retail-edit")
+
+
+def recents(workspace):
+    """Projects opened or saved lately, newest first, without the ones that no longer exist."""
+    rows = _read(workspace).get("recent")
+    out = []
+    for row in rows if isinstance(rows, list) else []:
+        if isinstance(row, dict) and row.get("mode") in RECENT_MODES and isinstance(row.get("path"), str):
+            try:
+                if Path(row["path"]).is_file():
+                    out.append(dict(mode=row["mode"], path=row["path"], name=str(row.get("name") or Path(row["path"]).stem)))
+            except OSError:
+                pass
+    return out[:RECENT_LIMIT]
+
+
+def add_recent(workspace, mode, path, name=None):
+    """Put a project at the top of the Home list. Never raises: a list that cannot be saved is only a convenience lost."""
+    if mode not in RECENT_MODES:
+        return False
+    path = str(Path(path).resolve())
+    try:
+        value = _read(workspace)
+        rows = [r for r in recents(workspace) if r["path"] != path]
+        value["recent"] = [dict(mode=mode, path=path, name=name or Path(path).stem)] + rows[:RECENT_LIMIT - 1]
+        Path(workspace).mkdir(parents=True, exist_ok=True)
+        atomic_bytes(Path(workspace) / FILE, (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8"))
+    except OSError:
+        return False
+    return True
+
+
 def remember(workspace, key, path):
     """Remember a folder that passes its check. Anything else is ignored, so a wrong pick is never offered again."""
     assert key in KEYS

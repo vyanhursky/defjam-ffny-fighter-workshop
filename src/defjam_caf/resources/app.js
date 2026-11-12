@@ -6,7 +6,23 @@ import {performanceEditor} from './performance.mjs';
 import {gameSetup} from './setup.mjs';
 
 const $ = id => document.getElementById(id);
-$('retail-editor').onclick=()=>call('open_retail_editor');
+// Home chooses a workflow and passes it in the address fragment: story (Story saves) or caf (a fighter project from a Create-a-Fighter).
+const params=new URLSearchParams(location.hash.slice(1)),workflow=params.get('mode')==='caf'?'caf':'story',startKind=params.get('start')||'',startPath=params.get('path')||'';
+document.body.dataset.mode=workflow;
+$('mode-title').textContent=workflow==='caf'?'FIGHTER FROM A CREATE-A-FIGHTER':'STORY CHARACTER EDITOR';
+$('home-button').onclick=()=>call('open_home').catch(fail);
+function renderStart(state){
+  const show=workflow==='caf'&&!state.project;$('start-banner').hidden=!show;document.body.classList.toggle('starting',show);
+  $('start-action').disabled=!readyFighter();document.querySelector('.profiles .eyebrow').textContent=show?'PICK A CREATE-A-FIGHTER TO START FROM':'YOUR PROFILES';
+  $('start-text').textContent=!state.data?'Choose your game data first (Game setup, top right) so your Create-a-Fighters can be listed.'
+    :readyFighter()?'Step 1 is done: the Create-a-Fighter selected on the left is your starting point; click another to change it. Step 2: create the project file.'
+    :'Step 1: choose the Create-a-Fighter to start from, in the list on the left. Then create the project file.';
+}
+async function startFlow(){
+  if(current?.project&&(workflow==='story'||startKind==='new'))await act('close_project',{},'Closing the fighter project…');
+  if(startKind==='import'&&workflow==='story'&&current?.data)await act('choose_import');
+  else if(workflow==='caf'&&startKind==='open'){if(startPath)await act('open_project',{path:startPath},'Opening fighter project…');else await act('choose_project',{},'Opening fighter project…');}
+}
 let bridge, current=null, serial=0, busyCount=0, options=[], selectionKey=null, previewEpoch=0;
 let auditionKey=null, categoryEpoch=0, previewTimer=null, sceneData=null, atlasTextures=[];
 let faceDraft=null,faceFrame=null,faceSceneEpoch=-1;
@@ -49,6 +65,7 @@ function renderState(state){
   $('save').disabled=!state.dirty;$('undo').disabled=!state.undo;$('reset').disabled=!state.dirty;
   for(const id of ['export','duplicate'])$(id).disabled=!state.selected||Boolean(state.project);$('save').textContent=state.project?'Save project':'Save changes';document.querySelector('.save-actions .two-cols').style.display=state.project?'none':'';
   $('import').disabled=!state.data;
+  renderStart(state);
   {const chip=setup.chip(state.setup);$('setup-open').textContent=chip.text;$('setup-open').className='chip '+chip.state;setup.offer(state.setup);}
   if(state.version)$('version').textContent=state.version.replace(/b(\d+)$/,' beta $1');
   renderBackups(state);
@@ -337,7 +354,8 @@ $('export').onclick=()=>act('choose_export',{},'Exporting complete profile…');
 $('duplicate').onclick=()=>act('choose_duplicate',{},'Duplicating profile…');
 $('save').onclick=()=>{if(current.project){act('save',{},'Saving fighter project…');return;}const risky=current.retail_moveset_save;if(confirm((risky?risky+'\n\n':'')+'Save these changes to '+current.selected+'?\n\n'+current.changes.join('\n')+'\n\nA backup will be created first. Close the game before saving.'))act('save',risky?{acknowledge_retail_moveset:true}:{},'Saving profile and backup…');};
 $('open-project').onclick=()=>{if(discard())act('choose_project',{},'Opening fighter project…');};
-$('new-project').onclick=()=>act('choose_new_project',{},'Creating standalone fighter project…');
+$('new-project').onclick=$('start-action').onclick=()=>act('choose_new_project',{},'Creating standalone fighter project…');
+$('start-open').onclick=()=>{if(discard())act('choose_project',{},'Opening fighter project…');};
 $('capture-portrait').onclick=()=>{if(faceDraft){fail(new Error('Apply or revert the face preview before capturing its portrait.'));return;}if(!window.__cafPreview?.ready||auditionKey||$('no-clothes').checked){fail(new Error('Finish or cancel try-on and show the full outfit before capturing its portrait.'));return;}const size=renderer.getSize(new THREE.Vector2()),ratio=renderer.getPixelRatio(),scale=Math.min(1,1024/Math.max(size.x,size.y));renderer.setPixelRatio(1);renderer.setSize(Math.round(size.x*scale),Math.round(size.y*scale),false);renderer.render(scene,camera);const png=renderer.domElement.toDataURL('image/png');renderer.setPixelRatio(ratio);renderer.setSize(size.x,size.y,false);renderer.render(scene,camera);act('project_portrait',{png});};
 $('import-portrait').onclick=()=>act('choose_project_portrait',{},'Importing portrait PNG…');
 $('clear-atlases').onclick=()=>act('project_atlas_clear',{},'Clearing imported atlases…');
@@ -378,5 +396,5 @@ new QWebChannel(qt.webChannelTransport,channel=>{
   bridge=channel.objects.editor;
   bridge.response.connect(raw=>{const message=JSON.parse(raw),task=pending.get(message.id);if(!task)return;pending.delete(message.id);if(task.label){busyCount--;$('busy').hidden=busyCount<=0;}if(message.error)task.reject(new Error(message.error));else task.resolve(message.result);});
   bridge.progress.connect(message=>{$('busy-label').textContent=message;$('status-message').textContent=message;});
-  act('boot',{},'Loading local fighter data…');
+  act('boot',{},'Loading local fighter data…').then(startFlow);
 });

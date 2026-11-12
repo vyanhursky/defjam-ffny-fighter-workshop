@@ -21,8 +21,19 @@ data folder. The choice is remembered; an action a version cannot do fails up fr
 app lacks all four; the retail studio previously failed late with a raw fighter-contract usage dump). Header buttons gained
 tooltips naming the file type and the usual folder. Textures now lists each atlas sheet by plain name with its own state and
 import/revert; the portrait source and the face method (presets, sliders, imported mesh) and the moveset source are one-of-N
-choice cards, with the locked options greyed and explained. Not built: the launch-time workflow chooser; a five-workflow
-draft is waiting for owner confirmation. 230 Python tests passed (6 new for runtime discovery).
+choice cards, with the locked options greyed and explained. The launch-time workflow chooser is below. 230 Python tests passed (6 new for runtime discovery).
+
+Home screen, same day (owner confirmed the draft; the fifth workflow, a blank standalone fighter, is dropped for now).
+The window opens on Home with four workflows: Story character editor; Fighter from a Create-a-Fighter; Fighter from a
+retail fighter; Retail fighter editor. Each card has a New/Open pair, shows a plain note when the chosen game version
+cannot do it yet, and a Recent projects list remembers the last six. A workflow is a mode of the existing pages, passed in
+the address fragment: the editor page runs as `story` (Appearance, Stats & cash, Moves, profile actions) or `caf`
+(a banner walks through picking a Create-a-Fighter and creating the project; all tabs once it exists); the retail page runs
+as `retail-new` (start from a retail fighter) or `retail-edit` (replace its look or add an outfit). Every page has a Home
+button, asks before discarding unsaved changes, and a fresh start closes the previous project. `--smoke-test`, `--capture`
+and `--retail` still open their page directly. Not built: folding the two pages into one shell, a pre-export checklist.
+237 Python tests passed (7 new); driven in the real Qt app on a copy of the saves: all four workflows, recents, and the
+Home and Open-project round trip. The unsaved-changes prompt is a native dialog and was not exercised.
 
 ## HD CAF atlas imports — 2026-11-10
 

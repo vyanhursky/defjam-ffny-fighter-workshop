@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import sys
 import traceback
+from urllib.parse import urlencode
 
 from PySide6.QtCore import QObject, Signal, Slot, QUrl, QStandardPaths, QTimer, qInstallMessageHandler
 from PySide6.QtGui import QDesktopServices, QIcon
@@ -49,6 +50,31 @@ class Bridge(QObject):
         so nobody picks an output file for an export that was never going to work."""
         return str(runtimes.require(self.editor.runtime, feature, self.editor.recipe_format())["path"])
 
+    PAGES = {"home": "home.html", "story": "index.html", "caf": "index.html", "retail-new": "retail.html", "retail-edit": "retail.html"}
+    STARTS = {"open", "new", "import"}
+
+    def navigate(self, ident, mode, args):
+        """Move this window to Home or one of the workflows. The page reads what to do from the address fragment."""
+        if mode not in self.PAGES:
+            raise ValueError("Unknown workflow")
+        if self.busy:
+            raise ValueError("Please wait for the current operation to finish.")
+        editor = self.editor
+        unsaved = ((editor.profile or editor.project) and editor.changes()) or editor.retail.snapshot()["dirty"]
+        if unsaved and QMessageBox.question(self.window, "Unsaved changes", "Leave without saving your fighter changes?") != QMessageBox.StandardButton.Yes:
+            return self.response.emit(json.dumps(dict(id=ident, result=False)))
+        if mode.startswith("retail") and self.initial and editor.retail.data is None:
+            editor.retail.data = Path(self.initial).resolve()
+        fragment = {"mode": mode}
+        if args.get("start") in self.STARTS:
+            fragment["start"] = args["start"]
+        if isinstance(args.get("path"), str) and args["path"]:
+            fragment["path"] = args["path"]
+        url = QUrl.fromLocalFile(str(Path(__file__).parent / "resources" / self.PAGES[mode]))
+        url.setFragment(urlencode(fragment))
+        self.response.emit(json.dumps(dict(id=ident, result=True)))
+        self.window.web.setUrl(url)
+
     @Slot(str)
     def dispatch(self, raw):
         try:
@@ -56,11 +82,10 @@ class Bridge(QObject):
             ident, action, args = request["id"], request["action"], request.get("args", {})
             if not isinstance(ident, str) or not isinstance(args, dict):
                 raise ValueError("Invalid editor request")
-            if action in ('open_retail_editor','open_caf_editor'):
-                target='retail.html' if action=='open_retail_editor' else 'index.html'
-                self.response.emit(json.dumps(dict(id=ident,result=None)))
-                self.window.web.setUrl(QUrl.fromLocalFile(str(Path(__file__).parent/'resources'/target)))
-                return
+            if action in ('open_home','open_workflow','open_retail_editor','open_caf_editor'):
+                if action=='open_retail_editor':action,args='open_workflow',{'mode':'retail-edit','start':'new'}
+                if action=='open_caf_editor':action,args='open_workflow',{'mode':'story','start':'open'}
+                return self.navigate(ident,'home' if action=='open_home' else args.get('mode'),args)
             if action.startswith('choose_retail_'):
                 operation=action.removeprefix('choose_retail_')
                 session=self.editor.retail
@@ -223,7 +248,7 @@ class Bridge(QObject):
 
 
 class Window(QMainWindow):
-    def __init__(self, workspace, initial=None):
+    def __init__(self, workspace, initial=None, start_page="home.html"):
         super().__init__()
         icon_name = "defjam.icns" if sys.platform == "darwin" else "defjam.png"
         self.setWindowIcon(QIcon(str(Path(__file__).parent / "resources" / "branding" / icon_name)))
@@ -242,7 +267,7 @@ class Window(QMainWindow):
         self.channel.registerObject("editor", self.bridge)
         self.page.setWebChannel(self.channel)
         self.setCentralWidget(self.web)
-        self.web.setUrl(QUrl.fromLocalFile(str(Path(__file__).parent / "resources" / "index.html")))
+        self.web.setUrl(QUrl.fromLocalFile(str(Path(__file__).parent / "resources" / start_page)))
 
     def closeEvent(self, event):
         if self.bridge.busy:
@@ -333,7 +358,8 @@ def main(argv=None):
     app = QApplication(sys.argv[:1])
     # Automated package checks without --data stay independent of installed saves.
     initial = args.data if args.smoke_test else initial_data_directory(args.data) or remembered.recall(workspace, "data")
-    window = Window(workspace, initial)
+    # Home is the front door. Automated checks and screenshots still open the editor page directly.
+    window = Window(workspace, initial, "index.html" if args.smoke_test or args.capture or args.retail else "home.html")
     if args.retail:
         # The retail studio needs the game directory, not a CAF cache/profile.
         window.bridge.initial=None

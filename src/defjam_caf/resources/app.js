@@ -4,6 +4,7 @@ import {poseMesh} from './poses.mjs';
 import {blendFace,faceDraft as makeFaceDraft} from './face-preview.mjs';
 import {performanceEditor} from './performance.mjs';
 import {gameSetup} from './setup.mjs';
+import {workshopVersion} from './version.mjs';
 
 const $ = id => document.getElementById(id);
 // Home chooses a workflow and passes it in the address fragment: story (Story saves) or caf (a fighter project from a Create-a-Fighter).
@@ -67,7 +68,7 @@ function renderState(state){
   $('import').disabled=!state.data;
   renderStart(state);
   {const chip=setup.chip(state.setup);$('setup-open').textContent=chip.text;$('setup-open').className='chip '+chip.state;setup.offer(state.setup);}
-  if(state.version)$('version').textContent=state.version.replace(/b(\d+)$/,' beta $1');
+  if(state.version)$('version').textContent=workshopVersion(state.version);
   renderBackups(state);
   $('changes').replaceChildren(...(state.changes.length?state.changes:['No changes yet.']).map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
   $('status-message').textContent=state.dirty?`${state.changes.length} pending change(s) · review before saving`:'Ready · changes stay local';

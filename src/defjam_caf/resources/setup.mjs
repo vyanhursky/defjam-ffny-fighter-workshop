@@ -16,6 +16,7 @@ export function gameSetup({call, act}) {
     <h4>3 · Game data</h4>
     <div class="setup-row"><code id="setup-data">Not chosen yet</code><button id="setup-data-change">Choose…</button></div>
     <p class="hint">The folder with <b>extracted</b> and <b>save</b> in it. It is normally the <b>data</b> folder inside your game folder, so it is filled in for you.</p>
+    <h4>Workshop files</h4><p class="hint">Backups and the private asset cache live here:</p><code id="setup-workspace"></code>
     <p id="setup-message" class="hint" aria-live="polite"></p>
     <div class="dialog-actions"><button id="setup-cancel" class="quiet">Later</button><button id="setup-use" class="primary">Use these settings</button></div>`;
   document.body.append(dialog);
@@ -53,6 +54,7 @@ export function gameSetup({call, act}) {
 
   async function open(setup) {
     current = setup || current;
+    $('setup-workspace').textContent = current?.workspace || '';
     dialog.showModal();
     try { show(await call('setup_scan', {})); } catch (error) { $('setup-message').textContent = error.message; }
   }

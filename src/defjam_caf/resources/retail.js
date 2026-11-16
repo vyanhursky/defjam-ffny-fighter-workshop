@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {gameSetup} from './setup.mjs';
+import {workshopVersion} from './version.mjs';
 const $=id=>document.getElementById(id),pending=new Map();let serial=0,bridge,state,shapeRows=[],epoch=0,detailDraft=null,draftTimer;
 // Home chooses the workflow: retail-new (a new fighter from a retail fighter) or retail-edit (change a retail fighter).
 const params=new URLSearchParams(location.hash.slice(1)),workflow=params.get('mode')==='retail-edit'?'retail-edit':'retail-new',startKind=params.get('start')||'',startPath=params.get('path')||'';
@@ -29,6 +30,7 @@ const discard=()=>!state?.dirty||confirm('Discard unsaved retail fighter changes
 function options(id,rows,value){const previous=value??$(id).value;$(id).replaceChildren(...rows.map(r=>new Option(r.name,r.id)));if(rows.some(r=>r.id===previous))$(id).value=previous;}
 function render(s){state=s;window.__retailState=s;const d=s.document,selected=d?.definition.inherits;
   {const chip=setup.chip(s.setup);$('setup-open').textContent=chip.text;$('setup-open').className='chip '+chip.state;setup.offer(s.setup);}
+  $('version').textContent=workshopVersion(s.setup.version);
   $('connection').textContent=s.data||'No game data chosen yet';$('saved').textContent=s.dirty?'● Unsaved changes':d?'● Saved project':'No project';
   for(const id of ['base-donor','body-donor','combat-donor','ui-donor','deployment-target'])options(id,s.donors,id==='combat-donor'?selected:id==='ui-donor'?d?.ui_art.donor:id==='deployment-target'?(d?.deployment?.target||selected):null);
   $('new').disabled=!s.donors.length;$('import').disabled=!s.runtime;$('fighter-name').textContent=d?.metadata.name||'YOUR FIGHTER';$('project-path').textContent=s.path||'Save a portable .ffnyfighter project.';

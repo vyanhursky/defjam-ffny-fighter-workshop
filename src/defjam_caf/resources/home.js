@@ -1,5 +1,6 @@
 // Home: the front door. It only chooses a workflow; each workflow page does its own work.
 import {gameSetup} from './setup.mjs';
+import {workshopVersion} from './version.mjs';
 
 const $ = id => document.getElementById(id), pending = new Map();
 let serial = 0, bridge, state = null;
@@ -111,7 +112,7 @@ function render() {
     button.onclick = () => go({mode: item.mode, start: 'open', path: item.path});
     return button;
   }));
-  $('home-version').textContent = 'Offline · nothing leaves this computer · Workshop ' + (state.version || '');
+  $('home-version').textContent = 'Offline · nothing leaves this computer · ' + workshopVersion(state.version);
   setup.offer(state.setup);
 }
 

@@ -38,9 +38,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == "import-atlas":
-            from .projects import read, write, with_atlas
+            from .projects import MAX_ATLAS_BYTES, read, write, with_atlas
             from .profiles import read_bounded
-            document = with_atlas(read(args.project)[0], args.slot, read_bounded(args.png, 1024 * 1024))
+            document = with_atlas(read(args.project)[0], args.slot, read_bounded(args.png, MAX_ATLAS_BYTES))
             write(args.out, document)
             print(json.dumps({"project": str(args.out), "atlas": args.slot, "material_alpha": "native-original", "native_playtest": False}))
             return 0

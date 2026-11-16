@@ -14,7 +14,7 @@ from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineUrlRequestIntercep
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
-from . import remembered, runtimes
+from . import projects, remembered, retail, runtimes
 from .editor import Editor
 from .locations import default_data_directory, initial_data_directory
 
@@ -102,7 +102,7 @@ class Bridge(QObject):
                         session.catalog=None
                         return self.response.emit(json.dumps(dict(id=ident,result=session.snapshot())))
                     if operation=='import':
-                        manifest=json.loads((Path(path)/'fighters.json').read_text(encoding='utf-8-sig'))
+                        manifest=retail.read_manifest(path)
                         labels=[f['id']+' · '+f['name'] for f in manifest['fighters']]
                         if not labels:labels=[r['target']+' · Retail appearance override' for r in manifest.get('overrides',[])]
                         label,ok=QInputDialog.getItem(self.window,'Import fighter','Choose one fighter',labels,0,False)
@@ -211,7 +211,7 @@ class Bridge(QObject):
                 path, _ = QFileDialog.getOpenFileName(self.window, title, "", "PNG image (*.png)")
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                limit = 16 * 1024 * 1024 if atlas else 4 * 1024 * 1024
+                limit = projects.MAX_ATLAS_BYTES if atlas else 4 * 1024 * 1024
                 with Path(path).open("rb") as stream:
                     raw = stream.read(limit + 1)
                 if len(raw) > limit:

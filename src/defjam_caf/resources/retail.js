@@ -196,7 +196,7 @@ function render(s) {
     ...outfits.map((row, index) => {
       const button = document.createElement("button");
       button.textContent = `${index + 1}. ${row.name}`;
-      button.classList.toggle("active", row.id === s.active_outfit);
+      button.className = "outfit-card";
       button.setAttribute("aria-pressed", String(row.id === s.active_outfit));
       button.onclick = () => act("retail_outfit_select", { id: row.id });
       return button;

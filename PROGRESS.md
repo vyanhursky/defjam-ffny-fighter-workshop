@@ -1,5 +1,23 @@
 # Progress and handoff
 
+## November 16 playtest — retail source animation preview
+
+Companion runtime PR269 (v1.2.0, stacked on267) adds verified retail skin metadata
+and workshop-animation --pack. Workshop reads an explicit optional extension,
+enables retail source playback only when advertised, and stages the current body
+for each request. Source SHA/mesh/vertex mappings must agree before attachment;
+late texture/animation replies cannot replace a newer preview. Runtime changes
+refresh loaded geometry. Older runtimes retain the main menu/performance features
+and clearly disable unsupported retail animation.
+
+Actual original-body Windows Qt/WebChannel/WebGL test passes open/body/catalogs/
+entrance/pause/scrub/stop/victory:39 surfaces,4656 vertices,94 bones; both original
+clips106ticks/two channels. A46-check invented tour adds CI playback coverage.
+Runtime source suite1881passed/778 compiler-platform skips; hygiene zero failures.
+Only offline authoring scripts changed in PR269; no game code, hooks, game launch
+or recipe change. Native gameplay acceptance, camera/face/hand animation, runtime
+blending and unsupported codecs remain outside source preview qualification.
+
 ## November 16 playtest — shared standalone performance/menu parity
 
 The priority Workshop-only phase shares Voice/AI/Entrance panels, performance

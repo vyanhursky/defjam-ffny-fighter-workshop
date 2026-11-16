@@ -18,3 +18,9 @@ results so scan/header labels cannot change cached capabilities. Installed build
 labels retain the first eight build-hash characters; the installed release
 record supplies its version when it names the same source. This distinguishes
 stable and beta installations sharing a numeric version.
+
+Optional `extensions` is a bounded list (up to32 names). The
+`retail-animation-preview-1` extension explicitly enables pack-bound retail source
+playback; the presence of `workshop-animation` alone only guarantees the existing
+CAF preview API. Missing extensions leave finer-grained features disabled, while
+malformed extension declarations refuse the manifest rather than enabling fallback.

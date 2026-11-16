@@ -92,6 +92,7 @@ def inspect(path, recipe_format):
     if stamp is not None and key in _cache:
         return copy.deepcopy(_cache[key])
     commands, caf_format, manifest_error = [], None, None
+    extensions = []
     if (path / MANIFEST).exists():
         try:
             with (path / MANIFEST).open("rb") as stream:
@@ -117,10 +118,17 @@ def inspect(path, recipe_format):
                 or not all(type(c) is str and re.fullmatch("[a-z][a-z0-9-]{0,63}", c) for c in manifest["commands"])
                 or type(manifest.get("recipe_format")) is not str
                 or len(manifest["recipe_format"]) > 80
+                or type(manifest.get("extensions", [])) is not list
+                or len(manifest.get("extensions", [])) > 32
+                or not all(
+                    type(name) is str and re.fullmatch("[a-z][a-z0-9-]{0,63}", name)
+                    for name in manifest.get("extensions", [])
+                )
             ):
                 raise ValueError("Unsupported capability manifest")
             if contract.is_file():
                 commands, caf_format = sorted(set(manifest["commands"])), manifest["recipe_format"]
+                extensions = sorted(set(manifest.get("extensions", [])))
         except (OSError, ValueError) as exc:
             manifest_error = str(exc)
     else:
@@ -151,6 +159,7 @@ def inspect(path, recipe_format):
         complete=all(features.values()),
         labels={name: label for name, label, *_ in FEATURES},
         manifest_error=manifest_error,
+        extensions=extensions,
     )
     if stamp is not None:
         if len(_cache) >= 128:

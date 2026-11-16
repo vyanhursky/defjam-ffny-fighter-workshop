@@ -53,6 +53,11 @@ def fixtures(output):
         "parser.add_argument('command', choices=" + repr(tuple(commands)) + ")\n"
     )
     (runtime / "setup/fighter_caf.py").write_text("FORMAT = 'caf-fighter-1'\n")
+    (runtime / "scripts/fighter-contract.json").write_text(
+        json.dumps(
+            dict(api=1, commands=commands, recipe_format="caf-fighter-1", extensions=["retail-animation-preview-1"])
+        )
+    )
     png = io.BytesIO()
     Image.new("RGBA", (32, 32), (50, 150, 80, 255)).save(png, format="PNG")
     preview = dict(
@@ -64,6 +69,9 @@ def fixtures(output):
                 indices=[0, 1, 2],
                 atlas="a",
                 slot="0",
+                rm=0,
+                source_model="retail-body",
+                source_model_sha256="a" * 64,
                 transparent=False,
             )
         ],
@@ -184,6 +192,24 @@ def main(argv=None):
                 animation=lambda request: dict(clips=[], unsupported={}),
             )
             return editor.retail.snapshot()
+        if action == "retail_performance_animation":
+            if arguments.get("operation") == "list":
+                return dict(clips=["fixture"], unsupported={})
+            return dict(
+                schema="fighter-workshop-animation-1",
+                clip=arguments["clip"],
+                ticks=30,
+                ticks_per_second=30,
+                models={
+                    "retail-body": dict(
+                        source_sha256="a" * 64,
+                        bones=[dict(parent=-1, scale=[1, 1, 1], quaternion=[0, 0, 0, 1], position=[0, 0, 0])],
+                        meshes={"0": dict(indices=[[0, 0, 0, 0]] * 3, weights=[[1, 0, 0, 0]] * 3)},
+                    )
+                },
+                channels=[dict(role="body", bones=[0], samples=[[[0, i / 60, 0, 1]] for i in range(31)])],
+                notice="Invented source tracks",
+            )
         if action == "performance_audio":
             time.sleep(0.15)  # Exercise playback after the initiating click returns.
             return audio_result
@@ -379,6 +405,22 @@ def main(argv=None):
             "window.__retailState?.performance.settings.intro==='CI_113A'",
             "document.querySelector('[data-panel=presentation]').click();document.getElementById('sequence-intro').value='CI_113A';document.getElementById('apply-intro').click()",
         ),
+        (
+            "Retail animated entrance",
+            "Boolean(window.__cafAnimation?.ready && window.__cafAnimation.time>0)",
+            "document.getElementById('preview-intro').click()",
+        ),
+        (
+            "Retail animation pause",
+            "document.getElementById('animation-play').textContent==='Play'",
+            "document.getElementById('animation-play').click()",
+        ),
+        (
+            "Retail animation scrub",
+            "window.__cafAnimation?.time===10",
+            "let e=document.getElementById('animation-time');e.value=10;e.dispatchEvent(new Event('input'))",
+        ),
+        ("Retail animation stop", "window.__cafAnimation===null", "document.getElementById('animation-stop').click()"),
         (
             "Retail moves preserve stats and performance",
             "window.__retailState?.document.definition.inherits==='retail/blaze' && window.__retailState.document.definition.components.stats.health===20 && window.__retailState.performance.settings.voice.preset==='retail/teck'",

@@ -113,3 +113,34 @@ def test_export_uses_combat_family_and_stages_hash_bound_audio(tmp_path, monkeyp
     assert native["fighters"][0]["components"]["voice"].endswith("/performance-voice")
     assert (root / "workshop-performance/voice.wav").read_bytes() == wav()
     assert editor.retail.document == original  # Generated resources never leak into the editable source.
+
+
+def test_animation_uses_a_staged_pack_and_explicit_runtime_extension(tmp_path, monkeypatch):
+    editor = session(tmp_path)
+    runtime = editor.runtime
+    (runtime / "scripts").mkdir(parents=True)
+    (runtime / "scripts/fighter-contract.py").write_text("# invented contract")
+    manifest = runtime / "scripts/fighter-contract.json"
+    row = dict(api=1, commands=["workshop-animation"], recipe_format="caf-fighter-1", extensions=[])
+    manifest.write_text(json.dumps(row))
+    with pytest.raises(SaveError, match="cannot preview retail animation"):
+        editor.request("retail_performance_animation", dict(clip="CI_113A", models=["retail-body"]))
+    row["extensions"] = ["retail-animation-preview-1"]
+    manifest.write_text(json.dumps(row))
+    calls = []
+
+    def api(args, temporary):
+        calls.append(args)
+        assert Path(args[args.index("--game") + 1]) == editor.data / "extracted"
+        pack = Path(args[args.index("--pack") + 1])
+        assert (pack / "fighters.json").is_file()
+        request = json.loads(Path(args[args.index("--workshop-request") + 1]).read_text())
+        assert request["models"] == ["retail-body"]
+        return dict(schema="fighter-workshop-animation-1")
+
+    monkeypatch.setattr(editor.retail, "api", api)
+    assert (
+        editor.request("retail_performance_animation", dict(clip="CI_113A", models=["retail-body"]))["schema"]
+        == "fighter-workshop-animation-1"
+    )
+    assert len(calls) == 1 and not editor.retail.history

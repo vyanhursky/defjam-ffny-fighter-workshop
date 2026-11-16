@@ -2,6 +2,7 @@
 
 import argparse
 import hashlib
+import json
 import os
 from importlib.metadata import distributions, version
 from pathlib import Path
@@ -16,8 +17,21 @@ NAME = "defjam-ffny-fighter-workshop"
 BUNDLE_ID = "org.ffnycommunity.fighterworkshop"
 
 
+def build_environment():
+    return dict(
+        schema=1,
+        python=platform.python_version(),
+        platform=sys.platform,
+        machine=platform.machine(),
+        dependencies=dict(sorted((package.metadata["Name"], package.version) for package in distributions())),
+    )
+
+
 def collect_notices(root, destination):
     destination.mkdir(parents=True, exist_ok=True)
+    (destination / "build-environment.json").write_text(
+        json.dumps(build_environment(), indent=2) + "\n", encoding="utf-8"
+    )
     for name in ("LICENSE", "COPYRIGHT", "THIRD_PARTY.md", "README.md", "PROGRESS.md"):
         shutil.copy2(root / name, destination / name)
     for name in ("beta-test-guide.md", "validation.md", "desktop-platforms.md"):

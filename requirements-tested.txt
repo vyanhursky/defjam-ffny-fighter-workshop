@@ -1,4 +1,5 @@
-# Windows local beta, Python 3.13.5. Build each OS natively.
+# Historical Windows beta build snapshot, Python 3.13.5.
+# Current native CI pins are requirements-build.txt; packaged build-environment.json records every resolved dependency.
 PySide6==6.8.3
 Pillow==12.3.0
 numpy==2.5.4

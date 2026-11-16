@@ -52,6 +52,19 @@ def staged(tmp_path):
         files = {
             base + "/documentation/docs/media/workshop-overview.png": image,
             base + "/documentation/dependency-licenses/invented/LICENSE.txt": b"invented notice",
+            base + "/documentation/build-environment.json": json.dumps(
+                dict(
+                    schema=1,
+                    python="3.13.5",
+                    platform="darwin"
+                    if target.startswith("macos")
+                    else "win32"
+                    if target.startswith("windows")
+                    else "linux",
+                    machine="invented architecture",
+                    dependencies={"Pillow": "12.3.0", "invented-transitive": "1.0"},
+                )
+            ).encode(),
         }
         exe = (
             app + ".app/Contents/MacOS/" + app
@@ -109,6 +122,7 @@ def test_stages_exact_native_packages_with_checksums_and_source_provenance(stage
     release.prepare(source, staging, SHA, 123, TAG)
     provenance = json.loads((staging / "assets/provenance.json").read_text())
     assert provenance["source_commit"] == SHA and len(provenance["packages"]) == 4
+    assert all(p["build_environment"]["dependencies"]["Pillow"] == "12.3.0" for p in provenance["packages"])
     assert len((staging / "assets/SHA256SUMS").read_text().splitlines()) == 4
     assert len(list((staging / "assets").iterdir())) == 10
 
@@ -118,6 +132,18 @@ def test_rejects_successful_ci_for_another_commit(staged):
     with pytest.raises(AssertionError):
         release.prepare(source, staging, "b" * 40, 123, TAG)
     assert not (staging / "assets").exists()
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        dict(schema=1, platform="other"),
+        dict(schema=1, platform="win32", python="3.13.5", machine="x64", dependencies={}),
+    ],
+)
+def test_refuses_wrong_or_missing_resolved_environment(record):
+    with pytest.raises(AssertionError):
+        release.environment_record(json.dumps(record).encode(), "win32")
 
 
 def test_rejects_modified_archive_despite_successful_ci_metadata(staged):

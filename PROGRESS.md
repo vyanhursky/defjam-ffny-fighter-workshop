@@ -1,5 +1,22 @@
 # Progress and handoff
 
+## November 15 review — checked internal contracts
+
+B6: TypedDict contracts cover fighter/retail projects, outfits, appearance assets,
+UI art, face sculpts, performance and editor snapshots. Project functions now
+have checked arguments/returns and overloads preserving admitted project kinds;
+only the JSON admission boundary takes Any. Outfit operations are fully strict,
+with explicit optional-asset copies preserving shared/default-art behavior.
+Editor.project, the complete snapshot builder and the Story moveset notice are
+checked. CI pins mypy 1.18.2 and runs the configured adoption set on every OS.
+The untyped editor handlers and external codec/catalog helpers remain explicit
+exceptions; this is incremental checking, not whole-editor strict qualification.
+
+Validation: mypy passes four modules, Ruff passes, 303 Python tests pass/5 skip.
+A local negative probe rejects misspelled fighter/snapshot keys, a numeric outfit
+name and text instead of atlas bytes (four expected errors). No format/schema
+changes; all runtime validators remain authoritative for untrusted input.
+
 ## November 15 review — retail workflow
 
 C7/C8/C9 and retail C11/C12/C16: reuse the compact editor header/path/runtime

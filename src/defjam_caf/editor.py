@@ -14,6 +14,7 @@ from .profiles import discover
 from .storage import save_profile, export_profile, duplicate, read_archive, install_files
 from . import projects, outfits, ui_art, backups, runtimes, remembered
 from . import __version__
+from .contracts import FighterProject, Snapshot
 
 
 RETAIL_MOVESET_NOTICE = (
@@ -24,6 +25,8 @@ RETAIL_MOVESET_NOTICE = (
 
 
 class Editor:
+    project: FighterProject | None
+
     def group_label(self, slot):
         if slot == 25:
             return "Earrings (pair)"
@@ -64,7 +67,8 @@ class Editor:
         self.performance_link = None
         self.last_export = None
         self.runtime = remembered.recall(self.workspace, "runtime")
-        self.project = self.project_path = self.project_hash = None
+        self.project = None
+        self.project_path = self.project_hash = None
         self.project_origin = None
         self._clear_drafts()
         self.active_outfit = outfits.DEFAULT
@@ -320,7 +324,7 @@ class Editor:
             return self.blazin.profile_keys(apply_fields(self.base(), edits).payload)
         return [None] * 4
 
-    def retail_moveset_save(self):
+    def retail_moveset_save(self) -> str | None:
         """The notice a Story save needs acknowledged, or None.
 
         A retail moveset core (1..86) in a real Story save is only understood by game builds that carry the Story
@@ -479,8 +483,8 @@ class Editor:
             result.append("Project outfit collection changed")
         return result
 
-    def snapshot(self):
-        result = dict(
+    def snapshot(self) -> Snapshot:
+        result: Snapshot = dict(
             data=str(self.data) if self.data else None,
             profiles=[],
             selected=None,
@@ -526,14 +530,12 @@ class Editor:
             sliders=sculpt["sliders"] if sculpt else {},
             controls=[dict(id=k, label=v) for k, v in CONTROLS],
         )
-        result.update(
-            project=project_view,
-            project_path=str(self.project_path) if self.project_path else None,
-            project_origin=self.project_origin,
-            portrait_available=self.portrait_edit is not None or bool(active and "portrait" in active),
-            outfits=outfits.entries(self.project_source()) if self.project else [],
-            active_outfit=self.active_outfit,
-        )
+        result["project"] = project_view
+        result["project_path"] = str(self.project_path) if self.project_path else None
+        result["project_origin"] = self.project_origin
+        result["portrait_available"] = self.portrait_edit is not None or bool(active and "portrait" in active)
+        result["outfits"] = outfits.entries(self.project_source()) if self.project else []
+        result["active_outfit"] = self.active_outfit
         result["ui_art"] = (
             ui_art.status(self.project_document(validate=False), self.active_outfit) if self.project else None
         )
@@ -567,19 +569,18 @@ class Editor:
                 for p in self.discovery.profiles
             ]
         if self.profile or self.project:
-            result.update(
-                selected=self.project["metadata"]["name"] if self.project else self.profile.name,
-                fields=read_fields(self.current().payload),
-                changes=self.changes(),
-                dirty=(
-                    self.project_document(validate=False) != self.project
-                    if self.project
-                    else self.current().encode() != self.base().encode()
-                ),
-                undo=bool(self.history),
+            result["selected"] = self.project["metadata"]["name"] if self.project else self.profile.name
+            result["fields"] = read_fields(self.current().payload)
+            result["changes"] = self.changes()
+            result["dirty"] = (
+                self.project_document(validate=False) != self.project
+                if self.project
+                else self.current().encode() != self.base().encode()
             )
+            result["undo"] = bool(self.history)
             if self.appearance:
                 fields = result["fields"]
+                assert fields is not None
                 result["appearance_selected"] = self.appearance.selected(fields)
                 from .faces import selected
 

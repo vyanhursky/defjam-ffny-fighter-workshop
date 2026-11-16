@@ -94,8 +94,9 @@ def test_open_edit_save_and_copy_project_without_any_source_profile(tmp_path):
 def test_project_duplicate_json_keys_and_oversize_rejected(tmp_path):
     path = tmp_path / "bad.ffnyfighter"
     path.write_text('{"schema":1,"schema":2}')
-    with pytest.raises(SaveError, match="Duplicate"):
+    with pytest.raises(SaveError, match="could not be opened") as failure:
         projects.read(path)
+    assert "Duplicate project field" in failure.value.detail
     path.write_bytes(b" " * (projects.MAX_PROJECT + 1))
     with pytest.raises(SaveError, match="large"):
         projects.read(path)

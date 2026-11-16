@@ -1,6 +1,7 @@
 // Home: the front door. It only chooses a workflow; each workflow page does its own work.
 import { gameSetup } from "./setup.mjs";
 import { workshopVersion } from "./version.mjs";
+import { responseError, attachDetails } from "./errors.mjs";
 
 const $ = (id) => document.getElementById(id),
   pending = new Map();
@@ -34,6 +35,8 @@ async function act(action, args = {}, label = "Working…") {
     return result;
   } catch (error) {
     toast(error.message || String(error), true);
+    attachDetails($("toast"), error.detail);
+    if (error.detail) clearTimeout(toast.timer);
     return null;
   } finally {
     $("busy").hidden = true;
@@ -192,7 +195,7 @@ new QWebChannel(qt.webChannelTransport, (channel) => {
       task = pending.get(message.id);
     if (!task) return;
     pending.delete(message.id);
-    if (message.error) task.reject(new Error(message.error));
+    if (message.error) task.reject(responseError(message));
     else task.resolve(message.result);
   });
   refresh().catch((error) => toast(error.message || String(error), true));

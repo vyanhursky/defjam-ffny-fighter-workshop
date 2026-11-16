@@ -57,6 +57,7 @@ class Editor:
         self.movesets = None
         self.moveset_error = "Load original game assets to choose a retail moveset."
         self.preview_error = None
+        self.preview_detail = None
         self._face_preview_basis = {}
         self.performance_link = None
         self.last_export = None
@@ -179,12 +180,17 @@ class Editor:
         self.blazin = None
         self.blazin_error = "Load original game assets to choose Blazin' moves."
         self.preview_error = None
+        self.preview_detail = None
         if (data / "extracted").is_dir():
             try:
                 self.cache = build_cache(data / "extracted", self.workspace, self.progress)
                 self.appearance = Appearance(self.cache)
             except (OSError, ValueError, KeyError) as exc:
-                self.preview_error = "CAF cache could not be loaded: " + str(exc)
+                from .diagnostics import log_detail
+
+                self.preview_error = "The 3D wardrobe could not be prepared. Check Game setup."
+                self.preview_detail = str(exc)
+                log_detail(self.workspace, "CAF cache could not be loaded: " + str(exc))
         else:
             self.preview_error = "Choose the Recomp data directory containing extracted game assets for the 3D preview."
         if (data / "extracted").is_dir():
@@ -464,6 +470,7 @@ class Editor:
             style_names=STYLE_NAMES,
             limits=dict(cash=CASH_LIMIT, development=DEV_LIMIT),
             preview_error=self.preview_error,
+            preview_detail=self.preview_detail,
             preview_available=self.appearance is not None,
             groups=[],
             skins=[],
@@ -1006,8 +1013,11 @@ class Editor:
     def _request_setup_scan(self, action, args):
         folder = args.get("folder") or remembered.recall(self.workspace, "app") or runtimes.default_folder()
         if not folder or not Path(folder).is_dir():
-            return dict(folder=None, candidates=[], data=None, current=None)
-        return runtimes.scan(folder, self.recipe_format())
+            result = dict(folder=None, candidates=[], data=None, current=None)
+        else:
+            result = runtimes.scan(folder, self.recipe_format())
+        result["warning"] = remembered.take_warning(self.workspace)
+        return result
 
     def _request_setup_use(self, action, args):
         runtime = Path(args["runtime"]).resolve()

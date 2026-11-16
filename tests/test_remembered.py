@@ -5,6 +5,22 @@ import json
 from defjam_caf import remembered
 
 
+def test_corrupt_settings_are_reported_once_and_missing_settings_are_quiet(tmp_path):
+    from defjam_caf.editor import Editor
+
+    empty = tmp_path / "empty"
+    assert remembered.recall(empty, "runtime") is None
+    assert remembered.take_warning(empty) is None
+    workspace = tmp_path / "corrupt"
+    workspace.mkdir()
+    (workspace / remembered.FILE).write_text("{broken", encoding="utf-8")
+    editor = Editor(workspace)
+    result = editor.request("setup_scan", {"folder": str(workspace)})
+    assert result["warning"] == "Your remembered folders could not be read; choose them again."
+    assert editor.request("setup_scan", {"folder": str(workspace)})["warning"] is None
+    assert "Remembered settings could not be read" in (workspace / "logs/desktop.log").read_text(encoding="utf-8")
+
+
 def runtime(path):
     (path / "setup").mkdir(parents=True)
     (path / "scripts").mkdir()

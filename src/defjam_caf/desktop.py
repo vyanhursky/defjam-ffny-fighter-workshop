@@ -8,7 +8,7 @@ import sys
 import traceback
 from urllib.parse import urlencode
 
-from PySide6.QtCore import QObject, Signal, Slot, QUrl, QStandardPaths, QTimer, qInstallMessageHandler
+from PySide6.QtCore import QObject, Signal, Slot, QUrl, QStandardPaths, QTimer, Qt, qInstallMessageHandler
 from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QInputDialog, QMessageBox
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineUrlRequestInterceptor
@@ -17,6 +17,8 @@ from PySide6.QtWebChannel import QWebChannel
 
 from . import projects, remembered, retail, runtimes
 from .editor import Editor
+from .container import SaveError
+from .diagnostics import log_detail
 from .locations import default_data_directory, initial_data_directory
 
 
@@ -37,14 +39,53 @@ class Page(QWebEnginePage):
 class Bridge(QObject):
     response = Signal(str)
     progress = Signal(str)
+    _completed = Signal(str, object)
+    _progress = Signal(str)
 
     def __init__(self, window, workspace, initial):
         super().__init__(window)
         self.window = window
-        self.editor = Editor(workspace, lambda message: self.progress.emit(message))
+        self._completed.connect(self._deliver, Qt.ConnectionType.QueuedConnection)
+        self._progress.connect(self._deliver_progress, Qt.ConnectionType.QueuedConnection)
+        self.editor = Editor(workspace, self._progress.emit)
         self.initial = initial
         self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="caf-editor")
         self.busy = 0
+        self.visible_busy = 0
+        self._requests = {}
+        self._pending_navigation = None
+
+    BACKGROUND = frozenset(
+        {
+            "snapshot",
+            "home",
+            "preview",
+            "options",
+            "ui_preview",
+            "performance_audio",
+            "performance_animation",
+            "retail_snapshot",
+            "retail_preview",
+        }
+    )
+
+    @Slot(str)
+    def _deliver_progress(self, message):
+        self.progress.emit(message)
+
+    def _error(self, ident, exc):
+        detail = getattr(exc, "detail", None) or "".join(traceback.format_exception(exc))
+        message = (
+            exc.message
+            if isinstance(exc, SaveError)
+            else (
+                "The file could not be read or written. Check its folder and try again."
+                if isinstance(exc, OSError)
+                else "This operation could not be completed. Open Details for more information."
+            )
+        )
+        log_detail(self.editor.workspace, detail)
+        self.response.emit(json.dumps(dict(id=ident, error=message, detail=detail)))
 
     def runtime_folder(self, feature):
         """The game version chosen once in Game setup. Refused up front, in plain words, when it cannot do the job,
@@ -63,9 +104,15 @@ class Bridge(QObject):
     def navigate(self, ident, mode, args):
         """Move this window to Home or one of the workflows. The page reads what to do from the address fragment."""
         if mode not in self.PAGES:
-            raise ValueError("Unknown workflow")
+            raise SaveError("Unknown workflow")
+        if self.visible_busy:
+            raise SaveError("Please wait for the current operation to finish.")
         if self.busy:
-            raise ValueError("Please wait for the current operation to finish.")
+            if self._pending_navigation is not None:
+                self.response.emit(json.dumps(dict(id=ident, result=False)))
+            else:
+                self._pending_navigation = (ident, mode, args)
+            return
         editor = self.editor
         unsaved = ((editor.profile or editor.project) and editor.changes()) or editor.retail.snapshot()["dirty"]
         if (
@@ -84,15 +131,24 @@ class Bridge(QObject):
         url = QUrl.fromLocalFile(str(Path(__file__).parent / "resources" / self.PAGES[mode]))
         url.setFragment(urlencode(fragment))
         self.response.emit(json.dumps(dict(id=ident, result=True)))
+        previous = QUrl(self.window.web.url())
+        previous.setFragment("")
+        target = QUrl(url)
+        target.setFragment("")
+        fragment_change = previous == target and self.window.web.url().fragment() != url.fragment()
         self.window.web.setUrl(url)
+        if fragment_change:
+            self.window.web.reload()
 
     @Slot(str)
     def dispatch(self, raw):
         try:
             request = json.loads(raw)
             ident, action, args = request["id"], request["action"], request.get("args", {})
-            if not isinstance(ident, str) or not isinstance(args, dict):
-                raise ValueError("Invalid editor request")
+            if not isinstance(ident, str) or not isinstance(action, str) or not isinstance(args, dict):
+                raise SaveError("Invalid editor request")
+            if self._pending_navigation is not None and action not in self.BACKGROUND:
+                raise SaveError("Please wait while the workflow opens.")
             if action in ("open_home", "open_workflow", "open_retail_editor", "open_caf_editor"):
                 if action == "open_retail_editor":
                     action, args = "open_workflow", {"mode": "retail-edit", "start": "new"}
@@ -116,7 +172,7 @@ class Bridge(QObject):
                     if operation == "data":
                         data = Path(path).resolve()
                         if not (data / "extracted").is_dir():
-                            raise ValueError("Choose the data directory containing extracted")
+                            raise SaveError("Choose the data directory containing extracted")
                         remembered.remember(self.editor.workspace, "data", data)
                         session.data = data
                         session.catalog = None
@@ -171,10 +227,10 @@ class Bridge(QObject):
                     with Path(path).open("rb") as stream:
                         raw = stream.read(limit + 1)
                     if len(raw) > limit:
-                        raise ValueError("PNG exceeds " + str(limit // 1024**2) + " MiB")
+                        raise SaveError("PNG exceeds " + str(limit // 1024**2) + " MiB")
                     action, args = "retail_" + operation, {**args, "png": base64.b64encode(raw).decode("ascii")}
                 else:
-                    raise ValueError("Unsupported retail dialog")
+                    raise SaveError("Unsupported retail dialog")
             if action == "choose_setup_folder":
                 start = remembered.recall(self.editor.workspace, "app") or runtimes.default_folder() or Path.home()
                 path = QFileDialog.getExistingDirectory(
@@ -191,7 +247,7 @@ class Bridge(QObject):
                 elif args.get("target") == "export" and self.editor.last_export is not None:
                     folder = self.editor.last_export.parent
                 else:
-                    raise ValueError("There is no folder to open yet")
+                    raise SaveError("There is no folder to open yet")
                 QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
                 return self.response.emit(json.dumps(dict(id=ident, result=None)))
             if action == "boot":
@@ -212,7 +268,7 @@ class Bridge(QObject):
                 action, args = "open_data", {"path": path}
             elif action == "choose_export":
                 if self.editor.profile is None:
-                    raise ValueError("Choose a profile first")
+                    raise SaveError("Choose a profile first")
                 path, _ = QFileDialog.getSaveFileName(
                     self.window,
                     "Export complete profile",
@@ -253,7 +309,7 @@ class Bridge(QObject):
                 with Path(path).open("rb") as stream:
                     audio = stream.read(8 * 1024**2 + 1)
                 if len(audio) > 8 * 1024**2:
-                    raise ValueError("Voice clip exceeds 8 MiB")
+                    raise SaveError("Voice clip exceeds 8 MiB")
                 action, args = (
                     "performance_clip",
                     dict(target=args["target"], wav=base64.b64encode(audio).decode("ascii")),
@@ -303,7 +359,7 @@ class Bridge(QObject):
                 with Path(path).open("rb") as stream:
                     raw = stream.read(limit + 1)
                 if len(raw) > limit:
-                    raise ValueError("Atlas PNG is too large" if atlas else "Portrait PNG is too large")
+                    raise SaveError("Atlas PNG is too large" if atlas else "Portrait PNG is too large")
                 action, args = (
                     ("project_atlas", {"slot": args["slot"], "png": base64.b64encode(raw).decode("ascii")})
                     if atlas
@@ -315,7 +371,7 @@ class Bridge(QObject):
                 )
             elif action == "choose_import":
                 if self.editor.discovery is None:
-                    raise ValueError("Choose the destination data directory first")
+                    raise SaveError("Choose the destination data directory first")
                 path, _ = QFileDialog.getOpenFileName(
                     self.window, "Import complete profile", "", "FFNY profiles (*.djprofile)"
                 )
@@ -329,24 +385,34 @@ class Bridge(QObject):
                 if not ok:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "duplicate", {"name": name.strip().upper()}
-            self.busy += 1
+            if self._pending_navigation is not None:
+                return self.response.emit(json.dumps(dict(id=ident, result=None)))
             future = self.pool.submit(self.editor.request, action, args)
+            self._requests[ident] = action not in self.BACKGROUND
+            self.busy += 1
+            self.visible_busy += self._requests[ident]
             future.add_done_callback(lambda task: self.finish(ident, task))
         except Exception as exc:
-            self.response.emit(
-                json.dumps(
-                    dict(id=request.get("id", "") if isinstance(locals().get("request"), dict) else "", error=str(exc))
-                )
-            )
+            self._error(request.get("id", "") if isinstance(locals().get("request"), dict) else "", exc)
 
     def finish(self, ident, task):
+        self._completed.emit(ident, task)
+
+    @Slot(str, object)
+    def _deliver(self, ident, task):
         try:
             self.response.emit(json.dumps(dict(id=ident, result=task.result()), allow_nan=False))
         except Exception as exc:
-            traceback.print_exc()
-            self.response.emit(json.dumps(dict(id=ident, error=str(exc))))
+            self._error(ident, exc)
         finally:
             self.busy -= 1
+            self.visible_busy -= self._requests.pop(ident, False)
+        if not self.busy and self._pending_navigation is not None:
+            navigation, self._pending_navigation = self._pending_navigation, None
+            try:
+                self.navigate(*navigation)
+            except Exception as exc:
+                self._error(navigation[0], exc)
 
 
 class Window(QMainWindow):

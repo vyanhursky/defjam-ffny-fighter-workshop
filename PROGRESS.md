@@ -1,5 +1,19 @@
 # Progress and handoff
 
+## November 15 review — bridge safety, errors and navigation
+
+A5/A13/A14/A15/C17 and initial B9 coverage: worker completions and progress now
+queue into GUI slots; result encoding, response emission and busy counters stay
+on the GUI thread. Home waits for background refreshes and still guards visible
+operations/unsaved changes. Same-document workflow fragment changes reload.
+SaveError separates player text from precise detail; errors retain private logs
+and Details disclosures. Corrupt remembered folders fail open, log diagnostics
+and show a one-time Game setup notice. Preview-cache failures use plain text
+with separate detail. Validation: 247 Python tests passed, 5 skipped; 9 Node
+tests; Ruff/Prettier/diff checks. Real Windows Qt/WebChannel/WebGL2 asset-free
+startup passes (build/ui-safety/startup.json, 0.54 s). This exercises transport
+and startup, not a game-asset preview, native dialogs or gameplay.
+
 ## November 15 review — action dispatch
 
 B1: Editor and retail Session requests now use explicit action tables and

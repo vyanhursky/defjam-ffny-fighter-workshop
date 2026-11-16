@@ -346,7 +346,10 @@ def read(path):
         )
         validate(document)
     except (ValueError, TypeError, KeyError) as exc:
-        raise SaveError("Invalid fighter project: " + str(exc)) from exc
+        raise SaveError(
+            "This fighter project could not be opened. Check the file or choose another project.",
+            detail="Invalid fighter project: " + str(exc),
+        ) from exc
     return document, sha(raw)
 
 

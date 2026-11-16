@@ -12,6 +12,18 @@ the selected runtime outside the project; it is never executed from a project.
 Original
 catalogs and audition audio are read from the player's game files offline.
 
+**Stage voice settings** also prepares the selected fighter's voices in the
+background. A progress count appears under the player; editing remains available.
+Choose a clip to play it, or use **Previous clip** / **Next clip**. Turn off
+**Play when selecting a clip** to browse silently. **Audition imported** compares
+an imported override with the original. WAVs are cached privately with size
+limits and do not get embedded in the project merely because you audition them.
+
+**Save WAV…**, or the player's **Download** menu, opens a save dialog. After
+saving, Workshop displays the full path and offers **Open folder**. Cancelling
+the dialog writes nothing. This exports only the loaded audition; it does not
+export the fighter's whole voice bank or modify the game files.
+
 ## Voice
 
 Choose an independent retail voice preset, optionally override Character,

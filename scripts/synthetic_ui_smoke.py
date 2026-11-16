@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 import sys
 import time
+import wave
 from types import SimpleNamespace
 
 from PIL import Image
@@ -112,10 +113,15 @@ def main(argv=None):
 
     def save_picker(parent, title, *rest):
         pickers.append(title)
-        return ("", "") if "Mod" in title else (str(output / "fighter.ffnyfighter"), "")
+        return (
+            ("", "")
+            if "Mod" in title
+            else (str(output / ("audition.wav" if title == "Save voice clip" else "fighter.ffnyfighter")), "")
+        )
 
     QFileDialog.getSaveFileName = save_picker
     QMessageBox.question = lambda *a, **k: QMessageBox.StandardButton.Yes
+    QMessageBox.exec = lambda self: QMessageBox.StandardButton.Close
 
     class Page(desktop.Page):
         def javaScriptConfirm(self, origin, message):
@@ -136,6 +142,13 @@ def main(argv=None):
     }
     calls = Counter()
     original = editor.request
+    audio = io.BytesIO()
+    with wave.open(audio, "wb") as stream:
+        stream.setnchannels(1)
+        stream.setsampwidth(2)
+        stream.setframerate(24000)
+        stream.writeframes(b"\x10\0" * 48000)
+    audio_result = dict(mime="audio/wav", data=base64.b64encode(audio.getvalue()).decode("ascii"))
 
     def prepared(value):
         if isinstance(value, dict):
@@ -147,6 +160,9 @@ def main(argv=None):
 
     def request(action, arguments):
         calls[action] += 1
+        if action == "performance_audio":
+            time.sleep(0.15)  # Exercise playback after the initiating click returns.
+            return audio_result
         if action in ("preview", "retail_preview"):
             return preview
         if action == "retail_appearance":
@@ -168,7 +184,7 @@ def main(argv=None):
                     "The catalogs could not be loaded. Retry or check Game setup.",
                     "Invented catalog failure for retry coverage",
                 )
-            editor.performance_link = SimpleNamespace(catalog=catalog)
+            editor.performance_link = SimpleNamespace(catalog=catalog, call=lambda *args: dict(valid=True))
             return prepared(editor.snapshot())
         if action == "donors":
             return dict(donors=catalog["fighters"])
@@ -243,6 +259,26 @@ def main(argv=None):
             "AI catalog reuse",
             "document.getElementById('ai-sliders').children.length>0",
             "document.querySelector('[data-tab=ai]').click()",
+        ),
+        (
+            "Stage and prepare voice clips",
+            "window.__cafState?.performance.settings.voice && document.getElementById('voice-preload-status').textContent.includes('clips prepared')",
+            "document.querySelector('[data-tab=voice]').click();document.getElementById('voice-apply').click()",
+        ),
+        (
+            "Voice starts without a separate Play click",
+            "!document.getElementById('voice-audio').paused && document.getElementById('voice-audio').currentTime>0",
+            "document.getElementById('voice-play').click()",
+        ),
+        (
+            "Next clip plays immediately",
+            "document.getElementById('voice-slot').selectedIndex===1 && !document.getElementById('voice-audio').paused && document.getElementById('voice-audio').currentTime>0",
+            "document.getElementById('voice-next').click()",
+        ),
+        (
+            "WAV save through native download handling",
+            "!document.getElementById('voice-save').disabled",
+            "document.getElementById('voice-save').click()",
         ),
         (
             "Named UI donors",
@@ -343,8 +379,12 @@ def main(argv=None):
             assert saved.payload[0x3210:0x321B] == b"STORY BYTES"
             assert len(list((workspace / "backups").glob("*.djprofile"))) == 1
             assert calls["performance_connect"] == 2
+            assert calls["performance_audio"] == 6  # Both playback actions reused the prepared clips.
             assert calls["retail_appearance"] == calls["retail_preview"] == 1
             assert any("Mod" in title for title in pickers)
+            assert "Save voice clip" in pickers
+            with wave.open(str(output / "audition.wav"), "rb") as saved_audio:
+                assert saved_audio.getnframes() == 48000
             assert len(projects.read(output / "fighter.ffnyfighter")[0]["outfits"]) == 1
         except Exception as exc:
             error = error or repr(exc)

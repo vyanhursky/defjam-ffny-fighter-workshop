@@ -362,6 +362,12 @@
               ><button id="voice-play-imported">Audition imported</button>
             </div>
             <audio id="voice-audio" controls="" preload="none"></audio>
+            <div class="two-cols">
+              <button id="voice-previous">Previous clip</button><button id="voice-next">Next clip</button>
+            </div>
+            <label class="hint"><input id="voice-auto" type="checkbox" checked /> Play when selecting a clip</label>
+            <button id="voice-save" disabled>Save WAV…</button>
+            <p id="voice-preload-status" class="hint" role="status"></p>
             <p id="voice-clip-status" class="hint"></p>
             <div class="two-cols">
               <button id="voice-import">Import WAV</button><button id="voice-clear-clip">Clear clip override</button>

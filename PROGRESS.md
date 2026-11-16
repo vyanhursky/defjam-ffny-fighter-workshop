@@ -1,5 +1,33 @@
 # Progress and handoff
 
+## November 16 playtest — voice audition preparation and WAV saving
+
+Owner authorized shared standalone CAF/retail menu parity and faster voice
+auditioning, with runtime-dependent animation/outfit work last. First Workshop-only
+phase: Stage voice settings prepares every selected bank and cataloged speech
+stream in the background; previous/next and selection autoplay avoid repeated
+load/play clicks. Request deduplication, generation checks and bounded caches
+(32 MiB frontend, 128 MiB private WAV disk cache) prevent stale playback and
+unbounded retention. Cached audio stays outside projects and mod exports.
+Unrelated snapshots no longer pause voice audio or reset active animation.
+
+The native audio Download menu previously had no Qt handler and silently cancelled.
+Both that menu and Save WAV now choose a destination, validate/write WAV through
+the app's bounded atomic writer, then show the path and Open folder. Chromium's
+temporary download writer is bypassed, and unsupported/nonlocal downloads refused.
+Qt explicitly permits playback after the initiating click's async local decode.
+
+Validation: 35-check real Windows synthetic Qt/WebChannel/WebGL/audio tour passes
+at 1100×760 and 1440×940, including background preparation, automatic playback,
+Next and an actual saved WAV. Resource/picker boundaries are adapters; no native
+game acceptance. 22 Node tests pass; targeted cache/download/editor tests pass;
+Ruff/mypy pass. One real read-only Warren G audition matches cached bytes exactly:
+0.6104s cold versus 0.0089s cached (private build/voice-real-cache receipt).
+Requested private export: 215 WAVs (Warren G72, Trick77, Mack10 66), all validated,
+with category folders and CSV. Downloads write was denied despite escalation;
+owner will move the completed untracked build/DefJam-Voice-Lines-2026-11-16 folder.
+No original game files changed and no audio/captures are tracked or uploaded.
+
 ## November 15 review — final A–C integration and documentation
 
 All 41 A–C items have independent assessments and source PRs; Part E is deferred.

@@ -13,7 +13,10 @@ RECOMP_KEY = bytes(16)
 
 
 class SaveError(ValueError):
-    pass
+    def __init__(self, message, detail=None):
+        super().__init__(message)
+        self.message = message
+        self.detail = detail
 
 
 def digest(data: bytes) -> bytes:

@@ -5,6 +5,7 @@ import { blendFace, faceDraft as makeFaceDraft } from "./face-preview.mjs";
 import { performanceEditor } from "./performance.mjs";
 import { gameSetup } from "./setup.mjs";
 import { workshopVersion } from "./version.mjs";
+import { responseError, attachDetails } from "./errors.mjs";
 
 const $ = (id) => document.getElementById(id);
 // Home chooses a workflow and passes it in the address fragment: story (Story saves) or caf (a fighter project from a Create-a-Fighter).
@@ -84,6 +85,11 @@ function call(action, args = {}, label = null) {
 function fail(error) {
   if (/Game setup/.test(error.message || "")) setup.open(current?.setup);
   toast(error.message || String(error), true);
+  if (error.detail) {
+    record(error.detail, true);
+    attachDetails($("toast"), error.detail);
+    clearTimeout(toast.timer);
+  }
   $("status-message").textContent = "Operation could not be completed · see Messages";
   $("status-message").classList.add("error");
 }
@@ -951,6 +957,7 @@ async function updatePreview(epoch) {
     $("empty").querySelector("h3").textContent = current?.selected ? "No preview available" : "Your fighter, your way.";
     $("empty").querySelector("p").textContent =
       current?.preview_error || "Create a Story fighter in the game to begin editing.";
+    attachDetails($("empty"), current?.preview_detail);
     window.__cafPreview = { ready: false };
     return;
   }
@@ -1258,7 +1265,7 @@ new QWebChannel(qt.webChannelTransport, (channel) => {
       busyCount--;
       $("busy").hidden = busyCount <= 0;
     }
-    if (message.error) task.reject(new Error(message.error));
+    if (message.error) task.reject(responseError(message));
     else task.resolve(message.result);
   });
   bridge.progress.connect((message) => {

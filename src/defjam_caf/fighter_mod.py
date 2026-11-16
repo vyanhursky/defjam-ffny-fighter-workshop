@@ -59,7 +59,10 @@ def contract(runtime, arguments, temporary, workspace):
         raise SaveError("Fighter runtime validation timed out; no mod was published") from exc
     output = helper_output.read_text(encoding="utf-8") if helper_output.is_file() else result.stdout
     if result.returncode:
-        raise SaveError("Fighter runtime validation refused the export: " + (result.stderr or output)[-3000:])
+        raise SaveError(
+            "Your game could not validate this fighter export. Review the project and game version.",
+            detail="Fighter runtime validation refused the export: " + (result.stderr or output)[-3000:],
+        )
     try:
         report = json.loads(output)
     except (ValueError, TypeError) as exc:

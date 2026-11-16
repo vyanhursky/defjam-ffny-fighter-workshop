@@ -17,6 +17,7 @@ export function gameSetup({ call, act }) {
     <div class="setup-row"><code id="setup-data">Not chosen yet</code><button id="setup-data-change">Choose…</button></div>
     <p class="hint">The folder with <b>extracted</b> and <b>save</b> in it. It is normally the <b>data</b> folder inside your game folder, so it is filled in for you.</p>
     <h4>Workshop files</h4><p class="hint">Backups and the private asset cache live here:</p><code id="setup-workspace"></code>
+    <p id="setup-warning" class="hint error" aria-live="polite"></p>
     <p id="setup-message" class="hint" aria-live="polite"></p>
     <div class="dialog-actions"><button id="setup-cancel" class="quiet">Later</button><button id="setup-use" class="primary">Use these settings</button></div>`;
   document.body.append(dialog);
@@ -53,6 +54,7 @@ export function gameSetup({ call, act }) {
 
   function show(result) {
     scan = result;
+    if (scan.warning) $("setup-warning").textContent = scan.warning;
     $("setup-folder").textContent = scan.folder || "Not found yet — use Browse…";
     $("setup-version").replaceChildren(
       ...scan.candidates.map(

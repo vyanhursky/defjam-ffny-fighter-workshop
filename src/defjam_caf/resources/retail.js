@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "./vendor/OrbitControls.js";
 import { gameSetup } from "./setup.mjs";
 import { workshopVersion } from "./version.mjs";
+import { responseError, attachDetails } from "./errors.mjs";
 const $ = (id) => document.getElementById(id),
   pending = new Map();
 let serial = 0,
@@ -78,6 +79,8 @@ async function act(action, args = {}, label = "Updating fighter…") {
   } catch (e) {
     if (/Game setup/.test(e.message)) setup.open(state?.setup);
     status(e.message, true);
+    attachDetails($("toast"), e.detail);
+    if (e.detail) clearTimeout(status.timer);
     return null;
   } finally {
     $("busy").hidden = true;
@@ -404,7 +407,7 @@ new QWebChannel(qt.webChannelTransport, (channel) => {
       task = pending.get(r.id);
     if (!task) return;
     pending.delete(r.id);
-    if (r.error) task.reject(new Error(r.error));
+    if (r.error) task.reject(responseError(r));
     else task.resolve(r.result);
   });
   act("retail_snapshot").then(startFlow);

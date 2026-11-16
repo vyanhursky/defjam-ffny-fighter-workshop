@@ -8,17 +8,38 @@ import json
 from pathlib import Path
 
 from .storage import atomic_bytes
+from .diagnostics import log_detail
 
 FILE = "remembered.json"
 KEYS = ("data", "runtime", "app")
+_reported = set()
+_pending = {}
 
 
 def _read(workspace):
+    path = Path(workspace) / FILE
     try:
-        value = json.loads((Path(workspace) / FILE).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise ValueError("Remembered settings must be an object")
+    except FileNotFoundError:
         return {}
-    return value if isinstance(value, dict) else {}
+    except (OSError, ValueError) as exc:
+        key = str(path.resolve())
+        try:
+            stamp = (key, path.stat().st_mtime_ns, path.stat().st_size)
+        except OSError:
+            stamp = (key, None, None)
+        if stamp not in _reported:
+            _reported.add(stamp)
+            _pending[key] = "Your remembered folders could not be read; choose them again."
+            log_detail(workspace, f"Remembered settings could not be read: {exc}")
+        return {}
+    return value
+
+
+def take_warning(workspace):
+    return _pending.pop(str((Path(workspace) / FILE).resolve()), None)
 
 
 def runtime_ok(path):

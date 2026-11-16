@@ -99,7 +99,7 @@ this review. No runtime merge, packaged release or game launch was performed.
 
 ### Integrated validation and limits
 
-- Windows integrated source: **310 Python tests passed, 5 skipped**; **19 Node
+- Windows integrated source: **311 Python tests passed, 5 skipped**; **19 Node
   tests passed**; configured mypy adoption set, Ruff and Prettier pass. The static
   negative probe rejects wrong fighter/snapshot keys and incompatible argument
   types. The 5 Python skips are target-specific platform checks, not hidden failures.

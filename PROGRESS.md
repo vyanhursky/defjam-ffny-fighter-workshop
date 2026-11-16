@@ -9,7 +9,7 @@ merge order, per-item decisions, measured improvements and qualification limits.
 Docs distinguish published Beta 2 packages from current workflow updates, remove
 stale manual catalog steps and synchronize CAF/retail/performance walkthroughs.
 
-Integrated Windows source: 310 Python tests passed/5 skipped, 19 Node tests,
+Integrated Windows source: 311 Python tests passed/5 skipped, 19 Node tests,
 mypy/Ruff/Prettier pass. The 31-step synthetic Windows Qt/WebChannel/WebGL tour
 passes both review sizes; Linux PR/nightly tour adds independent software-graphics
 coverage. Original-resource and picker boundaries are adapters, not native game

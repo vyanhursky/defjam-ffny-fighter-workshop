@@ -15,7 +15,7 @@ import tempfile
 import uuid
 import zipfile
 
-from . import projects, ui_art
+from . import projects, ui_art, retail_outfits
 from .container import SaveError
 
 # One retail project schema; a deployment target is an optional section. Projects saved before it existed
@@ -134,6 +134,7 @@ def validate(document):
         == {"schema", "identity", "metadata", "definition", "resources", "assets", "ui_art", "textures"}
         | ({"deployment"} if has_deployment else set())
         | ({"performance"} if has_performance else set())
+        | (set(document) & {"outfit_name", "outfits"})
         and document["schema"] in READABLE_SCHEMAS,
         "Unsupported retail fighter project fields",
     )
@@ -242,6 +243,8 @@ def validate(document):
     for name, value in textures.items():
         projects.require(re.fullmatch("[A-Za-z0-9_]{4}", name) is not None, "Choose a four-character texture shape")
         used += len(texture_bytes(value))
+    if "outfits" in document or "outfit_name" in document:
+        used += retail_outfits.validate(document)
     projects.require(used <= MAX_TOTAL, "Combined native assets and PNG artwork exceed 64 MiB")
     document["schema"] = SCHEMA
     return document
@@ -279,15 +282,58 @@ def read_manifest(folder):
     return manifest
 
 
-def import_pack(folder, fighter_id):
+def import_pack(folder, fighter_id, *, manifest_override=None, include_outfits=True):
     """Read one ordinary fighter and its hash-bound transitive JSON assets."""
     folder = Path(folder).resolve()
-    manifest = read_manifest(folder)
+    manifest = read_manifest(folder) if manifest_override is None else manifest_override
     projects.require(
         manifest.get("schema") == "fighter-registry-draft-1" and not manifest.get("requires"),
         "Import an independent fighter pack without dependencies",
     )
     fighter = next((f for f in manifest["fighters"] if f["id"] == fighter_id), None)
+    if include_outfits and fighter:
+        parent_key = fighter.get("outfit_of", "")
+        if parent_key.startswith(manifest["id"] + "/"):
+            fighter_id = parent_key.split("/", 1)[1]
+            fighter = next((f for f in manifest["fighters"] if f["id"] == fighter_id), None)
+            projects.require(fighter is not None and "outfit_of" not in fighter, "Invalid standalone outfit parent")
+        children = [f for f in manifest["fighters"] if f.get("outfit_of") == manifest["id"] + "/" + fighter_id]
+        if children:
+            projects.require(
+                len(children) <= 2 and not fighter.get("outfit_of"), "Invalid standalone outfit collection"
+            )
+            result = import_pack(folder, fighter_id, manifest_override=manifest, include_outfits=False)
+            result["outfits"] = []
+            for child in children:
+                projects.require(
+                    child.get("inherits") == manifest["id"] + "/" + fighter_id
+                    and set(child["components"]) <= {"appearance", "portrait"},
+                    "Imported outfits must inherit their parent's combat",
+                )
+                flattened = copy.deepcopy(manifest)
+                definition = dict(fighter["components"], **child["components"])
+                flattened["fighters"] = [
+                    dict(id=child["id"], name=child["name"], inherits=fighter["inherits"], components=definition)
+                ]
+                item = import_pack(folder, child["id"], manifest_override=flattened, include_outfits=False)
+                for resource in item["resources"]:
+                    if not any(r["id"] == resource["id"] for r in result["resources"]):
+                        result["resources"].append(resource)
+                for name, value in item["assets"].items():
+                    projects.require(
+                        name not in result["assets"] or result["assets"][name] == value, "Conflicting outfit asset"
+                    )
+                    result["assets"][name] = value
+                result["outfits"].append(
+                    dict(
+                        id=child["id"],
+                        name=child["name"],
+                        components={k: v for k, v in definition.items() if k in ("appearance", "portrait")},
+                        textures={},
+                        ui_art=copy.deepcopy(item["ui_art"]),
+                    )
+                )
+            return validate(result)
     deployment = None
     if manifest.get("overrides"):
         rows = manifest["overrides"]
@@ -393,6 +439,7 @@ class Session:
         self.digest = None
         self.history = []
         self.draft = None
+        self.active_outfit = "default"
 
     def effective(self):
         document = copy.deepcopy(self.document)
@@ -428,6 +475,15 @@ class Session:
         self.draft = None
         return self.snapshot()
 
+    def selected(self, document):
+        return retail_outfits.node(document, self.active_outfit)
+
+    def appearance_components(self, document):
+        return retail_outfits.components(document, self.active_outfit)
+
+    def selected_view(self):
+        return retail_outfits.view(self.effective(), self.active_outfit)
+
     def snapshot(self):
         from . import performance
 
@@ -439,6 +495,11 @@ class Session:
             ]
         view = self.effective()
         dirty = view != self.saved
+        outfits = retail_outfits.rows(view) if view is not None else []
+        if not any(row["id"] == self.active_outfit for row in outfits):
+            self.active_outfit = "default"
+        if view is not None:
+            view = retail_outfits.view(view, self.active_outfit)
         settings = performance.status(view.pop("performance", None)) if view is not None else {}
         if view is not None:
             view["asset_count"] = len(view.pop("assets"))
@@ -446,6 +507,8 @@ class Session:
         runtime = self.shared_runtime()
         return {
             "retail": True,
+            "outfits": outfits,
+            "active_outfit": self.active_outfit,
             "data": str(data) if data else None,
             "runtime": str(runtime) if runtime else None,
             "setup": self.owner.setup_view(),
@@ -570,6 +633,17 @@ class Session:
                     tab="setup",
                 )
             )
+        if document.get("outfits"):
+            supported = bool(runtime and "standalone-retail-outfits-1" in runtime.get("extensions", []))
+            checks.append(
+                dict(
+                    label="All outfits will share one fighter and combat settings."
+                    if supported
+                    else "Multiple outfits need a game version with standalone outfit support in Game setup.",
+                    status="pass" if supported else "fail",
+                    tab="setup",
+                )
+            )
         try:
             validate(document)
             checks.append(dict(label="Project details and imported assets are valid.", status="pass", tab="project"))
@@ -679,6 +753,7 @@ class Session:
         self.digest = digest if action == "open" else None
         self.history = []
         self.draft = None
+        self.active_outfit = "default"
         if action == "new" and args.get("mode", "add") != "add":
             self.document["deployment"] = dict(mode=args["mode"], target=args["donor"])
             validate(self.document)
@@ -744,10 +819,25 @@ class Session:
     def _request_component(self, action, args, workspace, candidate=None):
         key = args["component"]
         projects.require(key in KINDS, "Unknown fighter component")
+        components = (
+            self.appearance_components(candidate)
+            if key in ("appearance", "portrait")
+            else candidate["definition"]["components"]
+        )
         if args.get("resource"):
-            candidate["definition"]["components"][key] = args["resource"]
+            components[key] = args["resource"]
         else:
-            candidate["definition"]["components"].pop(key, None)
+            components.pop(key, None)
+        return self.commit(candidate)
+
+    def _request_outfit(self, action, args, workspace, candidate=None):
+        if action == "outfit_select":
+            retail_outfits.node(candidate, args["id"])
+            self.active_outfit = args["id"]
+            return self.snapshot()
+        identity = retail_outfits.edit(candidate, self.active_outfit, action.removeprefix("outfit_"), args)
+        validate(candidate)
+        self.active_outfit = identity
         return self.commit(candidate)
 
     def _request_stats(self, action, args, workspace, candidate=None):
@@ -755,6 +845,8 @@ class Session:
         return self.commit(candidate)
 
     def _request_ui(self, action, args, workspace, candidate=None):
+        document = candidate
+        candidate = self.selected(candidate)
         role = args["role"]
         projects.require(role in ui_art.ROLES, "Unknown artwork role")
         if args.get("png"):
@@ -767,24 +859,27 @@ class Session:
             candidate["ui_art"]["images"][role] = args["png"]
         else:
             candidate["ui_art"]["images"].pop(role, None)
-        return self.commit(candidate)
+        return self.commit(document)
 
     def _request_ui_settings(self, action, args, workspace, candidate=None):
-        candidate["ui_art"].update(donor=args["donor"], hd_scale=args["hd_scale"])
+        self.selected(candidate)["ui_art"].update(donor=args["donor"], hd_scale=args["hd_scale"])
         return self.commit(candidate)
 
     def _request_texture(self, action, args, workspace, candidate=None):
+        document = candidate
+        candidate = self.selected(candidate)
         if args.get("png"):
             candidate["textures"][args["shape"]] = args["png"]
         else:
             candidate["textures"].pop(args["shape"], None)
-        return self.commit(candidate)
+        return self.commit(document)
 
     def _request_preview(self, action, args, workspace, candidate=None):
         with tempfile.TemporaryDirectory(prefix="retail-", dir=workspace) as temporary:
             root = Path(temporary) / self.document["identity"]["pack"]
             root.mkdir()
             if action == "appearance":
+                resource_id = "retail-body-" + uuid.uuid4().hex[:12]
                 output = Path(temporary) / "appearance"
                 report = self.api(
                     [
@@ -799,24 +894,25 @@ class Session:
                     temporary,
                 )
                 resource = {
-                    "id": "retail-body",
+                    "id": resource_id,
                     "kind": "appearance",
                     "compatibility": {"skeleton": "retail/binding-" + args["donor"].split("/")[1]},
                     "source": report["source"],
                 }
                 resource["source"].update(
                     format="eagl-appearance-2",
-                    shape_names=texture_namespace(candidate["identity"]["pack"], "retail-body", report["shapes"]),
+                    shape_names=texture_namespace(candidate["identity"]["pack"], resource_id, report["shapes"]),
                 )
                 for spec in descriptors(resource):
                     raw = (output / spec["path"]).read_bytes()
-                    spec["path"] = "retail-body/" + spec["path"]
+                    spec["path"] = resource_id + "/" + spec["path"]
                     candidate["assets"][spec["path"]] = blob(raw)
-                candidate["resources"] = [r for r in candidate["resources"] if r["id"] != "retail-body"] + [resource]
-                candidate["definition"]["components"]["appearance"] = candidate["identity"]["pack"] + "/retail-body"
-                candidate["textures"] = {}
+                candidate["resources"].append(resource)
+                self.appearance_components(candidate)["appearance"] = candidate["identity"]["pack"] + "/" + resource_id
+                self.selected(candidate)["textures"] = {}
+                self.prune_appearance_assets(candidate)
                 return self.commit(candidate)
-            self.stage(root, temporary, include_performance=action != "preview")
+            self.stage(root, temporary, include_performance=action != "preview", collection=action != "preview")
             if action == "preview":
                 report = self.api(["preview-fighter", "--game", str(self.game()), "--pack", str(root)], temporary)
                 return report["preview"]
@@ -866,6 +962,10 @@ class Session:
         "performance_clear": _request_performance_set,
         "performance_clip": _request_performance_set,
         "component": _request_component,
+        "outfit_select": _request_outfit,
+        "outfit_copy": _request_outfit,
+        "outfit_rename": _request_outfit,
+        "outfit_remove": _request_outfit,
         "stats": _request_stats,
         "ui": _request_ui,
         "ui_settings": _request_ui_settings,
@@ -875,8 +975,40 @@ class Session:
         "export": _request_preview,
     }
 
-    def stage(self, root, temporary, *, include_performance=True):
+    def prune_appearance_assets(self, document):
+        used = {v for k, v in document["definition"]["components"].items() if k in KINDS}
+        for row in document.get("outfits", []):
+            used.update(row["components"].values())
+        ids = {v.split("/", 1)[1] for v in used if not v.startswith("retail/")}
+        document["resources"] = [r for r in document["resources"] if r["kind"] != "appearance" or r["id"] in ids]
+        needed = set()
+        queue = list(descriptors(document["resources"]))
+        while queue:
+            spec = queue.pop()
+            name = spec["path"]
+            if name in needed:
+                continue
+            needed.add(name)
+            if name.endswith(".json"):
+                queue.extend(
+                    descriptors(json.loads(unblob(document["assets"][name]), object_pairs_hook=projects.unique))
+                )
+        document["assets"] = {k: v for k, v in document["assets"].items() if k in needed}
+
+    def stage(self, root, temporary, *, include_performance=True, collection=False):
         document = self.effective()
+        if collection and document.get("outfits"):
+            from . import runtimes
+
+            projects.require(
+                "standalone-retail-outfits-1"
+                in runtimes.inspect(self.shared_runtime(), self.owner.recipe_format())["extensions"],
+                "Multiple outfits need a game version with standalone outfit support in Game setup.",
+            )
+            return retail_outfits.stage(self, root, temporary, document)
+        return self.stage_one(root, temporary, self.selected_view(), include_performance=include_performance)
+
+    def stage_one(self, root, temporary, document, *, include_performance=True, suffix=""):
         native = manifest(document)
         for name, value in document["assets"].items():
             path = root / relative(name)
@@ -885,7 +1017,7 @@ class Session:
         if document["textures"]:
             spec = {
                 name: {
-                    "path": "texture-imports/" + name + ".png",
+                    "path": "texture-imports/" + (suffix + "/" if suffix else "") + name + ".png",
                     "sha256": hashlib.sha256(texture_bytes(value)).hexdigest(),
                 }
                 for name, value in document["textures"].items()
@@ -923,9 +1055,10 @@ class Session:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(raw)
                 source["images"][role] = {"path": name, "sha256": hashlib.sha256(raw).hexdigest()}
-            native["resources"] = [r for r in native["resources"] if r["id"] != "workshop-ui"]
-            native["resources"].append({"id": "workshop-ui", "kind": "portrait", "compatibility": {}, "source": source})
-            native["fighters"][0]["components"]["portrait"] = native["id"] + "/workshop-ui"
+            resource_id = "workshop-ui" + ("-" + suffix if suffix else "")
+            native["resources"] = [r for r in native["resources"] if r["id"] != resource_id]
+            native["resources"].append({"id": resource_id, "kind": "portrait", "compatibility": {}, "source": source})
+            native["fighters"][0]["components"]["portrait"] = native["id"] + "/" + resource_id
         if include_performance and document.get("performance"):
             from .performance_exports import export_settings
 

@@ -55,7 +55,12 @@ def fixtures(output):
     (runtime / "setup/fighter_caf.py").write_text("FORMAT = 'caf-fighter-1'\n")
     (runtime / "scripts/fighter-contract.json").write_text(
         json.dumps(
-            dict(api=1, commands=commands, recipe_format="caf-fighter-1", extensions=["retail-animation-preview-1"])
+            dict(
+                api=1,
+                commands=commands,
+                recipe_format="caf-fighter-1",
+                extensions=["retail-animation-preview-1", "standalone-retail-outfits-1"],
+            )
         )
     )
     png = io.BytesIO()
@@ -422,6 +427,26 @@ def main(argv=None):
         ),
         ("Retail animation stop", "window.__cafAnimation===null", "document.getElementById('animation-stop').click()"),
         (
+            "Retail outfit copy",
+            "window.__retailState?.outfits.length===2 && window.__retailState.active_outfit!=='default' && document.getElementById('preview-outfit').options.length===2 && document.getElementById('preview-outfit').getBoundingClientRect().bottom<=document.getElementById('viewport').getBoundingClientRect().top && window.__retailPreview?.ready",
+            "document.getElementById('outfit-copy').click()",
+        ),
+        (
+            "Retail outfit rename",
+            "window.__retailState?.outfits[1].name==='Jacket' && document.getElementById('preview-outfit').selectedOptions[0].text.includes('Jacket')",
+            "let e=document.getElementById('outfit-name');e.value='Jacket';e.dispatchEvent(new Event('change'))",
+        ),
+        (
+            "Retail third outfit limit",
+            "window.__retailState?.outfits.length===3 && document.getElementById('outfit-copy').disabled",
+            "document.getElementById('outfit-copy').click()",
+        ),
+        (
+            "Retail outfit removal",
+            "window.__retailState?.outfits.length===2 && window.__retailState.active_outfit==='default' && document.getElementById('outfit-remove').disabled",
+            "document.getElementById('outfit-remove').click()",
+        ),
+        (
             "Retail moves preserve stats and performance",
             "window.__retailState?.document.definition.inherits==='retail/blaze' && window.__retailState.document.definition.components.stats.health===20 && window.__retailState.performance.settings.voice.preset==='retail/teck'",
             "document.querySelector('[data-panel=combat]').click();document.getElementById('combat-donor').value='retail/blaze';document.getElementById('combat').click()",
@@ -483,7 +508,7 @@ def main(argv=None):
             assert calls["performance_audio"] == 6  # Both playback actions reused the prepared clips.
             assert calls["retail_performance_audio"] == 6
             assert calls["retail_performance_connect"] == 1
-            assert calls["retail_appearance"] == calls["retail_preview"] == 1
+            assert calls["retail_appearance"] == 1 and calls["retail_preview"] == 4
             assert any("Mod" in title for title in pickers)
             assert "Save voice clip" in pickers
             with wave.open(str(output / "audition.wav"), "rb") as saved_audio:

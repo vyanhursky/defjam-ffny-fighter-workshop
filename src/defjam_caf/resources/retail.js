@@ -1,3 +1,4 @@
+import { createTabs } from "./tabs.mjs";
 import { unpackPreview, geometryFor } from "./geometry.mjs";
 import { createStage, disposeModel, frameStage } from "./three-stage.mjs";
 import { createBridge } from "./bridge.mjs";
@@ -18,7 +19,8 @@ let state,
   shapeRows = [],
   epoch = 0,
   detailDraft = null,
-  draftTimer;
+  draftTimer,
+  renderedPack;
 // Home chooses the workflow: retail-new (a new fighter from a retail fighter) or retail-edit (change a retail fighter).
 const params = new URLSearchParams(location.hash.slice(1)),
   workflow = params.get("mode") === "retail-edit" ? "retail-edit" : "retail-new",
@@ -107,13 +109,20 @@ function render(s) {
   window.__retailState = s;
   const d = s.document,
     selected = d?.definition.inherits;
+  document.body.dataset.hasProject = String(Boolean(d));
+  if (renderedPack !== d?.identity.pack) {
+    renderedPack = d?.identity.pack;
+    $("retail-start").open = !d;
+    clearPreview();
+  }
+  $("empty-body").disabled = $("empty-preview").disabled = !d;
   {
     const chip = setup.chip(s.setup);
     $("setup-open").textContent = chip.text;
     $("setup-open").className = "chip " + chip.state;
     setup.offer(s.setup);
   }
-  $("version").textContent = workshopVersion(s.setup.version);
+  $("workshop-version").textContent = workshopVersion(s.setup.version);
   $("connection").textContent = s.data || "No game data chosen yet";
   $("saved").textContent = s.dirty ? "● Unsaved changes" : d ? "● Saved project" : "No project";
   for (const id of ["base-donor", "body-donor", "combat-donor", "ui-donor", "deployment-target"])
@@ -129,6 +138,8 @@ function render(s) {
             : null,
     );
   $("new").disabled = !s.donors.length;
+  if (d && !$("body-donor").value) $("body-donor").value = d.metadata.donor;
+  donorSummary();
   $("import").disabled = !s.runtime;
   $("fighter-name").textContent = d?.metadata.name || "YOUR FIGHTER";
   $("project-path").textContent = s.path || "Save a portable .ffnyfighter project.";
@@ -261,23 +272,58 @@ for (const id of ["name", "author", "version", "description", "license", "pack",
     };
     draftTimer = setTimeout(send, 120);
   };
-for (const button of document.querySelectorAll("[data-panel]"))
-  button.onclick = () => {
-    for (const section of document.querySelectorAll("[data-content]"))
-      section.hidden = section.dataset.content !== button.dataset.panel;
-    for (const item of document.querySelectorAll("[data-panel]")) item.classList.toggle("active", item === button);
+createTabs({
+  root: document.querySelector(".retail-right"),
+  buttons: "[data-panel]",
+  panels: "[data-content]",
+  key: "panel",
+  panelKey: "content",
+  onSelect(name) {
     if (
-      button.dataset.panel === "textures" &&
+      name === "textures" &&
       !shapeRows.length &&
       state?.document?.definition.components.appearance &&
       !$("preview").disabled
     )
       $("preview").click();
-  };
+  },
+});
+try {
+  $("retail-workflow").open = !localStorage.getItem("retail-guide-seen");
+  localStorage.setItem("retail-guide-seen", "1");
+} catch {
+  $("retail-workflow").open = true;
+}
+$("new-open").onclick = () => {
+  $("retail-start").open = true;
+  $("base-donor").focus();
+};
+$("base-donor").onchange = () => {
+  for (const id of ["deployment-target", "combat-donor", "body-donor", "ui-donor"]) $(id).value = $("base-donor").value;
+  donorSummary();
+};
+function donorSummary() {
+  const label = (id) => $(id).selectedOptions[0]?.textContent || "Not connected";
+  $("donor-summary").textContent =
+    `Combat: ${label("combat-donor")} · Body to import: ${label("body-donor")} · UI: ${label("ui-donor")}`;
+}
+for (const id of ["combat-donor", "body-donor", "ui-donor"]) $(id).onchange = donorSummary;
+document.addEventListener("keydown", (event) => {
+  if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+  const id = event.key.toLowerCase() === "s" ? "save" : event.key.toLowerCase() === "z" ? "undo" : null;
+  if (id) {
+    event.preventDefault();
+    if (!$(id).disabled) $(id).click();
+  }
+});
 $("home").onclick = () => act("open_home");
 window.__retailAct = (...args) => act(...args);
 $("new").onclick = () => {
-  if (discard()) act("retail_new", { donor: $("base-donor").value, mode: $("deployment-mode").value });
+  if (discard()) {
+    const donor = $("base-donor").value;
+    $("body-donor").value = donor;
+    act("retail_new", { donor, mode: $("deployment-mode").value });
+  }
 };
 $("open").onclick = () => {
   if (discard()) act("choose_retail_open");
@@ -299,8 +345,19 @@ $("details").onclick = () => {
 $("apply-deployment").onclick = () =>
   act("retail_deployment", { mode: $("deployment-mode").value, target: $("deployment-target").value });
 $("combat").onclick = () => act("retail_combat", { donor: $("combat-donor").value });
-$("body").onclick = () =>
-  act("retail_appearance", { donor: $("body-donor").value }, "Importing original model resources…");
+$("body").onclick = async () => {
+  const result = await act(
+    "retail_appearance",
+    { donor: $("body-donor").value },
+    "Importing original model resources…",
+  );
+  if (result?.retail) {
+    clearPreview();
+    $("preview").click();
+  }
+};
+$("empty-body").onclick = () => $("body").click();
+$("empty-preview").onclick = () => $("preview").click();
 $("apply-stats").onclick = () =>
   act("retail_stats", {
     stats: Object.fromEntries(
@@ -325,6 +382,17 @@ const model = new THREE.Group();
 scene.add(model);
 let bounds,
   images = [];
+function clearPreview() {
+  disposeModel(model);
+  for (const image of images) image.dispose();
+  images = [];
+  shapeRows = [];
+  bounds = null;
+  epoch++;
+  window.__retailPreview = { ready: false };
+  $("preview-empty").hidden = false;
+  $("preview-note").textContent = "";
+}
 function frame(direction = 1) {
   frameStage({
     THREE,
@@ -380,6 +448,7 @@ $("preview").onclick = async () => {
   $("shape").disabled = !state?.document;
   frame();
   $("preview-note").textContent = result.notices.join(" · ");
+  $("preview-empty").hidden = true;
   window.__retailPreview = { ready: true, meshes: result.meshes.length, shapes: result.shapes };
 };
 

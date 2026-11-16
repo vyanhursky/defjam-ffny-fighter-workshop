@@ -20,12 +20,13 @@ TAG = "v0.1.0-beta.1"
 
 
 @pytest.fixture
-def staged(tmp_path):
+def staged(tmp_path, request):
+    version = getattr(request, "param", "0.1.0b1")
     source = tmp_path / "source"
     staging = tmp_path / "staging"
     (source / "docs/media").mkdir(parents=True)
     staging.mkdir()
-    (source / "pyproject.toml").write_text('[project]\nversion="0.1.0b1"\n')
+    (source / "pyproject.toml").write_text(f'[project]\nversion="{version}"\n')
     image = b"invented approved capture"
     (source / "docs/media/SHA256SUMS").write_text(hashlib.sha256(image).hexdigest() + "  workshop-overview.png\n")
     run = {
@@ -80,7 +81,7 @@ def staged(tmp_path):
         ) + b"invented executable header"
         folder = staging / "artifacts" / ("workshop-" + target)
         folder.mkdir(parents=True)
-        archive = folder / f"{app}-0.1.0b1-{target}.{extension}"
+        archive = folder / f"{app}-{version}-{target}.{extension}"
         if extension == "zip":
             with zipfile.ZipFile(archive, "w") as z:
                 for name, data in files.items():
@@ -117,14 +118,50 @@ def staged(tmp_path):
     return source, staging
 
 
+@pytest.mark.parametrize("staged", ["0.1.0b1", "0.2.0"], indirect=True)
 def test_stages_exact_native_packages_with_checksums_and_source_provenance(staged):
     source, staging = staged
-    release.prepare(source, staging, SHA, 123, TAG)
+    import tomllib
+
+    version = tomllib.loads((source / "pyproject.toml").read_text())["project"]["version"]
+    tag, _, prerelease = release.release_identity(version)
+    assert (tag, prerelease) == {"0.1.0b1": (TAG, True), "0.2.0": ("v0.2.0", False)}[version]
+    release.prepare(source, staging, SHA, 123, tag)
     provenance = json.loads((staging / "assets/provenance.json").read_text())
     assert provenance["source_commit"] == SHA and len(provenance["packages"]) == 4
     assert all(p["build_environment"]["dependencies"]["Pillow"] == "12.3.0" for p in provenance["packages"])
     assert len((staging / "assets/SHA256SUMS").read_text().splitlines()) == 4
     assert len(list((staging / "assets").iterdir())) == 10
+    assert provenance["tag"] == tag and provenance["package_version"] == version
+    report = staging / "upload.json"
+    metadata = {
+        "tag_name": tag,
+        "draft": True,
+        "prerelease": prerelease,
+        "assets": [
+            {"name": p.name, "state": "uploaded", "size": p.stat().st_size, "digest": "sha256:" + release.digest(p)}
+            for p in (staging / "assets").iterdir()
+        ],
+    }
+    report.write_text(json.dumps(metadata))
+    release.verify_uploaded(staging / "assets", report, tag)
+    metadata["prerelease"] = not prerelease
+    report.write_text(json.dumps(metadata))
+    with pytest.raises(AssertionError, match="channel"):
+        release.verify_uploaded(staging / "assets", report, tag)
+
+
+@pytest.mark.parametrize("version", ["0.2.0rc1", "0.2", "0.2.0.dev1", "0.2.0+local"])
+def test_refuses_unsupported_release_versions(version):
+    with pytest.raises(AssertionError):
+        release.release_identity(version)
+
+
+def test_rejects_a_stable_tag_for_beta_packages(staged):
+    source, staging = staged
+    with pytest.raises(AssertionError, match="Tag must match"):
+        release.prepare(source, staging, SHA, 123, "v0.1.0")
+    assert not (staging / "assets").exists()
 
 
 def test_rejects_successful_ci_for_another_commit(staged):
@@ -197,16 +234,28 @@ def test_checks_uploaded_digests_and_keeps_a_failed_draft_unpublished(staged):
         release.verify_uploaded(assets, report, TAG)
 
 
-def test_draft_lookup_resumes_only_the_same_unpublished_source(tmp_path):
+@pytest.mark.parametrize("tag", [TAG, "v0.2.0"])
+def test_draft_lookup_resumes_only_the_same_unpublished_source(tmp_path, tag):
     path = tmp_path / "releases.json"
     path.write_text("[]")
-    assert release.find_draft(path, TAG, SHA) is None
-    draft = {"id": 42, "tag_name": TAG, "draft": True, "prerelease": True, "target_commitish": SHA}
+    assert release.find_draft(path, tag, SHA) is None
+    draft = {
+        "id": 42,
+        "tag_name": tag,
+        "draft": True,
+        "prerelease": release.tag_is_prerelease(tag),
+        "target_commitish": SHA,
+    }
     path.write_text(json.dumps([[draft]]))
-    assert release.find_draft(path, TAG, SHA) == 42
+    assert release.find_draft(path, tag, SHA) == 42
     with pytest.raises(AssertionError):
-        release.find_draft(path, TAG, "b" * 40)
+        release.find_draft(path, tag, "b" * 40)
+    draft["prerelease"] = not draft["prerelease"]
+    path.write_text(json.dumps([draft]))
+    with pytest.raises(AssertionError, match="channel"):
+        release.find_draft(path, tag, SHA)
+    draft["prerelease"] = not draft["prerelease"]
     draft["draft"] = False
     path.write_text(json.dumps([draft]))
     with pytest.raises(AssertionError):
-        release.find_draft(path, TAG, SHA)
+        release.find_draft(path, tag, SHA)

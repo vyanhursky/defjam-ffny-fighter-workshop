@@ -1,5 +1,11 @@
 # defjam-ffny-fighter-workshop
 
+- Owner approved merging all open Workshop PRs and publishing/tagging stable
+  `v0.2.0` on 2026-11-16 after Windows playtesting. Runtime PRs must remain
+  untouched. This supersedes earlier release/merge limits for this release only.
+  Use exact green native CI packages, checksums and provenance, retaining the
+  existing icon/screenshot exceptions and private game-data exclusions.
+
 - Owner approved GPLv3-only licensing of the Workshop and merging all pending
   Workshop/runtime PRs on 2026-11-10. Preserve Vlad Yanhursky's copyright,
   third-party licenses and game-art exclusions. Earlier MIT versions retain

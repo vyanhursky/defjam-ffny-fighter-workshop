@@ -1,10 +1,10 @@
-name: Stage beta release
+name: Stage release
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Owner-authorized beta tag (must match package version)'
+        description: 'Owner-authorized stable or beta tag (must match package version)'
         required: true
         type: string
       source_sha:
@@ -17,7 +17,7 @@ on:
         type: string
 
 concurrency:
-  group: stage-beta-${{ inputs.tag }}
+  group: stage-release-${{ inputs.tag }}
   cancel-in-progress: false
 
 permissions:
@@ -49,19 +49,24 @@ jobs:
         with:
           python-version: '3.13'
       - name: Verify source and tag
+        id: identity
         shell: bash
         run: |
           python - <<'PY'
-          import os,re,subprocess,tomllib
+          import os,re,subprocess,sys,tomllib
           from pathlib import Path
+          sys.path.insert(0, 'publisher/scripts')
+          from stage_release import release_identity
           sha=os.environ['RELEASE_SHA']; tag=os.environ['RELEASE_TAG']; run=os.environ['RELEASE_RUN']
           assert re.fullmatch(r'[0-9a-f]{40}',sha) and re.fullmatch(r'[0-9]+',run)
           version=tomllib.loads(Path('release-source/pyproject.toml').read_text())['project']['version']
-          match=re.fullmatch(r'(\d+\.\d+\.\d+)b(\d+)',version)
-          assert match and tag==f'v{match[1]}-beta.{match[2]}'
+          expected,title,prerelease=release_identity(version)
+          assert tag==expected
           subprocess.run(['git','-C','release-source','fetch','origin',f'refs/tags/{tag}:refs/tags/{tag}'],check=True)
           tagged=subprocess.check_output(['git','-C','release-source','rev-parse',f'{tag}^{{commit}}'],text=True).strip()
           assert tagged==sha
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'title={title}\nprerelease={str(prerelease).lower()}\n')
           PY
       - name: Collect native CI outputs
         shell: bash
@@ -77,13 +82,16 @@ jobs:
           python publisher/scripts/stage_release.py --source release-source --staging "$RUNNER_TEMP/workshop-release" --source-sha "$RELEASE_SHA" --run-id "$RELEASE_RUN" --tag "$RELEASE_TAG"
       - name: Create draft and upload verified packages
         shell: bash
+        env:
+          RELEASE_TITLE: ${{ steps.identity.outputs.title }}
+          RELEASE_PRERELEASE: ${{ steps.identity.outputs.prerelease }}
         run: |
           # GitHub's by-tag REST endpoint excludes unpublished drafts. Discover
           # the exact draft by ID, and refuse any published/different-source release.
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/workshop-release/releases.json"
           release_id=$(python publisher/scripts/stage_release.py --source release-source --staging "$RUNNER_TEMP/workshop-release" --source-sha "$RELEASE_SHA" --run-id "$RELEASE_RUN" --tag "$RELEASE_TAG" --find-draft "$RUNNER_TEMP/workshop-release/releases.json")
           if [ -z "$release_id" ]; then
-            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --target "$RELEASE_SHA" --title "0.1 Beta ${RELEASE_TAG##*beta.}" --notes-file "release-source/docs/releases/$RELEASE_TAG.md" --prerelease --draft --latest=false
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --target "$RELEASE_SHA" --title "$RELEASE_TITLE" --notes-file "release-source/docs/releases/$RELEASE_TAG.md" --prerelease="$RELEASE_PRERELEASE" --draft --latest=false
           fi
           gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/workshop-release/assets/"* --repo "$GITHUB_REPOSITORY" --clobber
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/workshop-release/releases.json"
@@ -95,7 +103,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: beta-release-verification
+          name: release-verification
           path: |
             ${{ runner.temp }}/workshop-release/ci-*.json
             ${{ runner.temp }}/workshop-release/uploaded-release.json

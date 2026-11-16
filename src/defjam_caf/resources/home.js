@@ -1,22 +1,22 @@
+import { createBridge } from "./bridge.mjs";
 // Home: the front door. It only chooses a workflow; each workflow page does its own work.
 import { gameSetup } from "./setup.mjs";
 import { workshopVersion } from "./version.mjs";
-import { responseError, attachDetails } from "./errors.mjs";
+import { attachDetails } from "./errors.mjs";
 
-const $ = (id) => document.getElementById(id),
-  pending = new Map();
-let serial = 0,
-  bridge,
-  state = null;
+const $ = (id) => document.getElementById(id);
+const client = createBridge({
+  onBusy(count, label) {
+    $("busy").hidden = count <= 0;
+    if (label) $("busy-label").textContent = label;
+  },
+});
+let state = null;
 
-function call(action, args = {}) {
-  const id = String(++serial);
-  return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject });
-    bridge.dispatch(JSON.stringify({ id, action, args }));
-  });
-}
+const call = (action, args = {}, label = null) => client.call(action, args, label);
+
 function toast(text, error = false) {
+  client.record(text, error);
   $("status-message").textContent = text;
   $("toast").textContent = text;
   $("toast").classList.toggle("error", error);
@@ -27,10 +27,8 @@ function toast(text, error = false) {
   }, 9000);
 }
 async function act(action, args = {}, label = "Working…") {
-  $("busy-label").textContent = label;
-  $("busy").hidden = false;
   try {
-    const result = await call(action, args);
+    const result = await call(action, args, label);
     if (result?.message) toast(result.message);
     return result;
   } catch (error) {
@@ -38,8 +36,6 @@ async function act(action, args = {}, label = "Working…") {
     attachDetails($("toast"), error.detail);
     if (error.detail) clearTimeout(toast.timer);
     return null;
-  } finally {
-    $("busy").hidden = true;
   }
 }
 
@@ -189,14 +185,6 @@ async function refresh() {
 }
 
 new QWebChannel(qt.webChannelTransport, (channel) => {
-  bridge = channel.objects.editor;
-  bridge.response.connect((raw) => {
-    const message = JSON.parse(raw),
-      task = pending.get(message.id);
-    if (!task) return;
-    pending.delete(message.id);
-    if (message.error) task.reject(responseError(message));
-    else task.resolve(message.result);
-  });
+  client.connect(channel.objects.editor);
   refresh().catch((error) => toast(error.message || String(error), true));
 });

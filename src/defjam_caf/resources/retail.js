@@ -73,7 +73,7 @@ async function act(action, args = {}, label = "Updating fighter…") {
     }
     const result = await call(action, args);
     if (result?.retail) render(result);
-    if (result?.snapshot) render(result.snapshot);
+    if (result?.snapshot?.retail) render(result.snapshot);
     if (result?.message) status(result.message);
     return result;
   } catch (e) {
@@ -91,7 +91,7 @@ const setup = gameSetup({
   call,
   act: async (action, args, label) => {
     const result = await act(action, args, label);
-    if (action === "setup_use" || action === "choose_data") await act("retail_snapshot");
+    if (["setup_use", "choose_data", "cache_clear"].includes(action)) await act("retail_snapshot");
     return result;
   },
 });

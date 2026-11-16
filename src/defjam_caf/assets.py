@@ -14,6 +14,7 @@ from ._vendor.hd_assets import archive_entries, shpx_images
 from ._vendor.caf_shop import ShopDatabase, Locale
 from .storage import atomic_json
 from .game_paths import game_file
+from . import cache_maintenance
 
 
 def image_uri(image):
@@ -102,7 +103,10 @@ def build_cache(dump, workspace, progress=lambda message: None):
     )
     root = workspace / "assets" / identity
     if (root / "catalog" / "catalog.json").is_file():
-        return AssetCache(root, dump)
+        result = AssetCache(root, dump)
+        (root / "catalog/catalog.json").touch()
+        cache_maintenance.prune(workspace, root)
+        return result
     images = root / "originals"
     images.mkdir(parents=True, exist_ok=True)
     assets = {}
@@ -134,7 +138,9 @@ def build_cache(dump, workspace, progress=lambda message: None):
         catalog.rename(root / ("incomplete-" + uuid.uuid4().hex))
     build_catalog(dump, images, catalog)
     progress("CAF assets ready")
-    return AssetCache(root, dump)
+    result = AssetCache(root, dump)
+    cache_maintenance.prune(workspace, root)
+    return result
 
 
 class AssetCache:

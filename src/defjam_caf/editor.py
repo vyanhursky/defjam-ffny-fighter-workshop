@@ -240,11 +240,14 @@ class Editor:
         runtime = runtimes.describe(self.runtime, self.recipe_format()) if self.runtime else None
         folder = remembered.recall(self.workspace, "app") or runtimes.default_folder()
         data = self.data or remembered.recall(self.workspace, "data")
+        from . import cache_maintenance
+
         return dict(
             data=str(data) if data else None,
             runtime=runtime,
             folder=str(folder) if folder else None,
             workspace=str(self.workspace.resolve()),
+            cache=cache_maintenance.info(self.workspace),
             version=__version__,
             ready=bool(data and runtime and runtime["usable"]),
         )
@@ -671,6 +674,15 @@ class Editor:
 
     def _clear_drafts(self):
         self.outfit_draft = self.portrait_edit = self.metadata_edit = self.texture_edit = None
+
+    def _request_cache_clear(self, action, args):
+        from . import cache_maintenance
+
+        cache_maintenance.clear(self.workspace)
+        self.cache = self.appearance = None
+        self.preview_error = "The private wardrobe cache was cleared. Reopen your data folder to rebuild it."
+        self.preview_detail = None
+        return dict(snapshot=self.snapshot(), message="Private wardrobe cache cleared. Backups and projects are kept.")
 
     def request(self, action, args):
         handler = self.ACTIONS.get(action)
@@ -1178,6 +1190,7 @@ class Editor:
         return dict(snapshot=self.select_profile(name), message="Imported complete profile " + name)
 
     ACTIONS = {
+        "cache_clear": _request_cache_clear,
         "performance_connect": _request_performance_connect,
         "performance_audio": _request_performance_audio,
         "performance_animation": _request_performance_audio,

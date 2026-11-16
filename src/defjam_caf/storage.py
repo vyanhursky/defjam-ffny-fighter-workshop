@@ -20,6 +20,13 @@ def sha(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
+def default_lock_root():
+    from .locations import default_workspace_directory
+
+    # One namespace across custom workspaces, CLI and desktop processes.
+    return default_workspace_directory() / "locks"
+
+
 def atomic_bytes(path, raw):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -42,7 +49,10 @@ def atomic_json(path, data):
 
 @contextmanager
 def writer_lock(folder):
-    lock = Path(folder) / ".caf-editor.lock"
+    root = default_lock_root()
+    root.mkdir(parents=True, exist_ok=True)
+    identity = os.path.normcase(str(Path(folder).resolve()))
+    lock = root / (sha(identity.encode("utf-8")) + ".lock")
     descriptor = os.open(lock, os.O_CREAT | os.O_RDWR, 0o600)
     try:
         if os.fstat(descriptor).st_size == 0:
@@ -173,7 +183,7 @@ def install_files(title, name, files):
     canonical, legacy = directory_name(name), directory_name(name, legacy=True)
     if any(p.name.upper() in {canonical, legacy} for p in title.iterdir()):
         raise SaveError("A profile with this identity already exists")
-    stage = title / (".caf-import-" + uuid.uuid4().hex)
+    stage = title.parent / (".caf-import-" + uuid.uuid4().hex)
     stage.mkdir()
     try:
         for filename, raw in files.items():

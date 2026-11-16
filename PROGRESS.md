@@ -1,5 +1,19 @@
 # Progress and handoff
 
+## November 15 review — native dialog dispatch
+
+B2 and additional B9 coverage: native chooser preparation is separate from
+Bridge parsing, navigation and worker submission. Twenty-six chooser actions
+use explicit specifications; standard project/head file pickers share one path,
+while multi-step imports and guarded runtime/artwork flows have focused adapters.
+Prepared results distinguish cancellation/immediate replies from domain actions.
+Validation: 284 Python tests passed, 5 skipped; Ruff/diff checks pass. Tests
+cover every picker's cancellation, exact path/action mapping, bytes/limits,
+manifest selection, duplicate naming and save-without-picker behavior. Real
+asset-free Windows Qt/WebChannel/WebGL2 startup passes in 0.27 s. Native dialogs
+were replaced by deterministic adapters; manual OS-picker/game acceptance is
+not claimed.
+
 ## November 15 review — bridge safety, errors and navigation
 
 A5/A13/A14/A15/C17 and initial B9 coverage: worker completions and progress now

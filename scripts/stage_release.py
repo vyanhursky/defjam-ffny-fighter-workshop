@@ -1,4 +1,4 @@
-"""Audit exact green native CI artifacts and stage an owner-authorized beta draft.
+"""Audit exact green native CI artifacts and stage an owner-authorized release draft.
 
 No network calls and no publication. The staging workflow fetches authenticated
 metadata; this script verifies its source binding, packages and uploaded hashes.
@@ -16,6 +16,20 @@ import tomllib
 import zipfile
 
 TARGETS = {"windows-x64": "zip", "macos-arm64": "zip", "macos-x64": "zip", "linux-x64": "tar.gz"}
+
+
+def release_identity(version):
+    match = re.fullmatch(r"(\d+\.\d+\.\d+)(?:b(\d+))?", version)
+    assert match, "Unsupported release package version"
+    base, beta = match.groups()
+    if beta is not None:
+        return f"v{base}-beta.{beta}", f"{base} Beta {beta}", True
+    return f"v{base}", base, False
+
+
+def tag_is_prerelease(tag):
+    assert re.fullmatch(r"v\d+\.\d+\.\d+(?:-beta\.\d+)?", tag), "Unsupported release tag"
+    return "-beta." in tag
 
 
 def digest(path):
@@ -43,8 +57,7 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
     assert re.fullmatch(r"[0-9a-f]{40}", EXPECTED_SHA)
     assert RUN_ID > 0
     VERSION = tomllib.loads((REPO / "pyproject.toml").read_text())["project"]["version"]
-    match = re.fullmatch(r"(\d+\.\d+\.\d+)b(\d+)", VERSION)
-    assert match and f"v{match[1]}-beta.{match[2]}" == TAG, "Tag must match the beta package version"
+    assert release_identity(VERSION)[0] == TAG, "Tag must match the package version"
     run = json.loads((ROOT / "ci-run.json").read_text())
     jobs = json.loads((ROOT / "ci-jobs.json").read_text())["jobs"]
     artifacts = json.loads((ROOT / "ci-artifacts.json").read_text())["artifacts"]
@@ -200,7 +213,8 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
 
 def verify_uploaded(assets, metadata, tag):
     release = json.loads(metadata.read_text())
-    assert release["tag_name"] == tag and release["draft"] and release["prerelease"]
+    assert release["tag_name"] == tag and release["draft"]
+    assert release["prerelease"] == tag_is_prerelease(tag), "Release channel must match the tag"
     expected = {p.name: p for p in assets.iterdir() if p.is_file()}
     uploaded = {a["name"]: a for a in release["assets"]}
     assert len(uploaded) == len(release["assets"]) and set(uploaded) == set(expected)
@@ -219,7 +233,8 @@ def find_draft(metadata, tag, source_sha):
     if not matches:
         return None
     release = matches[0]
-    assert release["draft"] and release["prerelease"], "Refuse to replace a published release"
+    assert release["draft"], "Refuse to replace a published release"
+    assert release["prerelease"] == tag_is_prerelease(tag), "Release channel must match the tag"
     assert release["target_commitish"] == source_sha, "Draft belongs to another source commit"
     assert isinstance(release["id"], int) and release["id"] > 0
     return release["id"]

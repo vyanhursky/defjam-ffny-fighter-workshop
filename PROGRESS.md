@@ -1,5 +1,27 @@
 # Progress and handoff
 
+## November 16 — owner-authorized Workshop 0.2.0 release
+
+The owner accepted Windows playtesting and authorized merging every open Workshop
+PR, tagging/publishing 0.2.0, and leaving all runtime PRs untouched. All 21 open
+Workshop PRs (#12–32) were merged in dependency order into develop/0.1. Each merge
+was checked against its reviewed head's exact source tree. Runtime repositories
+and PRs were not modified. Redundant intermediate push builds are cancelled;
+release packages must come from the final versioned default-branch push build.
+
+Package metadata is 0.2.0. The release publisher now accepts strictly matched
+stable and beta identities, validates the draft channel, and retains the exact
+commit, green four-target native CI, archive, license, checksum and uploaded
+GitHub digest checks. Release notes distinguish the broadly available Workshop
+improvements from optional retail animation/outfit runtime extensions. Windows
+owner acceptance does not imply manual macOS/Linux or broad gameplay acceptance.
+
+Release preparation validation: Python354passed/3platform skips, Node24passed,
+Ruff format/check and four-file strict mypy checks pass in an isolated release
+environment. Stable/beta staging tests cover source/version/channel mismatches,
+published-release refusal and uploaded hashes. Final native packages and staging
+verification remain required before publication.
+
 ## November 16 playtest — original retail artwork previews
 
 Menu artwork now stages all24 original UI layouts in one read-only operation.

@@ -3,26 +3,29 @@
 A standalone, offline desktop Create-a-Fighter and save editor for **Def Jam:
 Fight for NY Recomp**, targeting Windows, macOS and Linux.
 
-**0.1 Beta 2** — [Download the prerelease](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/tag/v0.1.0-beta.2).
+**0.2.0** — [Download the release](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/tag/v0.2.0).
 Standalone packages include Python and Qt; no Python installation is required.
 
 | Platform | Download |
 | --- | --- |
-| Windows x64 | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.2/defjam-ffny-fighter-workshop-0.1.0b2-windows-x64.zip) |
-| macOS Apple Silicon | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.2/defjam-ffny-fighter-workshop-0.1.0b2-macos-arm64.zip) |
-| macOS Intel | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.2/defjam-ffny-fighter-workshop-0.1.0b2-macos-x64.zip) |
-| Linux x64 | [tar.gz](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.1.0-beta.2/defjam-ffny-fighter-workshop-0.1.0b2-linux-x64.tar.gz) |
+| Windows x64 | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.2.0/defjam-ffny-fighter-workshop-0.2.0-windows-x64.zip) |
+| macOS Apple Silicon | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.2.0/defjam-ffny-fighter-workshop-0.2.0-macos-arm64.zip) |
+| macOS Intel | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.2.0/defjam-ffny-fighter-workshop-0.2.0-macos-x64.zip) |
+| Linux x64 | [tar.gz](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.2.0/defjam-ffny-fighter-workshop-0.2.0-linux-x64.tar.gz) |
 
-Checksums accompany each package. Windows functional checks, all 29 local Apple
-Silicon editor checks, and native build/startup CI on all four targets pass.
-This is a beta; broader native editor/game acceptance remains ongoing.
+Checksums and build provenance accompany each package. Windows owner playtesting
+covers the updated editor; native package/startup CI covers all four targets.
+The 0.2.0 macOS/Linux packages have not received manual game acceptance.
 
-Workshop 0.1 Beta 2 opens on four workflows: **Story character editor**,
+Workshop 0.2.0 opens on four workflows: **Story character editor**,
 **Fighter from a Create-a-Fighter**, **Fighter from a retail fighter**, and
 **Retail fighter editor**. **Game setup** remembers the game/data folders and
 shows which installed build supports each feature. Project exports pair with
-**Recomp 1.2.0 beta 2** or a compatible source checkout; stable Recomp 1.2.0
-lacks these authoring tools.
+**Recomp 1.2.0 beta 2** or a compatible source checkout. Game setup reports
+optional capabilities: retail source-animation preview and standalone retail
+outfit collections need newer companion tools/runtime support. These runtime
+PRs remain separate and unmerged; the main menu, voice and artwork improvements
+do not require them. See the [0.2.0 release notes](docs/releases/v0.2.0.md).
 
 ## Terminology
 
@@ -62,11 +65,12 @@ Save writes the whole project. **Export mod…** produces a validated Custom
 Fighter Mod ZIP, then the compatible game's **Mods → Fighters** installs it.
 Export does not install or activate the pack.
 
-Current source adds a project/outfit sidebar, grouped keyboard tabs, automatic
+The editor includes a project/outfit sidebar, grouped keyboard tabs, automatic
 Voice/Entrance/AI catalogs and pinned **Save project** / **Export mod…** actions.
-Export checks readiness and saves staged edits before the ZIP chooser. The
-published Beta 2 packages predate these review workflow updates; the guides
-describe the current source UI.
+Export checks readiness and saves staged edits before the ZIP chooser. Voice clips
+can be prepared together and auditioned with Previous/Next;
+**Save WAV** opens an explicit destination chooser. Retail **Menu artwork** can
+stage original donor artwork for quick previews and comparison with imports.
 
 [Retail projects](docs/retail-fighter-projects.md) start from original fighters,
 with independent body/combat/UI donors, ordinary pack import, native stats,
@@ -75,7 +79,7 @@ resource components and HD RGB/UI artwork. **Retail fighter editor** supports
 while retaining the original combat identity. Experimental [PS2 snapshot recovery](docs/ps2-caf-recovery.md)
 can create a CAF project without converting a Story save. Compilation success
 and native game acceptance remain separate; see the
-[Beta 2 release notes](docs/releases/v0.1.0-beta.2.md) for qualification limits.
+[0.2.0 release notes](docs/releases/v0.2.0.md) for qualification limits.
 
 ## Screenshots
 

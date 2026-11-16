@@ -1,9 +1,9 @@
 """Portable UI PNGs: shared defaults and per-outfit role overrides."""
 
 import copy
-import io
 import re
 from . import projects
+from .pngs import inspect_png
 
 MASTERS = {
     "selector": "Selector portrait · all layouts",
@@ -47,27 +47,18 @@ def validate(pack):
         )
     images = pack["images"]
     projects.require(type(images) is dict and set(images) <= set(ROLES), "Unknown UI artwork role")
-    from PIL import Image
-
     for value in images.values():
-        raw = projects.portrait_bytes(value)
-        with Image.open(io.BytesIO(raw)) as picture:
-            projects.require(
-                picture.convert("RGBA").getchannel("A").getbbox() is not None, "UI PNG is entirely transparent"
-            )
+        projects.require(inspect_png(value, "portrait").visible, "UI PNG is entirely transparent")
     return pack
 
 
 def check_budget(document):
-    from PIL import Image
-
     used = pixels = 0
     for item in [document, *document.get("outfits", [])]:
         for encoded in item.get("ui_art", {}).get("images", {}).values():
-            raw = projects.portrait_bytes(encoded)
-            used += len(raw)
-            with Image.open(io.BytesIO(raw)) as image:
-                pixels += image.width * image.height
+            info = inspect_png(encoded, "portrait")
+            used += info.size
+            pixels += info.width * info.height
     projects.require(
         used <= MAX_TOTAL and pixels <= 64 * 1024**2, "Combined UI artwork exceeds 48 MiB or 64 megapixels"
     )

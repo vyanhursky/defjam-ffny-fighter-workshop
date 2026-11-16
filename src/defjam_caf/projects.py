@@ -2,7 +2,6 @@
 
 import copy
 import base64
-import io
 import json
 from pathlib import Path
 import re
@@ -14,6 +13,7 @@ from .container import Container, SaveError
 from .fields import STAT_KEYS, apply_fields, combine_styles, read_fields
 from .profiles import PROFILE_SIZE
 from .storage import atomic_bytes, sha, writer_lock
+from .pngs import MAX_ATLAS_BYTES as MAX_ATLAS_BYTES, inspect_png
 
 # One project schema. Everything past identity, metadata and the four fighter fields is an optional section:
 # finishers, a retail moveset, textures, a portrait, an outfit collection, UI artwork, a face sculpt and performance
@@ -23,7 +23,6 @@ SCHEMA = "ffny-fighter-project-7"
 EARLIER_SCHEMAS = tuple(f"ffny-fighter-project-{n}" for n in range(1, 7))
 READABLE_SCHEMAS = EARLIER_SCHEMAS + (SCHEMA,)
 MAX_PROJECT = 384 * 1024 * 1024  # HD atlases of up to 2048px
-MAX_ATLAS_BYTES = 16 * 1024**2
 ATLAS_SLOTS = ("a", "b", "c", "d", "d1", "d2")
 FIGHTER_FIELDS = ("stats", "styles", "caf_values", "caf_colors")
 SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
@@ -142,7 +141,7 @@ def validate(document):
 
         validate_face(document["face_sculpt"], fighter)
     if "portrait" in document:
-        portrait_bytes(document["portrait"])
+        inspect_png(document["portrait"], "portrait")
     if "textures" in document:
         textures = document["textures"]
         require(
@@ -158,7 +157,7 @@ def validate(document):
             "Invalid project atlas slots",
         )
         for value in textures["atlases"].values():
-            atlas_bytes(value)
+            inspect_png(value, "atlas")
     if has_outfits:
         from . import outfits
 
@@ -210,21 +209,8 @@ def appearance_hash(fields):
 
 
 def atlas_bytes(value):
-    from PIL import Image
-
-    require(type(value) is str and len(value) <= 4 * ((MAX_ATLAS_BYTES + 2) // 3), "Atlas PNG is too large")
-    try:
-        raw = base64.b64decode(value, validate=True)
-        require(len(raw) <= MAX_ATLAS_BYTES, "Atlas PNG is too large")
-        with Image.open(io.BytesIO(raw)) as image:
-            require(
-                image.format == "PNG" and image.width == image.height and image.width in (256, 512, 1024, 2048),
-                "Import a square 256, 512, 1024 or 2048 PNG atlas",
-            )
-            image.verify()
-    except (ValueError, OSError) as exc:
-        raise SaveError("Invalid atlas PNG: " + str(exc)) from exc
-    return raw
+    inspect_png(value, "atlas")
+    return base64.b64decode(value, validate=True)
 
 
 def with_atlas(document, slot, raw):
@@ -238,21 +224,8 @@ def with_atlas(document, slot, raw):
 
 
 def portrait_bytes(value):
-    from PIL import Image
-
-    require(type(value) is str and len(value) <= 5_600_000, "Portrait PNG is too large")
-    try:
-        raw = base64.b64decode(value, validate=True)
-        require(len(raw) <= 4 * 1024 * 1024, "Portrait PNG is too large")
-        with Image.open(io.BytesIO(raw)) as image:
-            require(
-                image.format == "PNG" and 32 <= image.width <= 2048 and 32 <= image.height <= 2048,
-                "Portrait must be a 32–2048px PNG",
-            )
-            image.verify()
-    except (ValueError, OSError) as exc:
-        raise SaveError("Invalid portrait PNG: " + str(exc)) from exc
-    return raw
+    inspect_png(value, "portrait")
+    return base64.b64decode(value, validate=True)
 
 
 def empty_container():

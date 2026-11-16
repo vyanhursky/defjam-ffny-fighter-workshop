@@ -1,5 +1,25 @@
 # Progress and handoff
 
+## November 15 review — measured project/preview performance
+
+A4/A6/A7/B7: content-key the base container across all four fighter fields;
+cache verified PNG metadata by digest with an exact immutable-string hot cache
+(256 entries and 64 MiB maximum, no decoded images retained). UI visibility and
+budget checks reuse dimensions/byte counts. Preview refreshes use appearance,
+outfit, atlas and sculpt content; nonvisual edits preserve try-ons and face drafts.
+Explicit profile/project/outfit/reset refreshes remain. Snapshot project summaries
+exclude atlas/portrait bytes; image preview/export actions still return actual art.
+
+Game-free benchmark (scripts/benchmark_project.py, same Windows interpreter,
+three outfits, six distinct 1024 RGB sheets copied per outfit, 30 128px UI PNGs):
+five warm validations median 118.59 ms before, 0.33–0.36 ms after. Snapshot JSON
+25,193,000 → 10,026 bytes. These synthetic figures do not claim real-game timing
+or a maximum-size project benchmark. Keep the remaining small catalogs in each
+coherent snapshot instead of adding a versioned catalog transport (B7 alternative).
+Validation: 288 Python tests passed, 5 skipped; 10 Node tests; Ruff/diff checks.
+Tests cover content mutation, changed/cached/transparent PNGs, bounded hot keys,
+asset-free snapshots and nonvisual appearance-key stability. Native game not run.
+
 ## November 15 review — native dialog dispatch
 
 B2 and additional B9 coverage: native chooser preparation is separate from

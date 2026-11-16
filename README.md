@@ -17,56 +17,65 @@ Checksums accompany each package. Windows functional checks, all 29 local Apple
 Silicon editor checks, and native build/startup CI on all four targets pass.
 This is a beta; broader native editor/game acceptance remains ongoing.
 
-Local beta: browse existing profiles, preview the saved fighter in 3D, edit
-appearance, training stats, cash, development points and retail CAF style
-combinations. Save with an original-profile backup, export/import a complete
-profile, or duplicate it under a new ID while retaining Story progress.
+Workshop 0.1 Beta 2 opens on four workflows: **Story character editor**,
+**Fighter from a Create-a-Fighter**, **Fighter from a retail fighter**, and
+**Retail fighter editor**. **Game setup** remembers the game/data folders and
+shows which installed build supports each feature. Project exports pair with
+**Recomp 1.2.0 beta 2** or a compatible source checkout; stable Recomp 1.2.0
+lacks these authoring tools.
 
-Items, colors and fits preview immediately as you browse. **Equip** adds the
-choice to Pending Changes; **Save changes** writes the profile. Tattoo categories
-are grouped and named by body area. **No clothes** temporarily hides apparel and
-accessories, retaining underwear, so tattoos are easier to inspect.
+## Terminology
 
-The viewer offers Wardrobe-inspired, Relaxed and source T-pose, plus Studio,
-Warm shop, Cool rim and Texture reference lighting. Wardrobe-inspired and Relaxed
-use approximate preview deformation, not the retail shop animation. Uncommitted
-try-ons are excluded from saves and exports. Equip stages an item; clothing
-visibility, pose and lighting always remain preview-only.
+A **Story profile** contains career progress, inventory and currency. A
+**project** (`.ffnyfighter`) holds fighter settings and imported artwork without
+Story progress. An **outfit** is one selectable look. The **game version/runtime**
+is the Recomp build that compiles an export **recipe**. All guides use the
+shared [terminology](docs/terminology.md).
 
-## In development: standalone fighters
+## Edit a Story fighter
 
-Development adds [voice, presentation, animation playback and AI editors](docs/performance-editor.md)
-for exportable projects with the matching CAF v6 runtime. Choose independent
-voice banks and WAV overrides, original entrance/victory sequences, and per-difficulty
-CPU tendencies. The viewer plays supported original body/root tracks with actual
-skin weights; unsupported codecs and preview limits are explicit. Story-save
-workflows remain available.
-The development source also includes a separate **Retail fighter studio** for
-retail/owned model resources, independent combat/body donors, ordinary pack
-import, native stats, supplied voice/animation components and HD RGB/UI artwork.
-Portable retail projects export through the matching runtime's complete compiler.
-See [retail fighter projects](docs/retail-fighter-projects.md) for limits and workflow.
-It also supports [retail appearance overrides and additional outfits](docs/retail-overrides-outfits.md)
-through the matching feature runtime, with portable projects and ordinary mod ZIPs.
+Browse existing profiles, preview the fighter in 3D and edit appearance, original
+facial presets, training stats, cash, development points and moves. **Moves**
+combines CAF styles, original retail movesets and four Blazin' assignments.
+Direct Story retail-moveset edits require acknowledging their game-compatibility
+notice. Save makes an original-profile backup. Export/import transfers the full
+profile; Duplicate creates a separate identity while keeping Story progress.
 
-The development source adds portable `.ffnyfighter` projects, pack metadata,
-portrait capture/import and validated CAF-to-Custom-Fighter-Mod ZIP export.
-Native 256×256 atlas import and saved retail finisher preservation are available
-with the matching version 2 runtime. Experimental [PS2 snapshot recovery](docs/ps2-caf-recovery.md)
-can create a new project from a verified CAF without converting its Story save.
-The **Blazin' moves** tab edits four assignments for Story CAFs and projects,
-using the complete original-game pool with normal Apply, Undo, Reset and Save.
-The **Fighting style** tab also selects a named [retail fighter moveset](docs/retail-movesets.md),
-with a matching experimental CAF runtime for projects and directly edited profiles.
-The Project tab supports up to three named outfits with independent appearance,
-textures and portraits, sharing one fighter's stats and moves. Exporting these
-projects requires the matching CAF runtime (recipe format `caf-fighter-1`).
-The **Menu artwork** tab imports separate selector/loading portraits, titlecards,
-result icons and grid states. Six master roles cover all layouts; 24 advanced
-slots allow individual 2/3/4-player artwork. Projects share defaults across outfits
-and support local overrides, original retail placeholders and 2×/4× HD UI output.
-Exported fighters need Recomp v1.2.0-beta.2 or newer (Fighter Mod Support); Beta 1 of
-this editor did not include them. See [the project/export workflow](docs/fighter-projects.md).
+Items, colors and fits preview as you browse. **Equip** stages the choice;
+**Save changes** writes it. No clothes temporarily hides apparel/accessories for
+tattoo inspection. Pose, lighting and uncommitted try-ons remain preview-only.
+Wardrobe-inspired and Relaxed are approximate deformation; source T-pose is also
+available. The viewer does not reproduce the full native animation/shader system.
+
+## Build an exportable fighter
+
+[CAF projects](docs/fighter-projects.md) include metadata, up to three selectable
+outfits, portrait capture/import, experimental face sliders/template sculpt import,
+and square 256–2048 px PNG atlases. Outfits share stats/moves/performance, with
+individual appearance and artwork. [Voice, entrance/victory and AI tools](docs/performance-editor.md)
+use the selected game's catalogs, support original source-track playback within
+explicit limits, and keep unsupported resources unavailable.
+
+**Menu artwork** supplies six master images or 24 individual 2/3/4-player roles,
+with shared defaults, outfit overrides, independent UI donors and HD output.
+Save writes the whole project. **Export mod…** produces a validated Custom
+Fighter Mod ZIP, then the compatible game's **Mods → Fighters** installs it.
+Export does not install or activate the pack.
+
+Current source adds a project/outfit sidebar, grouped keyboard tabs, automatic
+Voice/Entrance/AI catalogs and pinned **Save project** / **Export mod…** actions.
+Export checks readiness and saves staged edits before the ZIP chooser. The
+published Beta 2 packages predate these review workflow updates; the guides
+describe the current source UI.
+
+[Retail projects](docs/retail-fighter-projects.md) start from original fighters,
+with independent body/combat/UI donors, ordinary pack import, native stats,
+resource components and HD RGB/UI artwork. **Retail fighter editor** supports
+[appearance replacement and extra outfits](docs/retail-overrides-outfits.md)
+while retaining the original combat identity. Experimental [PS2 snapshot recovery](docs/ps2-caf-recovery.md)
+can create a CAF project without converting a Story save. Compilation success
+and native game acceptance remain separate; see the
+[Beta 2 release notes](docs/releases/v0.1.0-beta.2.md) for qualification limits.
 
 ## Screenshots
 
@@ -93,7 +102,7 @@ On macOS, open the `.app`. On Windows or Linux, keep the complete application
 folder together and launch its executable.
 On macOS, the app automatically opens the installer's default
 `~/Library/Application Support/DefJamRecompiled/data` directory when it contains
-FFNY saves. Use **Open data directory** or `--data` to select another directory
+FFNY saves. Use **Game setup** or `--data` to select another directory
 containing `save` and `extracted`. Start with separate copies of your saves and close the game using
 those copies before editing. Original game assets are decoded locally; nothing
 is uploaded or downloaded at runtime.

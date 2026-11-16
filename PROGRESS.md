@@ -1,5 +1,23 @@
 # Progress and handoff
 
+## November 15 review — final A–C integration and documentation
+
+All 41 A–C items have independent assessments and source PRs; Part E is deferred.
+The final source stack combines the implementation, capability reader and current
+player guides. See docs/review-assessment-2026-11-15.md for all 16 Workshop PRs,
+merge order, per-item decisions, measured improvements and qualification limits.
+Docs distinguish published Beta 2 packages from current workflow updates, remove
+stale manual catalog steps and synchronize CAF/retail/performance walkthroughs.
+
+Integrated Windows source: 313 Python tests passed/3 platform skips, 19 Node tests,
+mypy/Ruff/Prettier pass. The 31-step synthetic Windows Qt/WebChannel/WebGL tour
+passes both review sizes; Linux PR/nightly tour adds independent software-graphics
+coverage. Original-resource and picker boundaries are adapters, not native game
+acceptance. Runtime companion DefJamFFNY-recomp #267 is explicitly assigned to
+v1.2.0, has green CI, and its actual manifest passes Workshop's reader with every
+declared feature enabled. Full source runtime tests: 1875 passed/778 skipped;
+source hygiene zero failures. No merges, releases or asset publication performed.
+
 ## November 15 review — checked internal contracts
 
 B6: TypedDict contracts cover fighter/retail projects, outfits, appearance assets,
@@ -228,6 +246,16 @@ share 16 MiB admission. Retail chooser and importer use one bounded manifest
 reader. Baseline: 235 passed/5 skipped. Changed tree: 239 passed/5 skipped and
 8 Node tests passed on Windows. Native package startup awaits CI; native game
 acceptance is not implied. Original saves, assets and the input review are intact.
+## November 15 review — current player guides
+
+A2: README and the CAF project, retail project and beta test guides now describe
+the shipped Beta 2 Home workflows, Game setup, Moves, HD atlas admission,
+experimental project facial controls and performance editors. Shared terminology
+distinguishes Story profiles, projects, outfits, game versions and recipes.
+Numbered schema/runtime labels were removed from these current player guides;
+historical evidence and release notes remain intact. Checked local Markdown
+links and UI control names against the current source. Documentation-only;
+no new native platform or gameplay acceptance is claimed.
 
 ## Beta 2 published — 2026-11-12
 

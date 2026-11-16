@@ -22,7 +22,8 @@ automatic catalog failure/retry from Entrance, AI reuse, named UI donors, pinned
 changes and export preflight/save before a cancelled ZIP chooser. It asserts
 that the nonvisual stat edit does not request another preview. A compiler and
 native game acceptance require the actual compatible game and independent data.
-# Retail coverage
+
+## Retail coverage
 
 The same tour also starts a standalone retail fighter, synchronizes its starting
 donor choices, imports an invented body through a boundary adapter and observes

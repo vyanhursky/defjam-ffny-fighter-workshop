@@ -1,6 +1,6 @@
 # Retail appearance overrides and additional outfits
 
-The retail studio's **Project purpose** chooses between a separate fighter,
+Home separates new standalone fighters from the **Retail fighter editor**, whose purpose chooses a
 replacement appearance for an existing retail fighter, or an additional outfit
 in that fighter's original clothing selector. Choose the retail target before
 importing its original appearance and a replacement texture PNG.
@@ -13,20 +13,21 @@ studio after extracting the ZIP. Export itself does not install or activate the 
 
 ## Create a replacement or an extra outfit
 
-1. Open **Retail fighter studio** from the CAF editor. Select **Game data…**
-   and **Runtime…** for a matching development runtime with retail outfit support.
-2. Under **Original fighter**, choose the retail target, for example **Pockets**.
-   Set **Project purpose** to one of these choices, then click **New from retail fighter**:
-   - **Override existing retail appearance** replaces that fighter's appearance
+1. Open Home → **Retail fighter editor**. Use **Game setup** to select the game
+   data and a compatible runtime with retail outfit support.
+2. Under **Fighter to change**, choose the retail target, for example **Pockets**.
+   Set **What do you want to do?**, then **Start changing this fighter**:
+   - **Replace how it looks** replaces that fighter's appearance
      without adding an outfit or another roster entry.
-   - **Add outfit to existing retail fighter** keeps the original and adds a
+   - **Add an extra outfit** keeps the original and adds a
      choice to its existing clothing selector.
-3. For an already-open project, set **Project purpose** and **Existing fighter**
-   in the center panel, then click **Apply project purpose & target**.
+3. For an already-open project, **New…** reopens the collapsed setup. Set its
+   purpose and the center panel's **Existing fighter**, then click
+   **Apply project purpose & target**.
 4. Choose the matching **Body donor**, then **Import original body**. Do this
    before painting: importing a body again replaces the appearance and clears
-   its previous texture imports. Click **Refresh 3D preview** to load the model
-   and populate the texture-shape list.
+   its previous texture imports. Preview loads automatically and populates the
+   texture-shape list. Use Advanced: mix donors to choose another body to import.
 5. In **Textures**, select the relevant **Texture shape** and **Import RGB PNG…**.
    For the Pockets pants example, use his complete **A001** atlas with the pants
    recolored. Keep the original UV layout; supported sizes are native, 2× or 4×,
@@ -90,7 +91,7 @@ support and is refused at export rather than silently applied globally.
 
 ## Portable contract
 
-Projects saved under `ffny-retail-fighter-project-1` keep their standalone meaning
+Earlier standalone projects keep their standalone meaning
 (no deployment section). The current schema adds an optional `deployment: {mode, target}`, with `mode` equal to `add`, `override`
 or `outfit`, and a stable target such as `retail/pockets`. Non-add deployments
 must inherit that target and cannot override combat resources or stats.

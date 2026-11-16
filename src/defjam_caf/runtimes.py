@@ -9,9 +9,12 @@ import json
 import os
 import re
 import sys
+import copy
 from pathlib import Path
 
 CONTRACT = Path("scripts/fighter-contract.py")
+MANIFEST = Path("scripts/fighter-contract.json")
+MAX_MANIFEST_BYTES = 64 * 1024
 COMMANDS = re.compile(r"add_argument\(\s*['\"]command['\"]\s*,\s*choices\s*=\s*[\(\[]([^\)\]]*)[\)\]]", re.S)
 FORMAT = re.compile(r"^FORMAT\s*=\s*['\"]([^'\"]+)['\"]", re.M)
 VERSION_DIR = re.compile(r"^(\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)[0-9A-Za-z.]*?)?)-([0-9a-f]{7,40})(?:-|$)")
@@ -79,19 +82,52 @@ def inspect(path, recipe_format):
     path = Path(path)
     contract = path / CONTRACT
     try:
-        stamp = (
-            contract.stat().st_mtime_ns,
-            (path / "setup/fighter_caf.py").stat().st_mtime_ns if (path / "setup/fighter_caf.py").is_file() else 0,
+        stamp = tuple(
+            (p.stat().st_mtime_ns, p.stat().st_size) if p.exists() else None
+            for p in (contract, path / "setup/fighter_caf.py", path / MANIFEST)
         )
     except OSError:
         stamp = None
     key = (str(path), stamp, recipe_format)
     if stamp is not None and key in _cache:
-        return _cache[key]
-    match = COMMANDS.search(_read(contract))
-    commands = sorted(set(re.findall(r"['\"]([a-z][a-z0-9-]*)['\"]", match.group(1)))) if match else []
-    declared = FORMAT.search(_read(path / "setup/fighter_caf.py"))
-    caf_format = declared.group(1) if declared else None
+        return copy.deepcopy(_cache[key])
+    commands, caf_format, manifest_error = [], None, None
+    if (path / MANIFEST).exists():
+        try:
+            with (path / MANIFEST).open("rb") as stream:
+                raw = stream.read(MAX_MANIFEST_BYTES + 1)
+            if len(raw) > MAX_MANIFEST_BYTES:
+                raise ValueError("Capability manifest exceeds 64 KiB")
+
+            def unique(pairs):
+                row = {}
+                for name, value in pairs:
+                    if name in row:
+                        raise ValueError("Duplicate capability field: " + name)
+                    row[name] = value
+                return row
+
+            manifest = json.loads(raw, object_pairs_hook=unique)
+            if (
+                type(manifest) is not dict
+                or type(manifest.get("api")) is not int
+                or manifest["api"] != 1
+                or type(manifest.get("commands")) is not list
+                or len(manifest["commands"]) > 256
+                or not all(type(c) is str and re.fullmatch("[a-z][a-z0-9-]{0,63}", c) for c in manifest["commands"])
+                or type(manifest.get("recipe_format")) is not str
+                or len(manifest["recipe_format"]) > 80
+            ):
+                raise ValueError("Unsupported capability manifest")
+            if contract.is_file():
+                commands, caf_format = sorted(set(manifest["commands"])), manifest["recipe_format"]
+        except (OSError, ValueError) as exc:
+            manifest_error = str(exc)
+    else:
+        match = COMMANDS.search(_read(contract))
+        commands = sorted(set(re.findall(r"['\"]([a-z][a-z0-9-]*)['\"]", match.group(1)))) if match else []
+        declared = FORMAT.search(_read(path / "setup/fighter_caf.py"))
+        caf_format = declared.group(1) if declared else None
     features, missing = {}, {}
     for name, _label, needs, needs_format, why in FEATURES:
         lacks = [c for c in needs if c not in commands]
@@ -114,9 +150,12 @@ def inspect(path, recipe_format):
         usable=bool(commands),
         complete=all(features.values()),
         labels={name: label for name, label, *_ in FEATURES},
+        manifest_error=manifest_error,
     )
     if stamp is not None:
-        _cache[key] = row
+        if len(_cache) >= 128:
+            _cache.clear()
+        _cache[key] = copy.deepcopy(row)
     return row
 
 
@@ -129,9 +168,16 @@ def _installed_version(folder):
         return None, None
 
 
-def _label(name):
+def _label(name, release=None):
     match = VERSION_DIR.match(name)
-    return match.group(1) if match else name
+    if not match:
+        return name
+    title = release if isinstance(release, str) and release else match.group(1)
+    return (
+        title.removeprefix("v").replace("-beta.", " beta ").replace("-alpha.", " alpha ")
+        + " · build "
+        + match.group(2)[:8]
+    )
 
 
 def scan(folder, recipe_format):
@@ -157,7 +203,11 @@ def scan(folder, recipe_format):
             source = child / "source"
             if source.is_dir() and VERSION_DIR.match(child.name):
                 installed = current_source is not None and source.resolve() == current_source
-                add(source, "Game " + _label(child.name), "installed" if installed else "")
+                add(
+                    source,
+                    "Game " + _label(child.name, current_version if installed else None),
+                    "installed" if installed else "",
+                )
     add(folder / "source", "Game (source folder)", "")
     add(folder, "Source checkout", "developer checkout")
 
@@ -177,8 +227,14 @@ def describe(path, recipe_format):
     row = inspect(path, recipe_format)
     parent = Path(path).parent.name
     version = VERSION_DIR.match(parent)
+    release = None
+    if version and Path(path).name == "source":
+        root = Path(path).parents[3]
+        current, source = _installed_version(root)
+        if source == Path(path).resolve():
+            release = current
     row["label"] = (
-        ("Game " + _label(parent)) if version and Path(path).name == "source" else Path(path).name or str(path)
+        ("Game " + _label(parent, release)) if version and Path(path).name == "source" else Path(path).name or str(path)
     )
     return row
 

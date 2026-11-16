@@ -440,6 +440,9 @@ class Session:
         self.history = []
         self.draft = None
         self.active_outfit = "default"
+        from .artwork_references import References
+
+        self.artwork_references = References()
 
     def effective(self):
         document = copy.deepcopy(self.document)
@@ -861,6 +864,17 @@ class Session:
             candidate["ui_art"]["images"].pop(role, None)
         return self.commit(document)
 
+    def _request_artwork_stage(self, action, args, workspace, candidate=None):
+        document = self.selected_view()
+        self.owner.progress("Loading original artwork for all layouts…")
+        return self.artwork_references.stage(
+            self.shared_runtime(),
+            self.game(),
+            document["ui_art"].get("donor", document["metadata"]["donor"]),
+            workspace,
+            self.owner.recipe_format(),
+        )
+
     def _request_ui_settings(self, action, args, workspace, candidate=None):
         self.selected(candidate)["ui_art"].update(donor=args["donor"], hd_scale=args["hd_scale"])
         return self.commit(candidate)
@@ -968,6 +982,7 @@ class Session:
         "outfit_remove": _request_outfit,
         "stats": _request_stats,
         "ui": _request_ui,
+        "artwork_stage": _request_artwork_stage,
         "ui_settings": _request_ui_settings,
         "texture": _request_texture,
         "preview": _request_preview,

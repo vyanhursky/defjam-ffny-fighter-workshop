@@ -59,6 +59,7 @@ Requests carry `id`, `action`, and an `args` object. Native file pickers use
 | `ui_settings` | `Editor._request_ui_import` |
 | `undo` | `Editor._request_undo` |
 | `retail_appearance` | `Session._request_preview` |
+| `retail_artwork_stage` | `Session._request_artwork_stage` |
 | `retail_close` | `Session._request_close` |
 | `retail_combat` | `Session._request_combat` |
 | `retail_component` | `Session._request_component` |

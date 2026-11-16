@@ -248,18 +248,24 @@
           </section>
           <section data-content="art" hidden="" id="retail-panel-art" role="tabpanel" aria-labelledby="retail-tab-art">
             <h3>Complete the roster.</h3>
-            <p class="hint">Change the UI layout donor in Fighter → Advanced: mix donors.</p>
+            <p class="hint">Change the UI layout donor in Appearance → Advanced: mix donors.</p>
             <label
               >Output scale<select id="ui-scale">
                 <option value="1">Native</option>
                 <option value="2">2× HD</option>
                 <option value="4">4× HD</option>
               </select></label
-            ><button id="ui-settings">Apply UI settings</button><label>Artwork role<select id="role"></select></label>
+            ><button id="ui-settings">Apply UI settings</button>
+            <button id="art-stage">Stage artwork previews</button>
+            <p id="art-reference-status" class="hint" aria-live="polite"></p>
+            <label>Artwork role<select id="role"></select></label>
             <div class="two-cols">
               <button id="ui-import">Import PNG…</button><button id="ui-clear">Clear role</button>
             </div>
-            <div class="art-preview"><img id="art-image" alt="Imported fighter artwork" hidden="" /></div>
+            <label class="art-compare"
+              ><input type="checkbox" id="art-show-original" disabled /> Show original donor artwork</label
+            >
+            <div class="art-preview"><img id="art-image" alt="Selected artwork preview" hidden="" /></div>
             <p id="art-status" class="hint"></p>
             <p class="hint">
               Six master images cover all 24 selector, loading, titlecard, result and grid roles. Advanced roles

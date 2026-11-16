@@ -9,11 +9,16 @@ import * as THREE from "three";
 import { OrbitControls } from "./vendor/OrbitControls.js";
 import { gameSetup } from "./setup.mjs";
 import { workshopVersion } from "./version.mjs";
+import { artworkPreview } from "./artwork-previews.mjs";
 import { attachDetails } from "./errors.mjs";
 const $ = (id) => document.getElementById(id);
 mountPerformancePanels($("performance-panels"), { retail: true });
 mountExportDialog();
 const client = createBridge({
+  onProgress(message) {
+    $("busy-label").textContent = message;
+    $("status-message").textContent = message;
+  },
   onBusy(count, label) {
     $("busy").hidden = count <= 0;
     if (label) $("busy-label").textContent = label;
@@ -29,6 +34,8 @@ let state,
   renderedRuntime,
   renderedOutfit;
 let sceneData = null;
+let artworkReferences = null,
+  artworkBasis = null;
 // Home chooses the workflow: retail-new (a new fighter from a retail fighter) or retail-edit (change a retail fighter).
 const params = new URLSearchParams(location.hash.slice(1)),
   workflow = params.get("mode") === "retail-edit" ? "retail-edit" : "retail-new",
@@ -314,16 +321,43 @@ const performance = performanceEditor({
 });
 function showArt() {
   const d = state?.document,
-    role = $("role").value,
-    raw = d?.ui_art.images[role];
-  $("art-image").hidden = !raw;
-  if (raw) $("art-image").src = "data:image/png;base64," + raw;
+    role = $("role").value;
+  const basis = JSON.stringify([state?.runtime, state?.data, d?.ui_art.donor || d?.metadata.donor]);
+  if (basis !== artworkBasis) {
+    artworkBasis = basis;
+    artworkReferences = null;
+    $("art-show-original").checked = false;
+  }
+  const shown = artworkPreview(d?.ui_art.images || {}, artworkReferences, role, $("art-show-original").checked);
+  $("art-image").hidden = !shown;
+  if (shown) $("art-image").src = shown.png;
   else $("art-image").removeAttribute("src");
+  $("art-stage").disabled = !d;
+  $("art-show-original").disabled = !artworkReferences;
+  const donorName = state?.donors.find((row) => row.id === artworkReferences?.donor)?.name;
+  $("art-reference-status").textContent = artworkReferences
+    ? `${Object.keys(artworkReferences.images).length} original layouts prepared · ${donorName || artworkReferences.donor}`
+    : "Stage artwork previews to see the original donor images. No project images are changed.";
   $("art-status").textContent = d
-    ? Object.keys(d.ui_art.images).length + " imported roles · missing art inherits the UI donor."
+    ? (shown ? shown.caption + " · " : "") + Object.keys(d.ui_art.images).length + " imported roles."
     : "";
+  window.__retailArtwork = {
+    role,
+    ready: Boolean(shown),
+    original: shown?.original || false,
+    staged: Boolean(artworkReferences),
+  };
 }
 $("role").onchange = showArt;
+$("art-show-original").onchange = showArt;
+$("art-stage").onclick = async () => {
+  const basis = artworkBasis;
+  const result = await act("retail_artwork_stage", {}, "Loading original artwork previews…");
+  if (!result || basis !== artworkBasis) return;
+  artworkReferences = result;
+  showArt();
+  status("Original artwork previews ready.");
+};
 for (const id of ["name", "author", "version", "description", "license", "pack", "fighter"])
   $(id).oninput = () => {
     const metadata = {};

@@ -6,6 +6,10 @@ import { attachDetails } from "./errors.mjs";
 
 const $ = (id) => document.getElementById(id);
 const client = createBridge({
+  onProgress(message) {
+    $("busy-label").textContent = message;
+    $("status-message").textContent = message;
+  },
   onBusy(count, label) {
     $("busy").hidden = count <= 0;
     if (label) $("busy-label").textContent = label;

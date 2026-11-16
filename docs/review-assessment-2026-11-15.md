@@ -99,10 +99,10 @@ this review. No runtime merge, packaged release or game launch was performed.
 
 ### Integrated validation and limits
 
-- Windows integrated source: **311 Python tests passed, 5 skipped**; **19 Node
+- Windows integrated source: **313 Python tests passed, 3 skipped**; **19 Node
   tests passed**; configured mypy adoption set, Ruff and Prettier pass. The static
   negative probe rejects wrong fighter/snapshot keys and incompatible argument
-  types. The 5 Python skips are target-specific platform checks, not hidden failures.
+  types. The three skips require case-sensitive filesystems or POSIX modes and run in Linux CI. Optional PS2 compression checks are included in this final run.
 - Real Windows synthetic Qt/WebChannel/WebGL tour passes **31 checks** at
   **1440×940 and 1100×760**. It covers all four Home workflows, unknown Story bytes,
   backup, project/outfit changes, failed/retried automatic catalogs, keyboard tabs,

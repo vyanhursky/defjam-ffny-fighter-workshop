@@ -110,6 +110,19 @@ def test_manifest_survives_script_refactor_and_invalidates_cache(tmp_path):
     assert not runtimes.inspect(path, FORMAT)["usable"]
 
 
+def test_optional_preview_extension_is_explicit_and_bounded(tmp_path):
+    path = source(tmp_path / "runtime", NEW, FORMAT)
+    manifest = path / runtimes.MANIFEST
+    row = dict(api=1, commands=NEW, recipe_format=FORMAT, extensions=["retail-animation-preview-1"])
+    manifest.write_text(json.dumps(row))
+    assert runtimes.inspect(path, FORMAT)["extensions"] == ["retail-animation-preview-1"]
+    row["extensions"] = "retail-animation-preview-1"
+    manifest.write_text(json.dumps(row))
+    assert not runtimes.inspect(path, FORMAT)["usable"]
+    manifest.unlink()
+    assert runtimes.inspect(path, FORMAT)["extensions"] == []
+
+
 @pytest.mark.parametrize(
     "raw",
     [

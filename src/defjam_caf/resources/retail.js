@@ -25,7 +25,9 @@ let state,
   epoch = 0,
   detailDraft = null,
   draftTimer,
-  renderedPack;
+  renderedPack,
+  renderedRuntime;
+let sceneData = null;
 // Home chooses the workflow: retail-new (a new fighter from a retail fighter) or retail-edit (change a retail fighter).
 const params = new URLSearchParams(location.hash.slice(1)),
   workflow = params.get("mode") === "retail-edit" ? "retail-edit" : "retail-new",
@@ -114,6 +116,8 @@ function render(s) {
   window.__retailState = s;
   const d = s.document,
     selected = d?.definition.inherits;
+  const refreshRuntime = renderedRuntime !== s.runtime && Boolean(sceneData);
+  renderedRuntime = s.runtime;
   document.body.dataset.hasProject = String(Boolean(d));
   if (renderedPack !== d?.identity.pack) {
     renderedPack = d?.identity.pack;
@@ -241,6 +245,10 @@ function render(s) {
   showArt();
   $("texture-status").textContent = d ? Object.keys(d.textures).length + " texture overrides staged." : "";
   performance.render(performanceState());
+  if (refreshRuntime) {
+    clearPreview();
+    if (d) queueMicrotask(() => $("preview").click());
+  }
 }
 
 function performanceState() {
@@ -272,10 +280,10 @@ const performance = performanceEditor({
     status(error.message, true);
     attachDetails($("toast"), error.detail);
   },
-  parts: () => [],
-  meshes: () => [],
+  parts: () => sceneData?.meshes || [],
+  meshes: () => [...model.children],
   repose: () => {},
-  canAnimate: () => false,
+  canAnimate: () => Boolean(state?.setup?.runtime?.extensions?.includes("retail-animation-preview-1")),
 });
 function showArt() {
   const d = state?.document,
@@ -440,6 +448,8 @@ scene.add(model);
 let bounds,
   images = [];
 function clearPreview() {
+  performance.stop();
+  sceneData = null;
   disposeModel(model);
   for (const image of images) image.dispose();
   images = [];
@@ -472,9 +482,7 @@ $("preview").onclick = async () => {
   const mine = ++epoch,
     result = unpackPreview(await act("retail_preview", {}, "Decoding the static model…"));
   if (!result || mine !== epoch) return;
-  disposeModel(model);
-  for (const image of images) image.dispose();
-  images = [];
+  const loadedImages = [];
   const loader = new THREE.TextureLoader(),
     textures = {};
   await Promise.all(
@@ -483,21 +491,30 @@ $("preview").onclick = async () => {
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.flipY = false;
       textures[key] = texture;
-      images.push(texture);
+      loadedImages.push(texture);
     }),
   );
+  if (mine !== epoch) {
+    for (const image of loadedImages) image.dispose();
+    return;
+  }
+  performance.stop();
+  sceneData = result;
+  disposeModel(model);
+  for (const image of images) image.dispose();
+  images = loadedImages;
   for (const part of result.meshes) {
     const geometry = geometryFor(THREE, part);
-    model.add(
-      new THREE.Mesh(
-        geometry,
-        new THREE.MeshBasicMaterial({
-          map: textures[part.atlas],
-          side: THREE.DoubleSide,
-          wireframe: $("wireframe").checked,
-        }),
-      ),
+    const mesh = new THREE.Mesh(
+      geometry,
+      new THREE.MeshBasicMaterial({
+        map: textures[part.atlas],
+        side: THREE.DoubleSide,
+        wireframe: $("wireframe").checked,
+      }),
     );
+    mesh.userData.source = part;
+    model.add(mesh);
   }
   bounds = result.bounds;
   shapeRows = result.shapes.map((r) => ({ id: r.name, name: r.name + " · " + r.width + "×" + r.height }));
@@ -509,7 +526,8 @@ $("preview").onclick = async () => {
   window.__retailPreview = { ready: true, meshes: result.meshes.length, shapes: result.shapes };
 };
 
-renderer.setAnimationLoop(() => {
+renderer.setAnimationLoop((now) => {
+  performance.tick(now);
   controls.update();
   renderer.render(scene, camera);
 });

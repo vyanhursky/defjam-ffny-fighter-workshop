@@ -601,7 +601,33 @@ class Session:
         link = self.owner.performance_link
         projects.require(link is not None, "Connect compatible fighter tools first")
         if action == "performance_animation":
-            return link.animation(args)
+            if args.get("operation") == "list":
+                return link.animation(args)
+            from . import runtimes
+
+            projects.require(
+                "retail-animation-preview-1"
+                in runtimes.inspect(self.shared_runtime(), self.owner.recipe_format())["extensions"],
+                "This game version cannot preview retail animation. Choose a compatible version in Game setup.",
+            )
+            with tempfile.TemporaryDirectory(prefix="animation-", dir=workspace) as temporary:
+                root = Path(temporary) / self.document["identity"]["pack"]
+                root.mkdir()
+                self.stage(root, temporary, include_performance=False)
+                request = Path(temporary) / "animation.json"
+                request.write_text(json.dumps(args), encoding="utf-8")
+                return self.api(
+                    [
+                        "workshop-animation",
+                        "--game",
+                        str(self.game()),
+                        "--pack",
+                        str(root),
+                        "--workshop-request",
+                        str(request),
+                    ],
+                    temporary,
+                )
         if args.get("override"):
             encoded = self.effective().get("performance", {}).get("voice", {}).get("clips", {}).get(args["override"])
             projects.require(encoded is not None, "No imported clip in this slot")

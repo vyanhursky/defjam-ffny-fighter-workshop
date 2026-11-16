@@ -143,9 +143,10 @@ export function performanceEditor(api) {
     $("voice-play-imported").disabled = !override;
   }
   function render(s) {
-    if (animationBasis !== s.appearance_key) {
+    const basis = JSON.stringify([s.appearance_key, s.retail_movesets?.selected, s.fields?.combined_style]);
+    if (animationBasis !== basis) {
       stop();
-      animationBasis = s.appearance_key;
+      animationBasis = basis;
     }
     catalog = s.performance?.catalog;
     settings = s.performance?.settings || {};

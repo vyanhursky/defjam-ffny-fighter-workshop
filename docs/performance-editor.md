@@ -7,9 +7,11 @@ Story-save editing retains its existing scope.
 
 The same panels/settings apply to standalone fighters started from CAF or retail
 donors. Retail appearance replacements/extra outfits retain their parent's shared
-performance. Animation preview for retail bodies needs the subsequent runtime
-extension; voice, AI and entrance/victory authoring/export already use the existing
-runtime API.
+performance. Retail source animation preview requires the optional
+`retail-animation-preview-1` runtime extension (companion runtime PR269, v1.2.0).
+Without it, voice/AI/presentation authoring and export still use the existing API;
+only unsupported preview controls are disabled. With it, the shared player supports
+entrance/victory, source clips, play/pause, scrubbing and stop on the selected body.
 
 Open a standalone project and visit **Voice**, **Entrance & victory**, or **AI**.
 The first visit loads the selected game's catalogs. Inline errors offer Retry;

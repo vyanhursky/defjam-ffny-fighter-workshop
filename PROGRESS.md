@@ -1,5 +1,15 @@
 # Progress and handoff
 
+## November 15 review — action dispatch
+
+B1: Editor and retail Session requests now use explicit action tables and
+focused handlers, preserving grouped operations' existing semantics, return
+shapes, guard order and snapshot-to-configure fallback. Seven common draft
+reset sequences use one helper. scripts/editor_actions.py generates the public
+action index from the live tables; a freshness test checks it. Validation:
+241 Python tests passed, 5 skipped; Ruff format/check and diff check pass.
+Native file dialogs and bridge threading are separate follow-up changes.
+
 ## November 15 review — frontend formatting foundation
 
 B4 preparation: first-party HTML/CSS/JS/modules and Node tests use pinned

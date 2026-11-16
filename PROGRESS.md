@@ -1,5 +1,24 @@
 # Progress and handoff
 
+## November 15 review — retail workflow
+
+C7/C8/C9 and retail C11/C12/C16: reuse the compact editor header/path/runtime
+shell and keyboard/ARIA tabs. Start controls collapse after creation; New reopens
+them. IDs use full-width rows. The first visit opens the workflow guide, then
+remembers dismissal across visits. One starting fighter sets donor defaults;
+advanced mixing explains combat/body/UI and keeps a visible summary (body is
+explicitly the donor to import, not invented provenance). Empty preview offers
+body import and refresh; successful import automatically previews once and lists
+texture shapes. New projects clear the previous model. Footer version uses its
+own ID instead of colliding with the editable version field.
+
+Real Windows Qt/WebChannel/WebGL tour: all 31 checks pass at 1100×760 and
+1440×940, including standalone, replacement and additional-outfit modes, full IDs,
+collapsed setup, donor defaults and exactly one post-import preview. Captures
+inspected locally (build/ui-retail-compact3 and build/ui-retail-wide). Node 19
+tests and Ruff/Prettier pass. Body/catalog resources and OS pickers are invented
+boundary adapters; no original resources, native compilation or game acceptance.
+
 ## November 15 review — CAF workflow and synthetic Qt tour
 
 C1/C2/C3/C4/C5/C6/C11/C12/C13/C14/C16 and B9: CAF projects get a project/outfit

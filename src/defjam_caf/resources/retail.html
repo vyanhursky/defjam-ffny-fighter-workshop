@@ -12,8 +12,8 @@
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script type="module" src="retail.js"></script>
   </head>
-  <body>
-    <header>
+  <body class="editor-page retail-page">
+    <header class="editor-header">
       <div class="brand">
         <span class="badge">FF<span>NY</span></span>
         <div>
@@ -22,61 +22,87 @@
         </div>
       </div>
       <div class="header-actions">
+        <button id="new-open">New…</button>
         <button id="home" title="Back to the start screen, where you pick what to work on.">‹ Home</button
-        ><button
+        ><button id="open">Open project…</button>
+      </div>
+      <div class="data-strip">
+        <span class="path-label">GAME DATA</span> <span class="dot"></span
+        ><span id="connection">Choose game data and the compatible runtime.</span><span id="saved">No project</span>
+        <button
           id="setup-open"
           class="chip"
           title="Where your game and its data are, and which game version the Workshop uses."
         >
-          Game setup</button
-        ><button id="open">Open project…</button>
+          Game setup
+        </button>
       </div>
     </header>
-    <div class="data-strip">
-      <span class="dot"></span><span id="connection">Choose game data and the compatible runtime.</span
-      ><span id="saved">No project</span>
-    </div>
+
     <main class="retail-main">
       <aside class="retail-left">
-        <span class="eyebrow">START A FIGHTER</span><label>Original fighter<select id="base-donor"></select></label
-        ><label
-          >Project purpose<select id="deployment-mode">
-            <option value="add">New standalone fighter</option>
-            <option value="override">Override existing retail appearance</option>
-            <option value="outfit">Add outfit to existing retail fighter</option>
-          </select></label
-        ><button id="new">New from retail fighter</button><button id="import">Import fighter from pack…</button>
-        <p class="hint">Work in a portable project. Your Story profiles and installed packs stay separate.</p>
-        <div class="rule"></div>
+        <details id="retail-start" open="">
+          <summary>Start a fighter</summary>
+          <div class="start-controls">
+            <span class="eyebrow">START A FIGHTER</span><label>Original fighter<select id="base-donor"></select></label
+            ><label
+              >Project purpose<select id="deployment-mode">
+                <option value="add">New standalone fighter</option>
+                <option value="override">Override existing retail appearance</option>
+                <option value="outfit">Add outfit to existing retail fighter</option>
+              </select></label
+            ><button id="new">New from retail fighter</button><button id="import">Import fighter from pack…</button>
+            <p class="hint">Work in a portable project. Your Story profiles and installed packs stay separate.</p>
+            <div class="rule"></div>
+          </div>
+        </details>
         <label>Display name<input id="name" maxlength="80" /></label
         ><label>Author<input id="author" maxlength="120" /></label>
-        <div class="two-cols">
-          <label>Pack ID<input id="pack" /></label><label>Fighter ID<input id="fighter" /></label>
-        </div>
+
+        <label>Pack ID<input id="pack" /></label><label>Fighter ID<input id="fighter" /></label>
+
         <label>Version<input id="version" /></label
         ><label>Description<textarea id="description" rows="3"></textarea></label
         ><label>Credits / license<textarea id="license" rows="3"></textarea></label
         ><button id="details">Apply project details</button>
         <div class="rule"></div>
         <p id="project-path" class="hint"></p>
-        <button id="save" class="primary">Save project</button><button id="copy">Save project as…</button>
+        <button id="save" class="primary" title="Save project (Ctrl+S)">Save project</button
+        ><button id="copy">Save project as…</button>
       </aside>
       <aside class="retail-right">
-        <div class="tabs">
-          <button data-panel="combat" class="active">Fighter</button><button data-panel="textures">Textures</button
-          ><button data-panel="art">UI artwork</button>
+        <div class="tabs" role="tablist" aria-label="Retail project sections">
+          <button
+            data-panel="combat"
+            class="active tab"
+            id="retail-tab-combat"
+            role="tab"
+            aria-controls="retail-panel-combat"
+          >
+            Fighter</button
+          ><button
+            data-panel="textures"
+            class="tab"
+            id="retail-tab-textures"
+            role="tab"
+            aria-controls="retail-panel-textures"
+          >
+            Textures</button
+          ><button data-panel="art" class="tab" id="retail-tab-art" role="tab" aria-controls="retail-panel-art">
+            UI artwork
+          </button>
         </div>
         <details id="retail-workflow" class="retail-workflow">
           <summary>Workflow guide · replace an appearance or add an outfit</summary>
           <ol>
             <li>
-              Choose <strong>Original fighter</strong> and <strong>Project purpose</strong>, then
-              <strong>New from retail fighter</strong>. For an open project, choose
+              Open <strong>New…</strong>, choose the starting fighter and purpose, then start the project. The starting
+              fighter supplies combat, body and UI defaults. For an open appearance project, choose
               <strong>Existing fighter</strong> and <strong>Apply project purpose &amp; target</strong>.
             </li>
             <li>
-              Choose the <strong>Body donor</strong>, <strong>Import original body</strong>, then
-              <strong>Refresh 3D preview</strong>. Import the body before painting; importing a body again clears
+              Use <strong>Import original body</strong>; the preview loads automatically. To mix donors, open
+              <strong>Advanced: mix donors</strong>. Import the body before painting; importing a body again clears
               previous texture imports.
             </li>
             <li>
@@ -103,19 +129,31 @@
             single-fighter packs and single-target appearance overrides are supported.
           </p>
         </details>
-        <section data-content="combat">
+        <section data-content="combat" id="retail-panel-combat" role="tabpanel" aria-labelledby="retail-tab-combat">
+          <p id="donor-summary" class="hint"></p>
+          <details id="donor-mixing">
+            <summary>Advanced: mix donors</summary>
+            <p class="hint">
+              Combat supplies moves and stats. Body supplies the model and textures. UI supplies menu layouts and
+              fallback artwork.
+            </p>
+            <label>Combat donor<select id="combat-donor"></select></label
+            ><button id="combat">Use donor moveset &amp; stats</button
+            ><label>Body donor<select id="body-donor"></select></label
+            ><label>UI layout donor<select id="ui-donor"></select></label>
+          </details>
           <h3>Retail target</h3>
           <label>Existing fighter<select id="deployment-target"></select></label
-          ><button id="apply-deployment">Apply project purpose & target</button>
+          ><button id="apply-deployment">Apply project purpose &amp; target</button>
           <p id="deployment-status" class="hint"></p>
           <div class="rule"></div>
-          <label>Combat donor<select id="combat-donor"></select></label
-          ><button id="combat">Use donor moveset & stats</button>
+
           <p class="hint">
             Copies the original fighter's combat baseline. Supplied voice, Blazin’, entrance and victory resources
             remain selectable below.
           </p>
-          <label>Body donor<select id="body-donor"></select></label><button id="body">Import original body</button>
+          <h3>Original body</h3>
+          <button id="body">Import original body</button>
           <p class="hint">
             The runtime checks the body against the chosen combat rig before export. Preview is a static source pose.
           </p>
@@ -126,7 +164,13 @@
           <button id="apply-stats">Apply stats</button>
           <p class="hint">Native retail stats differ from CAF training values.</p>
         </section>
-        <section data-content="textures" hidden>
+        <section
+          data-content="textures"
+          hidden=""
+          id="retail-panel-textures"
+          role="tabpanel"
+          aria-labelledby="retail-tab-textures"
+        >
           <h3>Paint the fighter.</h3>
           <label>Texture shape<select id="shape"></select></label><button id="texture">Import RGB PNG…</button
           ><button id="clear-texture">Clear texture override</button>
@@ -137,10 +181,10 @@
           </p>
           <p id="texture-status" class="hint"></p>
         </section>
-        <section data-content="art" hidden>
+        <section data-content="art" hidden="" id="retail-panel-art" role="tabpanel" aria-labelledby="retail-tab-art">
           <h3>Complete the roster.</h3>
-          <label>UI layout donor<select id="ui-donor"></select></label
-          ><label
+          <p class="hint">Change the UI layout donor in Fighter → Advanced: mix donors.</p>
+          <label
             >Output scale<select id="ui-scale">
               <option value="1">Native</option>
               <option value="2">2× HD</option>
@@ -150,7 +194,7 @@
           <div class="two-cols">
             <button id="ui-import">Import PNG…</button><button id="ui-clear">Clear role</button>
           </div>
-          <div class="art-preview"><img id="art-image" alt="Imported fighter artwork" hidden /></div>
+          <div class="art-preview"><img id="art-image" alt="Imported fighter artwork" hidden="" /></div>
           <p id="art-status" class="hint"></p>
           <p class="hint">
             Six master images cover all 24 selector, loading, titlecard, result and grid roles. Advanced roles override
@@ -167,6 +211,11 @@
           </div>
         </div>
         <div id="viewport"></div>
+        <div id="preview-empty" class="viewer-empty">
+          <strong>No model loaded yet</strong>
+          <p>Import the original body, then refresh the 3D preview.</p>
+          <button id="empty-body">Import original body</button><button id="empty-preview">Refresh 3D preview</button>
+        </div>
         <div class="retail-camera">
           <button id="preview">Refresh 3D preview</button><button id="front">Front</button
           ><button id="back">Back</button><button id="fit">Fit</button
@@ -174,16 +223,16 @@
         </div>
         <p id="preview-note" class="hint"></p>
         <div class="retail-bottom">
-          <button id="undo">Undo</button><button id="reset">Reset to saved</button
+          <button id="undo" title="Undo last change (Ctrl+Z)">Undo</button><button id="reset">Reset to saved</button
           ><button id="export" class="primary">Export Custom Fighter Mod…</button>
         </div>
       </section>
     </main>
-    <footer><span id="status-message">Ready</span><span id="version">Fighter Workshop</span></footer>
-    <div id="busy" hidden>
+    <footer><span id="status-message">Ready</span><span id="workshop-version">Fighter Workshop</span></footer>
+    <div id="busy" hidden="">
       <div class="spinner"></div>
       <strong id="busy-label">Working…</strong>
     </div>
-    <div id="toast" role="status" hidden></div>
+    <div id="toast" role="status" hidden=""></div>
   </body>
 </html>

@@ -30,7 +30,7 @@ jobs:
         run: |
           python -m pip install -r requirements-build.txt
           python -m pip install --no-build-isolation -c requirements-build.txt -e '.[desktop,dev]'
-      - name: Drive Home, Story and portable projects without game data
+      - name: Drive all four workflows without game data
         env:
           QT_QPA_PLATFORM: xcb
           LIBGL_ALWAYS_SOFTWARE: '1'

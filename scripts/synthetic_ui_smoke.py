@@ -128,6 +128,12 @@ def main(argv=None):
     editor = window.bridge.editor
     editor.open_data(data)
     editor.runtime = runtime
+    editor.retail.catalog = {
+        "fighters": [
+            dict(id=row["key"].split("/")[1], name=row["label"], components=dict(stats=dict(health=20)))
+            for row in catalog["fighters"]
+        ]
+    }
     calls = Counter()
     original = editor.request
 
@@ -143,6 +149,19 @@ def main(argv=None):
         calls[action] += 1
         if action in ("preview", "retail_preview"):
             return preview
+        if action == "retail_appearance":
+            document = editor.retail.effective()
+            document["resources"] = [
+                dict(
+                    id="retail-body",
+                    kind="appearance",
+                    compatibility=dict(skeleton="retail/binding-" + arguments["donor"].split("/")[1]),
+                    source=dict(format="invented-fixture"),
+                )
+            ]
+            document["definition"]["components"]["appearance"] = document["identity"]["pack"] + "/retail-body"
+            document["textures"] = {}
+            return editor.retail.commit(document)
         if action == "performance_connect":
             if calls[action] == 1:
                 raise SaveError(
@@ -245,6 +264,66 @@ def main(argv=None):
             "!document.getElementById('export-ready').open && !window.__cafState.dirty",
             "document.getElementById('export-ready-confirm').click()",
         ),
+        (
+            "Return Home for retail",
+            "document.querySelectorAll('.home-card').length===4",
+            "document.getElementById('home-button').click()",
+        ),
+        (
+            "Retail standalone start",
+            "window.__retailState?.donors.length===3 && document.getElementById('retail-start').open",
+            "document.querySelectorAll('.home-card')[2].querySelector('button').click()",
+        ),
+        (
+            "Single start donor",
+            "['combat-donor','body-donor','ui-donor','deployment-target'].every(id=>document.getElementById(id).value==='retail/teck')",
+            "let e=document.getElementById('base-donor');e.value='retail/teck';e.dispatchEvent(new Event('change'))",
+        ),
+        (
+            "Retail portable project and empty viewer",
+            "window.__retailState?.document?.definition.inherits==='retail/teck' && !document.getElementById('retail-start').open && !document.getElementById('preview-empty').hidden && !document.getElementById('donor-mixing').open",
+            "document.getElementById('new').click()",
+        ),
+        (
+            "Retail compact shell and full IDs",
+            "document.querySelector('header').getBoundingClientRect().height<=64 && document.documentElement.scrollWidth<=innerWidth && document.getElementById('pack').getBoundingClientRect().width>=185",
+            None,
+        ),
+        (
+            "Body import automatically previews",
+            "window.__retailPreview?.ready && document.getElementById('preview-empty').hidden && document.getElementById('shape').options[0].value==='A001'",
+            "document.getElementById('empty-body').click()",
+        ),
+        (
+            "Retail keyboard tabs",
+            "document.querySelector('[data-panel=textures]').getAttribute('aria-selected')==='true'",
+            "let e=document.querySelector('[data-panel=combat]');e.click();e.focus();e.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))",
+        ),
+        (
+            "Home for appearance workflow",
+            "document.querySelectorAll('.home-card').length===4",
+            "document.getElementById('home').click()",
+        ),
+        (
+            "Retail appearance workflow",
+            "document.body.dataset.mode==='retail-edit' && !window.__retailState?.document",
+            "document.querySelectorAll('.home-card')[3].querySelector('button').click()",
+        ),
+        (
+            "Retail override preserves combat",
+            "window.__retailState?.document?.deployment?.mode==='override' && document.getElementById('combat').disabled && document.getElementById('apply-stats').disabled",
+            "document.getElementById('new').click()",
+        ),
+        (
+            "New button reopens setup",
+            "document.getElementById('retail-start').open",
+            "document.getElementById('new-open').click()",
+        ),
+        (
+            "Retail extra-outfit mode",
+            "window.__retailState?.document?.deployment?.mode==='outfit' && document.getElementById('combat').disabled",
+            "document.getElementById('deployment-mode').value='outfit';document.getElementById('new').click()",
+        ),
     ]
     evidence, started, state = (
         [],
@@ -264,6 +343,7 @@ def main(argv=None):
             assert saved.payload[0x3210:0x321B] == b"STORY BYTES"
             assert len(list((workspace / "backups").glob("*.djprofile"))) == 1
             assert calls["performance_connect"] == 2
+            assert calls["retail_appearance"] == calls["retail_preview"] == 1
             assert any("Mod" in title for title in pickers)
             assert len(projects.read(output / "fighter.ffnyfighter")[0]["outfits"]) == 1
         except Exception as exc:

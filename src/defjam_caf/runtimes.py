@@ -228,10 +228,11 @@ def describe(path, recipe_format):
     parent = Path(path).parent.name
     version = VERSION_DIR.match(parent)
     release = None
-    if version and Path(path).name == "source":
-        root = Path(path).parents[3]
+    resolved = Path(path).resolve()
+    if version and resolved.name == "source" and len(resolved.parents) > 3:
+        root = resolved.parents[3]
         current, source = _installed_version(root)
-        if source == Path(path).resolve():
+        if source == resolved:
             release = current
     row["label"] = (
         ("Game " + _label(parent, release)) if version and Path(path).name == "source" else Path(path).name or str(path)

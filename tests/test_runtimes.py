@@ -136,6 +136,12 @@ def test_release_label_matches_header_and_scan_without_mutating_cached_inspectio
     assert "label" not in runtimes.inspect(old, FORMAT)
 
 
+def test_relative_version_source_keeps_its_build_label(tmp_path, monkeypatch):
+    checkout = source(tmp_path / "1.2.0-abcdef012345/source", NEW, FORMAT)
+    monkeypatch.chdir(tmp_path)
+    assert runtimes.describe(checkout.relative_to(tmp_path), FORMAT)["label"] == "Game 1.2.0 · build abcdef01"
+
+
 def test_the_choice_is_remembered_and_actions_refuse_a_version_that_cannot_do_them(tmp_path):
     root, old, new = app_folder(tmp_path)
     workspace = tmp_path / "work"

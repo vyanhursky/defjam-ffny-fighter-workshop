@@ -26,6 +26,19 @@ def digest(path):
     return h.hexdigest()
 
 
+def environment_record(raw, expected_platform):
+    assert len(raw) <= 64 * 1024, "Build environment record exceeds 64 KiB"
+    record = json.loads(raw)
+    assert record.get("schema") == 1 and record.get("platform") == expected_platform, (
+        "Build environment platform mismatch"
+    )
+    assert isinstance(record.get("python"), str) and isinstance(record.get("machine"), str)
+    dependencies = record.get("dependencies")
+    assert isinstance(dependencies, dict) and dependencies, "Missing resolved dependency versions"
+    assert all(isinstance(k, str) and isinstance(v, str) and k and v for k, v in dependencies.items())
+    return record
+
+
 def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
     assert re.fullmatch(r"[0-9a-f]{40}", EXPECTED_SHA)
     assert RUN_ID > 0
@@ -70,6 +83,7 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
         approved_seen = set()
         notices_seen = False
         entrypoint_seen = False
+        build_environment = None
         app = "defjam-ffny-fighter-workshop"
         entrypoint = (
             f"{app}.app/Contents/MacOS/{app}"
@@ -98,6 +112,9 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
                     check_name(member.filename)
                     if member.is_dir() or stat.S_ISLNK(member.external_attr >> 16):
                         continue
+                    if member.filename.endswith("/documentation/build-environment.json"):
+                        assert build_environment is None and member.file_size <= 64 * 1024
+                        build_environment = environment_record(bundle.read(member), expected_platform)
                     if member.filename == entrypoint:
                         with bundle.open(member) as stream:
                             header = stream.read(4)
@@ -119,6 +136,9 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
                         assert not PurePosixPath(member.linkname).is_absolute(), member.name
                     if not member.isfile():
                         continue
+                    if member.name.endswith("/documentation/build-environment.json"):
+                        assert build_environment is None and member.size <= 64 * 1024
+                        build_environment = environment_record(bundle.extractfile(member).read(), expected_platform)
                     if member.name == entrypoint:
                         assert bundle.extractfile(member).read(4) == b"\x7fELF" and member.mode & stat.S_IXUSR
                         entrypoint_seen = True
@@ -129,6 +149,7 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
         assert approved_seen == set(media), (target, "Missing approved offline README images", approved_seen)
         assert notices_seen, (target, "Missing dependency license notices")
         assert entrypoint_seen, (target, "Missing native workshop executable")
+        assert build_environment is not None, (target, "Missing resolved build environment")
         for source in (archive, sidecar):
             try:
                 os.link(source, output / source.name)
@@ -145,6 +166,7 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
                 "ci_artifact_id": artifact_index["workshop-" + target]["id"],
                 "archive_entries": len(names),
                 "startup": receipt,
+                "build_environment": build_environment,
                 "audit": {
                     "no_save_dump_or_compiled_game_files": True,
                     "approved_readme_images_verified": True,

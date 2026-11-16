@@ -1,5 +1,18 @@
 # Progress and handoff
 
+## November 15 review — build dependency provenance
+
+A12: native CI pins setuptools/wheel, Qt, PyInstaller, Pillow and NumPy via
+requirements-build.txt and disables isolated editable-build dependency drift.
+Each package records its actual Python/OS/CPU and complete resolved distribution
+versions in documentation/build-environment.json. Release staging validates and
+copies those records into per-target provenance, refusing missing/mismatched
+records. requirements-tested.txt is explicitly historical. Focused release,
+package/platform and hygiene tests: 16 passed, 3 skipped; Ruff/diff checks pass.
+Native package CI remains the target qualification gate. These are core pins
+and full resolved records, not a claim of byte-identical builds or a complete
+transitive dependency lock. No release publication is requested.
+
 ## November 15 review — storage and private cache hygiene
 
 A9/A10: path-hashed kernel lock files live in the default Workshop workspace's

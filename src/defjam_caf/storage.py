@@ -1,4 +1,5 @@
 """Atomic persistence, stale-source detection and bounded full-profile archives."""
+
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
@@ -51,9 +52,11 @@ def writer_lock(folder):
         try:
             if os.name == "nt":
                 import msvcrt
+
                 msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
             else:
                 import fcntl
+
                 fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as exc:
             raise SaveError("Another editor is writing this profile") from exc
@@ -91,9 +94,14 @@ def profile_files(profile, save):
 
 def archive_bytes(profile, save):
     import io
+
     files = profile_files(profile, save)
-    manifest = {"schema": 1, "title": TITLE_ID, "name": profile.name,
-                "files": {name: {"sha256": sha(raw), "size": len(raw)} for name, raw in files.items()}}
+    manifest = {
+        "schema": 1,
+        "title": TITLE_ID,
+        "name": profile.name,
+        "files": {name: {"sha256": sha(raw), "size": len(raw)} for name, raw in files.items()},
+    }
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("manifest.json", json.dumps(manifest, sort_keys=True))
@@ -117,10 +125,15 @@ def export_profile(profile, save, destination):
 
 def read_archive(path):
     import io
+
     raw = read_bounded(Path(path), 8 * 1024 * 1024)
     with zipfile.ZipFile(io.BytesIO(raw)) as archive:
         infos = archive.infolist()
-        if len(infos) > 33 or len({i.filename for i in infos}) != len(infos) or sum(i.file_size for i in infos) > 8 * 1024 * 1024:
+        if (
+            len(infos) > 33
+            or len({i.filename for i in infos}) != len(infos)
+            or sum(i.file_size for i in infos) > 8 * 1024 * 1024
+        ):
             raise SaveError("Invalid or oversized profile archive")
         if any(i.flag_bits & 1 or i.file_size > MAX_SAVE_SIZE for i in infos):
             raise SaveError("Encrypted or oversized archive member")

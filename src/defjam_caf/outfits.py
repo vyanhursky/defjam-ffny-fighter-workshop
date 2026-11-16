@@ -1,4 +1,5 @@
 """Versioned outfit collection; combat settings and fighter identity stay shared."""
+
 import copy
 import uuid
 
@@ -11,14 +12,17 @@ APPEARANCE = ("caf_values", "caf_colors")
 
 
 def entries(document):
-    return [{"id": DEFAULT, "name": document.get("outfit_name", "Outfit 1")},
-            *[{"id": row["id"], "name": row["name"]} for row in document.get("outfits", [])]]
+    return [
+        {"id": DEFAULT, "name": document.get("outfit_name", "Outfit 1")},
+        *[{"id": row["id"], "name": row["name"]} for row in document.get("outfits", [])],
+    ]
 
 
 def view(document, identity=DEFAULT):
     """Flatten a selected outfit for the existing single-CAF editor/preview."""
     result = copy.deepcopy(document)
-    result.pop("outfits", None); result.pop("outfit_name", None)
+    result.pop("outfits", None)
+    result.pop("outfit_name", None)
     if identity != DEFAULT:
         selected = next((row for row in document.get("outfits", []) if row["id"] == identity), None)
         projects.require(selected is not None, "This outfit is unavailable")
@@ -40,9 +44,9 @@ def replace_view(document, identity, selected):
     result["fighter"].pop("finishers", None)
     if "finishers" in selected["fighter"]:
         result["fighter"]["finishers"] = selected["fighter"]["finishers"][:]
-    result['fighter'].pop('retail_moveset',None)
-    if 'retail_moveset' in selected['fighter']:
-        result['fighter']['retail_moveset']=selected['fighter']['retail_moveset']
+    result["fighter"].pop("retail_moveset", None)
+    if "retail_moveset" in selected["fighter"]:
+        result["fighter"]["retail_moveset"] = selected["fighter"]["retail_moveset"]
     if identity == DEFAULT:
         target = result["fighter"]
         assets = result
@@ -71,17 +75,30 @@ def add(document, source=DEFAULT):
     selected = view(document, source)
     result = upgrade(document)
     identity = "outfit-" + uuid.uuid4().hex[:12]
-    row = dict(id=identity, name="Outfit " + str(len(entries(document)) + 1),
-               **{key: copy.deepcopy(selected["fighter"][key]) for key in APPEARANCE})
-    row.update({key: copy.deepcopy(selected[key]) for key in ASSETS if key in selected and (key!='ui_art' or source!=DEFAULT)})
+    row = dict(
+        id=identity,
+        name="Outfit " + str(len(entries(document)) + 1),
+        **{key: copy.deepcopy(selected["fighter"][key]) for key in APPEARANCE},
+    )
+    row.update(
+        {
+            key: copy.deepcopy(selected[key])
+            for key in ASSETS
+            if key in selected and (key != "ui_art" or source != DEFAULT)
+        }
+    )
     result["outfits"].append(row)
     return result, identity
 
 
 def rename(document, identity, name):
-    projects.require(type(name) is str and bool(name.strip()) and len(name) <= 80
-                     and not any(ord(c) < 32 or 0xD800 <= ord(c) <= 0xDFFF for c in name),
-                     "Give the outfit a name (1–80 characters)")
+    projects.require(
+        type(name) is str
+        and bool(name.strip())
+        and len(name) <= 80
+        and not any(ord(c) < 32 or 0xD800 <= ord(c) <= 0xDFFF for c in name),
+        "Give the outfit a name (1–80 characters)",
+    )
     result = upgrade(document)
     if identity == DEFAULT:
         result["outfit_name"] = name

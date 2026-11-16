@@ -1,4 +1,5 @@
 """Private original-asset cache derived directly from a local game dump."""
+
 import base64
 import hashlib
 import io
@@ -37,15 +38,22 @@ def composite(canvas, image, origin, mode):
     alpha = src[:, :, 3:4]
     rgb = (src[:, :, :3] * alpha + dst[:, :, :3] * (255 - alpha) + 128) >> 8
     rgb = np.where(alpha == 255, src[:, :, :3], np.where(alpha == 0, dst[:, :, :3], rgb))
-    canvas.paste(Image.fromarray(np.concatenate((rgb, np.maximum(src[:, :, 3:4], dst[:, :, 3:4])), axis=2).astype(np.uint8)), (x, y))
+    canvas.paste(
+        Image.fromarray(np.concatenate((rgb, np.maximum(src[:, :, 3:4], dst[:, :, 3:4])), axis=2).astype(np.uint8)),
+        (x, y),
+    )
 
 
 class Database:
     """Bounded generic SODB row-index adapter for serialized selection IDs."""
+
     def __init__(self, dump):
         dump = Path(dump)
-        raw = next(expanded(b) for name, b in archive_entries(game_file(dump, "assets/misc.viv").read_bytes())
-                   if name.lower() == "cmusen.loc")
+        raw = next(
+            expanded(b)
+            for name, b in archive_entries(game_file(dump, "assets/misc.viv").read_bytes())
+            if name.lower() == "cmusen.loc"
+        )
         self.shop = ShopDatabase(game_file(dump, "assets/djv2.sod").read_bytes(), Locale(raw))
         self.tables = self.shop.mapping(self.shop.word(16), b"DATA")
         self.cache = {}
@@ -65,7 +73,7 @@ class Database:
         return self.cache[table_hash]
 
     def packed(self, value):
-        table_index, row_index = value >> 24, value & 0xffff
+        table_index, row_index = value >> 24, value & 0xFFFF
         keys = list(self.tables)
         if not 0 <= table_index < len(keys):
             raise ValueError("Unknown saved item table")
@@ -86,9 +94,12 @@ class Database:
 def build_cache(dump, workspace, progress=lambda message: None):
     dump, workspace = Path(dump), Path(workspace)
     sources = [game_file(dump, f"assets/v2cp_{n}.viv") for n in range(4)]
-    identity = sha(b"caf-customizer-cache-1" + b"".join(hashlib.sha256(p.read_bytes()).digest() for p in sources)
-                   + hashlib.sha256(game_file(dump, "assets/djv2.sod").read_bytes()).digest()
-                   + hashlib.sha256(game_file(dump, "assets/misc.viv").read_bytes()).digest())
+    identity = sha(
+        b"caf-customizer-cache-1"
+        + b"".join(hashlib.sha256(p.read_bytes()).digest() for p in sources)
+        + hashlib.sha256(game_file(dump, "assets/djv2.sod").read_bytes()).digest()
+        + hashlib.sha256(game_file(dump, "assets/misc.viv").read_bytes()).digest()
+    )
     root = workspace / "assets" / identity
     if (root / "catalog" / "catalog.json").is_file():
         return AssetCache(root, dump)
@@ -110,14 +121,16 @@ def build_cache(dump, workspace, progress=lambda message: None):
                     continue
                 dest = images / (ident + ".png")
                 image.save(dest, format="PNG")
-                assets[ident] = dict(id=ident, source_id=ident, original=dest.name,
-                                     original_hash=sha(dest.read_bytes()))
+                assets[ident] = dict(
+                    id=ident, source_id=ident, original=dest.name, original_hash=sha(dest.read_bytes())
+                )
     atomic_json(images / "corpus.json", dict(corpus_id=identity, assets=list(assets.values())))
     progress("Decoding original meshes and body fits · first run only")
     # Each build has an immutable destination; incomplete builds stay identifiable.
     catalog = root / "catalog"
     if catalog.exists():
         import uuid
+
         catalog.rename(root / ("incomplete-" + uuid.uuid4().hex))
     build_catalog(dump, images, catalog)
     progress("CAF assets ready")
@@ -171,6 +184,7 @@ class AssetCache:
 
     def geometry(self, name, build, slot):
         from ._vendor.caf_assets import fit_build
+
         variants = self.catalog["geometry"][name]
         build = fit_build(str(slot), build)
         record = variants.get(build, variants.get("C"))
@@ -180,6 +194,7 @@ class AssetCache:
 
     def raw_model(self, name):
         from ._vendor.defjam_model import decode
+
         key = "raw:" + name
         if key not in self._geometries:
             self._geometries[key] = decode(self.verified(self.catalog["objects"][name]), name, "caf:" + name)
@@ -187,6 +202,7 @@ class AssetCache:
 
     def face(self, outfit):
         from ._vendor.caf_assets import apply_morph
+
         key = "face:" + ",".join(outfit["morphs"])
         if key not in self._geometries:
             result = self.raw_model("v2cp_532_0004_c")
@@ -202,6 +218,7 @@ class AssetCache:
         translation4/inverse-bind16 (112 bytes). No game clip is decoded here.
         """
         from ._vendor.defjam_model import ElfData
+
         key = "preview-arm-pivots"
         if key not in self._geometries:
             source = self.catalog["objects"]["v2cp_110_0001_c"]
@@ -210,8 +227,11 @@ class AssetCache:
             count = elf.u(skeleton + 8)
             if not 1 <= count <= 256:
                 raise ValueError("Unsupported preview skeleton")
-            names = {s["name"].removeprefix("__Bone:::root."): elf.u(s["value"])
-                     for s in elf.symbols if s["name"].startswith("__Bone:::root.")}
+            names = {
+                s["name"].removeprefix("__Bone:::root."): elf.u(s["value"])
+                for s in elf.symbols
+                if s["name"].startswith("__Bone:::root.")
+            }
             result = {}
             for name in ("L_arm1", "L_arm2", "R_arm1", "R_arm2"):
                 index = names[name]
@@ -237,9 +257,15 @@ class AssetCache:
             hat_model = self.items[hat["item"]].get("geometry") if hat else None
             if hat_model:
                 number = int(hat_model[9:13])
-                part = (211 if number in {*range(1, 8), *range(25, 34)} else
-                        212 if number in {8, *range(15, 18), *range(19, 25)} else
-                        213 if number in {*range(9, 15), 18, *range(34, 39)} else None)
+                part = (
+                    211
+                    if number in {*range(1, 8), *range(25, 34)}
+                    else 212
+                    if number in {8, *range(15, 18), *range(19, 25)}
+                    else 213
+                    if number in {*range(9, 15), 18, *range(34, 39)}
+                    else None
+                )
                 if part is None:
                     raise ValueError("This hat/hair fit is not supported by the verified preview rules")
                 hair_model = hair_model[:7] + str(part - 210) + hair_model[8:]
@@ -265,6 +291,7 @@ class AssetCache:
                     geometry = self.raw_model(hair_model)
                 elif slot == "21":
                     from ._vendor.caf_assets import fit_build
+
                     suffix = outfit["face_type"] % 4 + 1
                     name = item["geometry"][:-1] + fit_build("21", outfit["build"]).lower()
                     if suffix != 4:
@@ -279,17 +306,28 @@ class AssetCache:
                     if atlas not in {"cp_a", "cp_b", "cp_c", "cp_d"}:
                         notices.append("Unsupported material: " + mesh["name"])
                         continue
-                    meshes.append(dict(mesh, slot=slot, atlas=atlas[-1], source_model=geometry['name'].lower().removesuffix('.o'),
-                                       source_model_sha256=geometry['source_sha256']))
+                    meshes.append(
+                        dict(
+                            mesh,
+                            slot=slot,
+                            atlas=atlas[-1],
+                            source_model=geometry["name"].lower().removesuffix(".o"),
+                            source_model_sha256=geometry["source_sha256"],
+                        )
+                    )
             if not item["styles"]:
                 continue
-            resource = self.catalog["resources"][item["styles"][selected["style"]]["variants"][selected["color"]].lower()]
+            resource = self.catalog["resources"][
+                item["styles"][selected["style"]]["variants"][selected["color"]].lower()
+            ]
             first = resource["records"][0] if resource["records"] else None
             companions = first["placement"]["parameters"][0] if first and first["placement"] else 0
             names = ({first["name"]} if first else set()) | {f"al{i:02d}" for i in range(1, companions + 1)}
             for record in resource["records"]:
                 if record["name"] in names and record["placement"]:
-                    layers.append((self.groups[slot]["stage"], int(slot), resource, record, selected.get("palette", "default")))
+                    layers.append(
+                        (self.groups[slot]["stage"], int(slot), resource, record, selected.get("palette", "default"))
+                    )
         layers.sort(key=lambda x: x[:2])
         textures = {}
         for atlas in "abcd":
@@ -301,10 +339,20 @@ class AssetCache:
             for _, _, resource, record, palette in layers:
                 instruction = record["placement"]
                 if instruction["atlas"] == atlas:
-                    composite(canvas, self.resource_image(resource, record, palette), instruction["origin"], instruction["mode"])
+                    composite(
+                        canvas,
+                        self.resource_image(resource, record, palette),
+                        instruction["origin"],
+                        instruction["mode"],
+                    )
             textures[atlas] = image_uri(canvas)
         if not meshes:
             raise ValueError("No renderable fighter geometry")
         points = [p for m in meshes for p in m["positions"]]
-        return dict(meshes=meshes, textures=textures, notices=notices, arm_pivots=self.arm_pivots(),
-                    bounds=[[min(p[i] for p in points) for i in range(3)], [max(p[i] for p in points) for i in range(3)]])
+        return dict(
+            meshes=meshes,
+            textures=textures,
+            notices=notices,
+            arm_pivots=self.arm_pivots(),
+            bounds=[[min(p[i] for p in points) for i in range(3)], [max(p[i] for p in points) for i in range(3)]],
+        )

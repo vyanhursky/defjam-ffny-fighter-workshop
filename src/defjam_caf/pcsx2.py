@@ -4,6 +4,7 @@ This is not a memory-card/profile converter. Only the observed PS2 CAF layout
 is recognized; item references are translated by SODB identities, never by
 assuming that PS2 and Xbox row ordinals happen to match.
 """
+
 import binascii
 import hashlib
 import io
@@ -24,18 +25,23 @@ MAX_ARCHIVE = 128 * 1024 * 1024
 APPEARANCE_OFFSET = 0x5560
 COLOR_OFFSET = APPEARANCE_OFFSET + 38 * 4
 RECORD_SIZE = 0x594C
-TABLES_BY_SLOT = {**{s: 0x912016DD for s in range(12, 20)},
-                  20: 0x7450591A, 21: 0x7450591A,
-                  **{s: 0x426B8667 for s in (22, 23, 24, 25, 26, 28)},
-                  **{s: 0x30948EA0 for s in range(29, 38)}}
+TABLES_BY_SLOT = {
+    **{s: 0x912016DD for s in range(12, 20)},
+    20: 0x7450591A,
+    21: 0x7450591A,
+    **{s: 0x426B8667 for s in (22, 23, 24, 25, 26, 28)},
+    **{s: 0x30948EA0 for s in range(29, 38)},
+}
 
 
 def _member(archive, name, maximum):
     matches = [entry for entry in archive.infolist() if entry.filename == name]
     require(len(matches) == 1, "Missing or ambiguous savestate member: " + name)
     entry = matches[0]
-    require(not entry.flag_bits & 1 and 0 <= entry.file_size <= maximum
-            and 0 <= entry.compress_size <= MAX_ARCHIVE, "Unsupported savestate member size/encryption")
+    require(
+        not entry.flag_bits & 1 and 0 <= entry.file_size <= maximum and 0 <= entry.compress_size <= MAX_ARCHIVE,
+        "Unsupported savestate member size/encryption",
+    )
     if entry.compress_type == 93:
         try:
             import zstandard
@@ -50,8 +56,9 @@ def _member(archive, name, maximum):
         name_size, extra_size = struct.unpack_from("<HH", header, 26)
         require(flags == entry.flag_bits and method == 93, "Inconsistent savestate ZIP header")
         local_name = archive.fp.read(name_size)
-        require(local_name.decode("utf-8" if flags & 0x800 else "cp437") == name,
-                "Inconsistent savestate ZIP member name")
+        require(
+            local_name.decode("utf-8" if flags & 0x800 else "cp437") == name, "Inconsistent savestate ZIP member name"
+        )
         archive.fp.seek(extra_size, 1)
         compressed = archive.fp.read(entry.compress_size)
         require(len(compressed) == entry.compress_size, "Truncated savestate ZIP member")
@@ -59,15 +66,16 @@ def _member(archive, name, maximum):
             # Inspect the byte-valued frame window as well as bounding output.
             # zstandard 0.25's native/CFFI implementations pass max_window_size
             # to ZSTD_DCtx_setMaxWindowSize in bytes despite its KiB docstring.
-            require(zstandard.get_frame_parameters(compressed).window_size <= EE_SIZE,
-                    "PCSX2 Zstandard window exceeds 32 MiB")
+            require(
+                zstandard.get_frame_parameters(compressed).window_size <= EE_SIZE,
+                "PCSX2 Zstandard window exceeds 32 MiB",
+            )
             with zstandard.ZstdDecompressor(max_window_size=EE_SIZE).stream_reader(io.BytesIO(compressed)) as reader:
                 raw = reader.read(maximum + 1)
         except zstandard.ZstdError as exc:
             raise SaveError("Invalid or oversized PCSX2 Zstandard frame: " + str(exc)) from exc
     else:
-        require(entry.compress_type in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED),
-                "Unsupported savestate compression")
+        require(entry.compress_type in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED), "Unsupported savestate compression")
         with archive.open(entry) as stream:
             raw = stream.read(maximum + 1)
     require(len(raw) == entry.file_size and len(raw) <= maximum, "Savestate member size mismatch")
@@ -93,9 +101,12 @@ def memory(path):
             require(len(version) >= 8 and version[:5] == b"\0\0S\x9av", "Unsupported PCSX2 version record")
             mem = _member(archive, "eeMemory.bin", EE_SIZE)
             require(len(mem) == EE_SIZE, "Expected the original 32 MiB PS2 EE memory layout")
-        return mem, {"source_sha256": source_hash, "state_sha256": hashlib.sha256(state).hexdigest(),
-                     "memory_sha256": hashlib.sha256(mem).hexdigest(),
-                     "pcsx2_version_record_hex": version.hex()}
+        return mem, {
+            "source_sha256": source_hash,
+            "state_sha256": hashlib.sha256(state).hexdigest(),
+            "memory_sha256": hashlib.sha256(mem).hexdigest(),
+            "pcsx2_version_record_hex": version.hex(),
+        }
     except (zipfile.BadZipFile, UnicodeError, EOFError, RuntimeError) as exc:
         raise SaveError("Invalid PCSX2 archive: " + str(exc)) from exc
 
@@ -115,8 +126,9 @@ class MemoryDatabase(Binary):
             require(tag == table, "Invalid PS2 database table")
             indexes = self.mapping(index)
             rows = self.mapping(indexes[table][0], table.to_bytes(4, "little"))
-            require(len(rows) == count and all(len(row) == 1 for row in rows.values()),
-                    "Invalid PS2 database row index")
+            require(
+                len(rows) == count and all(len(row) == 1 for row in rows.values()), "Invalid PS2 database row index"
+            )
             self.cache[table] = list(rows.items())
         return self.cache[table]
 
@@ -137,12 +149,15 @@ def recover(mem, name):
     Multiple identical copies are acceptable. Conflicting live/archive copies
     remain ambiguous; the importer must never choose the first match silently.
     """
-    require(re.fullmatch(r"[A-Z0-9 _-]{1,15}", name) is not None, "Use the exact uppercase PS2 fighter name (1–15 characters)")
+    require(
+        re.fullmatch(r"[A-Z0-9 _-]{1,15}", name) is not None,
+        "Use the exact uppercase PS2 fighter name (1–15 characters)",
+    )
     signature = name.encode("ascii").ljust(16, b"\0")
     records, databases = [], []
     for match in re.finditer(re.escape(b"SODB\x02\0\0\0"), mem):
         try:
-            databases.append((match.start(), MemoryDatabase(mem[match.start():])))
+            databases.append((match.start(), MemoryDatabase(mem[match.start() :])))
         except (ValueError, KeyError, struct.error, SaveError):
             continue
     require(len(databases) == 1, "Missing or ambiguous intact FFNY SODB in PS2 memory")
@@ -152,16 +167,18 @@ def recover(mem, name):
         if base + RECORD_SIZE > len(mem):
             continue
         stats = list(struct.unpack_from("<5I", mem, base + 0xF0))
-        slots = list(mem[base + 0x134:base + 0x137])
-        styles = slots[:slots.index(255)] if 255 in slots else slots
+        slots = list(mem[base + 0x134 : base + 0x137])
+        styles = slots[: slots.index(255)] if 255 in slots else slots
         try:
             require(slots == styles + [255] * (3 - len(styles)), "Noncontiguous PS2 style slots")
             combined = combine_styles(styles)
             require(mem[base + 0x137] == combined and all(v <= 50 for v in stats), "Invalid PS2 training/style record")
             q = list(struct.unpack_from("<38I", mem, base + APPEARANCE_OFFSET))
-            c = list(mem[base + COLOR_OFFSET:base + COLOR_OFFSET + 38])
-            require(q[0] < 6 and 1 <= q[1] <= 16 and 1 <= q[5] <= 8
-                    and all(1 <= v <= 32 for v in q[6:12]), "Unsupported PS2 CAF appearance")
+            c = list(mem[base + COLOR_OFFSET : base + COLOR_OFFSET + 38])
+            require(
+                q[0] < 6 and 1 <= q[1] <= 16 and 1 <= q[5] <= 8 and all(1 <= v <= 32 for v in q[6:12]),
+                "Unsupported PS2 CAF appearance",
+            )
             refs = []
             for slot, table in TABLES_BY_SLOT.items():
                 if q[slot] == 0xFFFFFFFF:
@@ -171,24 +188,38 @@ def recover(mem, name):
             # The current Xbox CAF adapter cannot author a right wrist or a
             # nonempty direct teeth setting. Preserve them in inspection and
             # let the native recipe validator decide export support.
-            fields = dict(stats=dict(zip(STAT_KEYS, stats)), styles=styles, caf_values=q, caf_colors=c, has_fighter=True)
+            fields = dict(
+                stats=dict(zip(STAT_KEYS, stats)), styles=styles, caf_values=q, caf_colors=c, has_fighter=True
+            )
             saved_finishers = struct.unpack_from("<4I", mem, base + 0x120)
             if saved_finishers != (0xFFFFFFFF,) * 4:
                 # Original 20525 resolves these SODB references through the
                 # 6FC83815 member before native paired-move setup.
                 schema = database.mapping(database.word(12), b"SKMA")
                 require(schema.get(0x47D305FD ^ 0x6FC83815) == (4, 2), "Unsupported PS2 finisher schema")
-                require(all((value >> 16) & 255 == 0 for value in saved_finishers), "Unsupported PS2 finisher reference flags")
+                require(
+                    all((value >> 16) & 255 == 0 for value in saved_finishers),
+                    "Unsupported PS2 finisher reference flags",
+                )
                 fields["finishers"] = [f"{database.resolve(value, 0x47D305FD):08x}" for value in saved_finishers]
             records.append((base, fields, refs))
         except (SaveError, ValueError, KeyError, struct.error):
             continue
     require(bool(records), "No verified PS2 CAF record found for " + name)
     first = records[0]
-    require(all(fields == first[1] and refs == first[2] for _, fields, refs in records),
-            "Conflicting PS2 CAF copies; select a different snapshot")
-    return first[1], first[2], {"profile_offsets": [hex(base) for base, _, _ in records],
-                              "database_offset": hex(db_offset), "combined_style": combine_styles(first[1]["styles"])}
+    require(
+        all(fields == first[1] and refs == first[2] for _, fields, refs in records),
+        "Conflicting PS2 CAF copies; select a different snapshot",
+    )
+    return (
+        first[1],
+        first[2],
+        {
+            "profile_offsets": [hex(base) for base, _, _ in records],
+            "database_offset": hex(db_offset),
+            "combined_style": combine_styles(first[1]["styles"]),
+        },
+    )
 
 
 def inspect(path, name, data=None):
@@ -214,20 +245,37 @@ def inspect(path, name, data=None):
                     require(choice < 82, "Saved finisher exceeds original paired resources")
                     choices.append(choice)
                 evidence["finisher_choices"] = choices
-        return {"schema": "pcsx2-caf-inspection-1", "name": name, **provenance, **evidence,
-                "body_build": "ABCDEF"[fields["caf_values"][0]],
-                "style_names": [STYLE_NAMES[s] for s in fields["styles"]],
-                "fields": fields, "item_references": translated if data is not None else references,
-                "xbox_items_verified": data is not None, "native_playtest": False,
-                "textures_imported": False, "story_progress_included": False}
+        return {
+            "schema": "pcsx2-caf-inspection-1",
+            "name": name,
+            **provenance,
+            **evidence,
+            "body_build": "ABCDEF"[fields["caf_values"][0]],
+            "style_names": [STYLE_NAMES[s] for s in fields["styles"]],
+            "fields": fields,
+            "item_references": translated if data is not None else references,
+            "xbox_items_verified": data is not None,
+            "native_playtest": False,
+            "textures_imported": False,
+            "story_progress_included": False,
+        }
     except (ValueError, KeyError, IndexError, struct.error) as exc:
         raise SaveError("Unsupported PS2 CAF/database layout: " + str(exc)) from exc
 
 
 def project(report, donor="retail/blaze"):
-    require(report.get("xbox_items_verified") is True, "Verify item identities against the Xbox dump before creating a project")
-    document = from_fields(report["fields"], report["name"],
-                           {"donor": donor, "description": "Experimental PS2 CAF recovery. Original retail parts; native acceptance is recorded separately."})
+    require(
+        report.get("xbox_items_verified") is True,
+        "Verify item identities against the Xbox dump before creating a project",
+    )
+    document = from_fields(
+        report["fields"],
+        report["name"],
+        {
+            "donor": donor,
+            "description": "Experimental PS2 CAF recovery. Original retail parts; native acceptance is recorded separately.",
+        },
+    )
     if "finishers" in report["fields"]:
         document["fighter"]["finishers"] = report["fields"]["finishers"][:]
     return validate(document)

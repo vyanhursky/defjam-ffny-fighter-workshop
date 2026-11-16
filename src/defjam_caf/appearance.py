@@ -1,12 +1,13 @@
 """Translate retail CAF profile references to original source parts."""
+
 import copy
 from .container import SaveError
 
-EMPTY = 0xffffffff
-CLOTHING = 0x912016dd
-HAIR = 0x7450591a
-JEWELRY = 0x426b8667
-TATTOO = 0x30948ea0
+EMPTY = 0xFFFFFFFF
+CLOTHING = 0x912016DD
+HAIR = 0x7450591A
+JEWELRY = 0x426B8667
+TATTOO = 0x30948EA0
 
 
 class Appearance:
@@ -17,6 +18,7 @@ class Appearance:
         self.by_key = {}
         self._make_options()
         from .faces import catalog
+
         self.face_options = catalog(cache)
 
     def find(self, slot, model, resource, palette="default"):
@@ -46,10 +48,15 @@ class Appearance:
 
     def _label(self, table, offset, fallback):
         schema = self.db.shop.mapping(self.db.shop.word(12), b"SKMA")
-        field = schema.get(table ^ 0xca10191c)
+        field = schema.get(table ^ 0xCA10191C)
         try:
             if field:
-                return self.db.shop.string(self.db.shop.word(offset + field[0] * 4)).replace("@", "").replace("#", "").strip()
+                return (
+                    self.db.shop.string(self.db.shop.word(offset + field[0] * 4))
+                    .replace("@", "")
+                    .replace("#", "")
+                    .strip()
+                )
         except (ValueError, KeyError, UnicodeError):
             pass
         return fallback
@@ -60,10 +67,16 @@ class Appearance:
                 for color in garment["colors"]:
                     for fitting in color["fittings"]:
                         value = self.db.value_for(CLOTHING, int(garment["id"]), int(color["id"]))
-                        self._add(slot, value, int(fitting["id"]),
-                                  f"{garment['name']} · {color['name']} · {fitting['name']}",
-                                  fitting["selection"], garment=garment["name"],
-                                  color_name=color["name"], fitting=fitting["name"])
+                        self._add(
+                            slot,
+                            value,
+                            int(fitting["id"]),
+                            f"{garment['name']} · {color['name']} · {fitting['name']}",
+                            fitting["selection"],
+                            garment=garment["name"],
+                            color_name=color["name"],
+                            fitting=fitting["name"],
+                        )
         # Match source resources to their exact XML group rather than guessing a
         # garment from its filename or assigning an arbitrary same-suffix part.
         for row_index, (ident, (offset,)) in enumerate(self.db.records(HAIR)):
@@ -71,9 +84,16 @@ class Appearance:
             model, resource = self.db.shop.string(words[3]), self.db.shop.string(words[7])
             if resource[9:13] == "0001":
                 for slot in (20, 21):
-                    self._add(slot, self.db.value_for(HAIR, ident), 0,
-                              "Bald" if slot == 20 else "Clean shaven", None,
-                              garment="Bald" if slot == 20 else "Clean shaven", color_name="", fitting="")
+                    self._add(
+                        slot,
+                        self.db.value_for(HAIR, ident),
+                        0,
+                        "Bald" if slot == 20 else "Clean shaven",
+                        None,
+                        garment="Bald" if slot == 20 else "Clean shaven",
+                        color_name="",
+                        fitting="",
+                    )
                 continue
             model = None if model[9:10] == "9" else model + "_C"
             for slot in (20, 21):
@@ -87,8 +107,16 @@ class Appearance:
                 for color in range(max(1, len(palettes))):
                     sel = dict(selection, palette=f"pl{color + 1:02}" if palettes else "default")
                     label = self._label(HAIR, offset, "Grooming " + str(row_index + 1))
-                    self._add(slot, value, color, f"{label} · Color {color + 1}", sel,
-                              garment=label, color_name=f"Color {color + 1}", fitting="")
+                    self._add(
+                        slot,
+                        value,
+                        color,
+                        f"{label} · Color {color + 1}",
+                        sel,
+                        garment=label,
+                        color_name=f"Color {color + 1}",
+                        fitting="",
+                    )
         for row_index, (ident, (offset,)) in enumerate(self.db.records(JEWELRY)):
             words = self.db.shop.words(offset, 4)
             stem = self.db.shop.string(words[1])
@@ -106,9 +134,16 @@ class Appearance:
                     except SaveError:
                         continue
                     label = self._label(JEWELRY, offset, "Jewelry " + str(row_index + 1))
-                    self._add(slot, self.db.value_for(JEWELRY, ident), color,
-                              f"{label} · Finish {color + 1}", selection,
-                              garment=label, color_name=f"Finish {color + 1}", fitting="")
+                    self._add(
+                        slot,
+                        self.db.value_for(JEWELRY, ident),
+                        color,
+                        f"{label} · Finish {color + 1}",
+                        selection,
+                        garment=label,
+                        color_name=f"Finish {color + 1}",
+                        fitting="",
+                    )
         for row_index, (ident, (offset,)) in enumerate(self.db.records(TATTOO)):
             words = self.db.shop.words(offset, 4)
             for slot in range(29, 38):
@@ -118,35 +153,45 @@ class Appearance:
                 except SaveError:
                     continue
                 label = self._label(TATTOO, offset, "Tattoo " + str(row_index + 1))
-                self._add(slot, self.db.value_for(TATTOO, ident), 255, label, selection,
-                          garment=label, color_name="", fitting="")
+                self._add(
+                    slot,
+                    self.db.value_for(TATTOO, ident),
+                    255,
+                    label,
+                    selection,
+                    garment=label,
+                    color_name="",
+                    fitting="",
+                )
         for value in range(42):
             resource = f"V2CP_35{value // 7 + 1}_000{value % 7 + 1}_A01_01"
             try:
                 selection = self.find(27, None, resource)
             except SaveError:
                 continue
-            self._add(27, value, 0, f"Teeth {value + 1}", selection,
-                      garment=f"Teeth {value + 1}", color_name="", fitting="")
+            self._add(
+                27, value, 0, f"Teeth {value + 1}", selection, garment=f"Teeth {value + 1}", color_name="", fitting=""
+            )
         for slot in range(15, 38):
             if slot == 18:
                 continue
-            self._add(slot, EMPTY, 255 if slot >= 29 else 0, "None", None,
-                      garment="None", color_name="", fitting="")
-        for slot, model, resource in ((12, "V2CP_110_0001_C", None),
-                                       (13, "V2CP_120_0001_C", "V2CP_120_0001_A01_01"),
-                                       (14, "V2CP_130_0001_C", None),
-                                       (18, "V2CP_140_0001_C", None)):
-            self._add(slot, EMPTY, 0, "None", self.find(slot, model, resource),
-                      garment="None", color_name="", fitting="")
+            self._add(slot, EMPTY, 255 if slot >= 29 else 0, "None", None, garment="None", color_name="", fitting="")
+        for slot, model, resource in (
+            (12, "V2CP_110_0001_C", None),
+            (13, "V2CP_120_0001_C", "V2CP_120_0001_A01_01"),
+            (14, "V2CP_130_0001_C", None),
+            (18, "V2CP_140_0001_C", None),
+        ):
+            self._add(
+                slot, EMPTY, 0, "None", self.find(slot, model, resource), garment="None", color_name="", fitting=""
+            )
 
     def outfit(self, fields):
         values, colors = fields["caf_values"], fields["caf_colors"]
         build, face_type = values[0], values[5] - 1
         if build not in range(6) or face_type not in range(8):
             raise SaveError("Unsupported saved body or face type; profile fields remain available")
-        result = dict(build="ABCDEF"[build], skin=f"pl{values[1]:02}", slots={},
-                      face_type=face_type, morphs=[])
+        result = dict(build="ABCDEF"[build], skin=f"pl{values[1]:02}", slots={}, face_type=face_type, morphs=[])
         slots = result["slots"]
         slots["1"] = self.find(1, f"V2CP_532_000{2 if face_type % 2 else 1}_C_F", None)
         slots["2"] = self.find(2, "V2CP_532_0004_C", None)
@@ -166,9 +211,16 @@ class Appearance:
                 result["morphs"].append(model)
             if slot == 11 and value % 2 == 0:
                 continue
-            slots[str(slot)] = self.find(slot, None, resource,
-                                        f"pl{colors[slot] + 1:02}" if slot == 8 else
-                                        f"pl{values[1]:02}" if slot in (6, 9, 10, 11) and values[1] else "default")
+            slots[str(slot)] = self.find(
+                slot,
+                None,
+                resource,
+                f"pl{colors[slot] + 1:02}"
+                if slot == 8
+                else f"pl{values[1]:02}"
+                if slot in (6, 9, 10, 11) and values[1]
+                else "default",
+            )
         for slot in range(12, 38):
             if slot == 26:
                 continue  # right earring is reconstructed from the left item
@@ -218,7 +270,8 @@ class Appearance:
 
     def change(self, fields, changes):
         from .faces import change
-        values, colors = change(fields,changes,self.face_options)
+
+        values, colors = change(fields, changes, self.face_options)
         if "build" in changes:
             if changes["build"] not in "ABCDEF" or len(changes["build"]) != 1:
                 raise SaveError("Invalid body build")

@@ -4,6 +4,7 @@ The Workshop's mod, voice, animation and retail tools run scripts that ship with
 of them, so every candidate is inspected by reading its files (never by running it) and reported feature by feature.
 A game folder holds one or more versions under ``app/versions/<version>/source``; a developer checkout is a single
 ``scripts/fighter-contract.py`` tree."""
+
 import json
 import os
 import re
@@ -18,14 +19,34 @@ VERSION_DIR = re.compile(r"^(\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)[0-9A-Za-z.]*?)?)
 # What each part of the Workshop needs from a game version: contract commands, and whether it must understand the
 # Custom Fighter recipe format the Workshop writes.
 FEATURES = (
-    ("export", "Export fighter mods", ("validate",), True,
-     "Needs a game version that understands Custom Fighter mods."),
-    ("tools", "Voice, entrance and AI tools", ("workshop-catalog", "workshop-check", "workshop-audio", "workshop-animation"),
-     False, "Needs a game version with the Workshop tool commands."),
-    ("menu", "Retail menu artwork import", ("export-ui-reference",), False,
-     "Needs a game version with retail UI reference export."),
-    ("retail", "Retail fighter studio", ("catalog", "export-retail-appearance", "preview-fighter", "validate"), False,
-     "Needs a game version with retail appearance export."),
+    (
+        "export",
+        "Export fighter mods",
+        ("validate",),
+        True,
+        "Needs a game version that understands Custom Fighter mods.",
+    ),
+    (
+        "tools",
+        "Voice, entrance and AI tools",
+        ("workshop-catalog", "workshop-check", "workshop-audio", "workshop-animation"),
+        False,
+        "Needs a game version with the Workshop tool commands.",
+    ),
+    (
+        "menu",
+        "Retail menu artwork import",
+        ("export-ui-reference",),
+        False,
+        "Needs a game version with retail UI reference export.",
+    ),
+    (
+        "retail",
+        "Retail fighter studio",
+        ("catalog", "export-retail-appearance", "preview-fighter", "validate"),
+        False,
+        "Needs a game version with retail appearance export.",
+    ),
 )
 _cache = {}
 
@@ -58,8 +79,10 @@ def inspect(path, recipe_format):
     path = Path(path)
     contract = path / CONTRACT
     try:
-        stamp = (contract.stat().st_mtime_ns, (path / "setup/fighter_caf.py").stat().st_mtime_ns
-                 if (path / "setup/fighter_caf.py").is_file() else 0)
+        stamp = (
+            contract.stat().st_mtime_ns,
+            (path / "setup/fighter_caf.py").stat().st_mtime_ns if (path / "setup/fighter_caf.py").is_file() else 0,
+        )
     except OSError:
         stamp = None
     key = (str(path), stamp, recipe_format)
@@ -73,13 +96,25 @@ def inspect(path, recipe_format):
     for name, label, needs, needs_format, why in FEATURES:
         lacks = [c for c in needs if c not in commands]
         if needs_format and caf_format != recipe_format:
-            lacks.append("the " + recipe_format + " fighter format" + (" (this version uses " + caf_format + ")" if caf_format else ""))
+            lacks.append(
+                "the "
+                + recipe_format
+                + " fighter format"
+                + (" (this version uses " + caf_format + ")" if caf_format else "")
+            )
         features[name] = not lacks
         if lacks:
             missing[name] = why
-    row = dict(path=str(path), commands=commands, format=caf_format, features=features, missing=missing,
-               usable=bool(commands), complete=all(features.values()),
-               labels={name: label for name, label, *_ in FEATURES})
+    row = dict(
+        path=str(path),
+        commands=commands,
+        format=caf_format,
+        features=features,
+        missing=missing,
+        usable=bool(commands),
+        complete=all(features.values()),
+        labels={name: label for name, label, *_ in FEATURES},
+    )
     if stamp is not None:
         _cache[key] = row
     return row
@@ -142,21 +177,32 @@ def describe(path, recipe_format):
     row = inspect(path, recipe_format)
     parent = Path(path).parent.name
     version = VERSION_DIR.match(parent)
-    row["label"] = ("Game " + _label(parent)) if version and Path(path).name == "source" else Path(path).name or str(path)
+    row["label"] = (
+        ("Game " + _label(parent)) if version and Path(path).name == "source" else Path(path).name or str(path)
+    )
     return row
 
 
 def require(path, feature, recipe_format):
     """Raise a plain-language error when the chosen game version cannot do something the player asked for."""
     from .container import SaveError
+
     if path is None:
         raise SaveError("Game setup needed: choose your game version first (Game setup, top right).")
     row = describe(path, recipe_format)
     if not row["usable"]:
-        raise SaveError("This folder does not look like a game version: scripts/fighter-contract.py is missing. "
-                        "Choose another in Game setup.")
+        raise SaveError(
+            "This folder does not look like a game version: scripts/fighter-contract.py is missing. "
+            "Choose another in Game setup."
+        )
     if not row["features"].get(feature):
         label = row["labels"][feature]
-        raise SaveError(label + " is not available in " + row["label"] + ". " + row["missing"][feature]
-                        + " Choose a newer version in Game setup.")
+        raise SaveError(
+            label
+            + " is not available in "
+            + row["label"]
+            + ". "
+            + row["missing"][feature]
+            + " Choose a newer version in Game setup."
+        )
     return row

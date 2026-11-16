@@ -1,4 +1,5 @@
 """The Home screen's back end: recent projects, the home view, and leaving a project to start a workflow clean."""
+
 import json
 
 from defjam_caf import remembered
@@ -39,7 +40,9 @@ def test_only_known_workflows_are_remembered_and_the_list_is_capped(tmp_path):
 
 
 def test_a_damaged_list_reads_as_empty(tmp_path):
-    (tmp_path / "remembered.json").write_text(json.dumps({"recent": [1, {"mode": "caf"}, {"mode": "nope", "path": "x"}]}))
+    (tmp_path / "remembered.json").write_text(
+        json.dumps({"recent": [1, {"mode": "caf"}, {"mode": "nope", "path": "x"}]})
+    )
     assert remembered.recents(tmp_path) == []
 
 

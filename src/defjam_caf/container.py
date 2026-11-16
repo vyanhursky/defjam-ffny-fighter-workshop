@@ -1,4 +1,5 @@
 """Bounds-checked Recomp MC02 reader; no game bytes or console keys."""
+
 from dataclasses import dataclass
 import hashlib
 import hmac
@@ -35,9 +36,8 @@ class Container:
             raise SaveError("Save length and chunk lengths disagree")
         if not size0 or not size1:
             raise SaveError("Save chunks must not be empty")
-        chunks = (raw[HEADER_SIZE:HEADER_SIZE + size0], raw[HEADER_SIZE + size0:])
-        checks = ((raw[16:36], digest(chunks[0])), (raw[36:56], digest(chunks[1])),
-                  (raw[56:76], digest(raw[:56])))
+        chunks = (raw[HEADER_SIZE : HEADER_SIZE + size0], raw[HEADER_SIZE + size0 :])
+        checks = ((raw[16:36], digest(chunks[0])), (raw[36:56], digest(chunks[1])), (raw[56:76], digest(raw[:56])))
         if not all(hmac.compare_digest(stored, expected) for stored, expected in checks):
             raise SaveError("Invalid Recomp integrity signatures; unsupported or damaged save")
         return cls(*chunks)

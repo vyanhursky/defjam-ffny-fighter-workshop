@@ -1,4 +1,5 @@
 """Custom Fighter pack export through the matching runtime's shared compiler."""
+
 import hashlib
 import json
 import os
@@ -23,6 +24,7 @@ def run_contract(runtime, output, arguments):
     """
     import contextlib
     import runpy
+
     runtime, output = Path(runtime).resolve(), Path(output)
     script = runtime / "scripts/fighter-contract.py"
     require(script.is_file(), "Fighter authoring API is missing")
@@ -40,10 +42,14 @@ def run_contract(runtime, output, arguments):
 
 def contract(runtime, arguments, temporary, workspace):
     helper_output = Path(temporary) / ("contract-" + str(len(list(Path(temporary).glob("contract-*.json")))) + ".json")
-    command = ([sys.executable, "--fighter-contract", str(runtime), str(helper_output), *arguments]
-               if getattr(sys, "frozen", False) else
-               [sys.executable, "-B", str(runtime / "scripts/fighter-contract.py"), *arguments])
-    environment = dict(os.environ, TMPDIR=str(workspace.resolve()), TEMP=str(workspace.resolve()), TMP=str(workspace.resolve()))
+    command = (
+        [sys.executable, "--fighter-contract", str(runtime), str(helper_output), *arguments]
+        if getattr(sys, "frozen", False)
+        else [sys.executable, "-B", str(runtime / "scripts/fighter-contract.py"), *arguments]
+    )
+    environment = dict(
+        os.environ, TMPDIR=str(workspace.resolve()), TEMP=str(workspace.resolve()), TMP=str(workspace.resolve())
+    )
     try:
         result = subprocess.run(command, cwd=runtime, env=environment, capture_output=True, text=True, timeout=600)
     except subprocess.TimeoutExpired as exc:
@@ -64,8 +70,10 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
     destination, runtime, workspace = Path(destination), Path(runtime).resolve(), Path(workspace)
     require(data is not None, "Open your Recomp data directory before exporting a fighter mod")
     require(not destination.exists(), "Mod export destination already exists")
-    require((runtime / "setup/fighter_caf.py").is_file() and (runtime / "scripts/fighter-contract.py").is_file(),
-            "This runtime has no CAF recipe support. Select the compatible Custom Fighter development checkout")
+    require(
+        (runtime / "setup/fighter_caf.py").is_file() and (runtime / "scripts/fighter-contract.py").is_file(),
+        "This runtime has no CAF recipe support. Select the compatible Custom Fighter development checkout",
+    )
     game = (Path(data) / "extracted").resolve()
     require(game.is_dir(), "Choose the data directory containing extracted game assets")
     workspace.mkdir(parents=True, exist_ok=True)
@@ -75,32 +83,48 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         root = Path(temporary) / pack_id
         root.mkdir()
         import copy
+
         fighter = copy.deepcopy(project["fighter"])
-        performance = project.get('performance',{})
-        if performance.get('voice'):
-            fighter['voice_donor']=performance['voice']['preset']
+        performance = project.get("performance", {})
+        if performance.get("voice"):
+            fighter["voice_donor"] = performance["voice"]["preset"]
         from . import outfits
+
         views = [(row, outfits.view(project, row["id"])) for row in outfits.entries(project)]
         face_cache = None
-        if any('face_sculpt' in view for _,view in views):
+        if any("face_sculpt" in view for _, view in views):
             from .assets import build_cache
             from .appearance import Appearance
-            face_cache = asset_cache if asset_cache is not None else build_cache(game,workspace.parent,progress)
+
+            face_cache = asset_cache if asset_cache is not None else build_cache(game, workspace.parent, progress)
             face_appearance = Appearance(face_cache)
+
         def write_face(view, relative):
-            if 'face_sculpt' not in view:
+            if "face_sculpt" not in view:
                 return None
             from . import face_geometry
-            reference = face_geometry.template(face_cache,face_appearance,view['fighter'])
-            sculpt = face_geometry.validate(view['face_sculpt'],view['fighter'],reference)
-            value = dict(schema='caf-face-coordinates-1',template_sha256=reference['sha256'],basis=reference['basis'],
-                meshes=[dict(rm=m['rm'],positions=m['positions'],deltas=d['deltas']) for m,d in zip(reference['meshes'],sculpt['meshes'])])
-            raw = (json.dumps(value,sort_keys=True)+'\n').encode()
-            target=root/relative;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
-            return dict(path=relative,sha256=hashlib.sha256(raw).hexdigest())
-        face = write_face(views[0][1], 'face.json')
+
+            reference = face_geometry.template(face_cache, face_appearance, view["fighter"])
+            sculpt = face_geometry.validate(view["face_sculpt"], view["fighter"], reference)
+            value = dict(
+                schema="caf-face-coordinates-1",
+                template_sha256=reference["sha256"],
+                basis=reference["basis"],
+                meshes=[
+                    dict(rm=m["rm"], positions=m["positions"], deltas=d["deltas"])
+                    for m, d in zip(reference["meshes"], sculpt["meshes"])
+                ],
+            )
+            raw = (json.dumps(value, sort_keys=True) + "\n").encode()
+            target = root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(raw)
+            return dict(path=relative, sha256=hashlib.sha256(raw).hexdigest())
+
+        face = write_face(views[0][1], "face.json")
         if face:
-            fighter['face'] = face
+            fighter["face"] = face
+
         def write_atlases(view, relative):
             result = {}
             if not view.get("textures", {}).get("atlases"):
@@ -112,6 +136,7 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
                 (folder / (slot + ".png")).write_bytes(png)
                 result[slot] = {"path": relative + "/" + slot + ".png", "sha256": hashlib.sha256(png).hexdigest()}
             return result
+
         default_atlases = write_atlases(views[0][1], "atlases")
         if default_atlases:
             fighter["atlases"] = default_atlases
@@ -120,30 +145,68 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         fighter["outfit_name"] = project.get("outfit_name", "Outfit 1")
         fighter["outfits"] = []
         for row, view in views[1:]:
-            entry = dict(id=row["id"], name=row["name"],
-                         **{key: copy.deepcopy(view["fighter"][key]) for key in outfits.APPEARANCE})
+            entry = dict(
+                id=row["id"],
+                name=row["name"],
+                **{key: copy.deepcopy(view["fighter"][key]) for key in outfits.APPEARANCE},
+            )
             atlases = write_atlases(view, "outfits/" + row["id"] + "/atlases")
             if atlases:
                 entry["atlases"] = atlases
-            face = write_face(view, 'outfits/' + row['id'] + '/face.json')
+            face = write_face(view, "outfits/" + row["id"] + "/face.json")
             if face:
-                entry['face'] = face
+                entry["face"] = face
             fighter["outfits"].append(entry)
         recipe = (json.dumps(fighter, sort_keys=True, indent=2) + "\n").encode()
         (root / "fighter.json").write_bytes(recipe)
-        manifest = {"schema": "fighter-registry-draft-1", "id": pack_id, "version": meta["version"],
-                    "requires": {}, "resources": [{"id": "caf", "kind": "caf", "compatibility": {},
-                    "source": {"format": RECIPE_FORMAT, "selection": {"path": "fighter.json", "sha256": hashlib.sha256(recipe).hexdigest()}}}],
-                    "fighters": [{"id": fighter_id, "name": meta["name"], "inherits": meta["donor"],
-                                  "components": {"caf": pack_id + "/caf"}}], "overrides": []}
+        manifest = {
+            "schema": "fighter-registry-draft-1",
+            "id": pack_id,
+            "version": meta["version"],
+            "requires": {},
+            "resources": [
+                {
+                    "id": "caf",
+                    "kind": "caf",
+                    "compatibility": {},
+                    "source": {
+                        "format": RECIPE_FORMAT,
+                        "selection": {"path": "fighter.json", "sha256": hashlib.sha256(recipe).hexdigest()},
+                    },
+                }
+            ],
+            "fighters": [
+                {
+                    "id": fighter_id,
+                    "name": meta["name"],
+                    "inherits": meta["donor"],
+                    "components": {"caf": pack_id + "/caf"},
+                }
+            ],
+            "overrides": [],
+        }
         if performance:
-            request=Path(temporary)/'performance.json'
-            request.write_text(json.dumps(dict(settings=performance,pack=pack_id,donor=meta['donor'])),encoding='utf-8')
-            generated=contract(runtime,['workshop-export','--game',str(game),'--workshop-request',str(request),
-                '--workshop-out',str(root/'performance')],temporary,workspace)
-            manifest['resources'].extend(generated['resources'])
-            manifest['fighters'][0]['components'].update(generated['components'])
-        role_art = any('ui_art' in node for node in [project, *project.get('outfits', [])])
+            request = Path(temporary) / "performance.json"
+            request.write_text(
+                json.dumps(dict(settings=performance, pack=pack_id, donor=meta["donor"])), encoding="utf-8"
+            )
+            generated = contract(
+                runtime,
+                [
+                    "workshop-export",
+                    "--game",
+                    str(game),
+                    "--workshop-request",
+                    str(request),
+                    "--workshop-out",
+                    str(root / "performance"),
+                ],
+                temporary,
+                workspace,
+            )
+            manifest["resources"].extend(generated["resources"])
+            manifest["fighters"][0]["components"].update(generated["components"])
+        role_art = any("ui_art" in node for node in [project, *project.get("outfits", [])])
         for row, view in views:
             if "portrait" not in view and not role_art:
                 continue
@@ -151,33 +214,64 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
             relative = "portraits" if is_default else "portraits/" + row["id"]
             if role_art:
                 from . import ui_art
-                effective=ui_art.resolved(project,row['id'])
-                source={'format':'eagl-portrait-png-1','donor':effective['donor'],'hd_scale':effective['hd_scale'],'images':{}}
-                folder=root/relative/'png';folder.mkdir(parents=True)
+
+                effective = ui_art.resolved(project, row["id"])
+                source = {
+                    "format": "eagl-portrait-png-1",
+                    "donor": effective["donor"],
+                    "hd_scale": effective["hd_scale"],
+                    "images": {},
+                }
+                folder = root / relative / "png"
+                folder.mkdir(parents=True)
                 for part in ui_art.PARTS:
-                    if part not in effective['images']:continue
-                    raw=portrait_bytes(effective['images'][part]);digest=hashlib.sha256(raw).hexdigest()
-                    if effective['origins'][part].get('role')=='portrait':
-                        from PIL import Image,ImageOps
+                    if part not in effective["images"]:
+                        continue
+                    raw = portrait_bytes(effective["images"][part])
+                    digest = hashlib.sha256(raw).hexdigest()
+                    if effective["origins"][part].get("role") == "portrait":
+                        from PIL import Image, ImageOps
                         import io
+
                         with Image.open(io.BytesIO(raw)) as im:
-                            im=im.convert('RGBA');bounds=im.getchannel('A').getbbox()
-                            require(bounds is not None,'Portrait is entirely transparent');im=im.crop(bounds)
-                            if part.startswith(('result_','grid_')):
-                                side=min(im.size);im=ImageOps.fit(im,(side,side),centering=(.5,0))
-                            encoded=io.BytesIO();im.save(encoded,format='PNG');raw=encoded.getvalue();digest=hashlib.sha256(raw).hexdigest()
-                    name=digest+'.png';(folder/name).write_bytes(raw)
-                    source['images'][part]={'path':relative+'/png/'+name,'sha256':digest}
+                            im = im.convert("RGBA")
+                            bounds = im.getchannel("A").getbbox()
+                            require(bounds is not None, "Portrait is entirely transparent")
+                            im = im.crop(bounds)
+                            if part.startswith(("result_", "grid_")):
+                                side = min(im.size)
+                                im = ImageOps.fit(im, (side, side), centering=(0.5, 0))
+                            encoded = io.BytesIO()
+                            im.save(encoded, format="PNG")
+                            raw = encoded.getvalue()
+                            digest = hashlib.sha256(raw).hexdigest()
+                    name = digest + ".png"
+                    (folder / name).write_bytes(raw)
+                    source["images"][part] = {"path": relative + "/png/" + name, "sha256": digest}
             else:
                 png = Path(temporary) / ("portrait-" + row["id"] + ".png")
                 png.write_bytes(portrait_bytes(view["portrait"]))
-                portrait = contract(runtime, ["export-caf-portrait", "--game", str(game), "--portrait-png", str(png),
-                                             "--portrait-out", str(root / relative)], temporary, workspace)
+                portrait = contract(
+                    runtime,
+                    [
+                        "export-caf-portrait",
+                        "--game",
+                        str(game),
+                        "--portrait-png",
+                        str(png),
+                        "--portrait-out",
+                        str(root / relative),
+                    ],
+                    temporary,
+                    workspace,
+                )
                 source = portrait["source"]
                 for key, descriptor in source.items():
                     if isinstance(descriptor, dict):
                         descriptor["path"] = relative + "/" + descriptor["path"]
-            portrait_id = "portrait" if is_default else "portrait-outfit-" + hashlib.sha256(row["id"].encode()).hexdigest()[:12]
+            portrait_id = (
+                "portrait" if is_default else "portrait-outfit-" + hashlib.sha256(row["id"].encode()).hexdigest()[:12]
+            )
             manifest["resources"].append({"id": portrait_id, "kind": "portrait", "compatibility": {}, "source": source})
             if is_default:
                 manifest["fighters"][0]["components"]["portrait"] = pack_id + "/" + portrait_id
@@ -187,25 +281,53 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         (root / "fighter.json").write_bytes(recipe)
         manifest["resources"][0]["source"]["selection"]["sha256"] = hashlib.sha256(recipe).hexdigest()
         (root / "fighters.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-        portrait_note = "Authored outfit portraits/thumbnails use the project's PNGs, converted through original UI templates." if any('portrait' in view for _, view in views) else "Portraits/thumbnails inherit the presentation donor."
+        portrait_note = (
+            "Authored outfit portraits/thumbnails use the project's PNGs, converted through original UI templates."
+            if any("portrait" in view for _, view in views)
+            else "Portraits/thumbnails inherit the presentation donor."
+        )
         if role_art:
             portrait_note = "UI artwork uses embedded PNGs for selector/loading portraits, titlecards, result icons and grid states in all three player layouts. Missing roles inherit the UI donor. HD output requires the matching runtime's per-launch Fighter UI texture layer."
-        extras_note = ("Atlas and finisher overrides are carried in the runtime's hash-checked fighter-caf.bin.\n"
-                       "Declared native atlases replace RGB only; original material alpha is retained.\n"
-                       "Saved finisher identities resolve against the player's original database.\n") if ('finishers' in fighter or fighter.get('atlases') or any(o.get('atlases') for o in fighter['outfits'])) else ""
+        extras_note = (
+            (
+                "Atlas and finisher overrides are carried in the runtime's hash-checked fighter-caf.bin.\n"
+                "Declared native atlases replace RGB only; original material alpha is retained.\n"
+                "Saved finisher identities resolve against the player's original database.\n"
+            )
+            if ("finishers" in fighter or fighter.get("atlases") or any(o.get("atlases") for o in fighter["outfits"]))
+            else ""
+        )
         if len(views) > 1:
             extras_note += "One roster entry exposes up to three outfits through the native clothing selector.\nCombat settings are shared; appearance, atlases and portraits are outfit-specific.\n"
         if face_cache is not None:
-            extras_note += 'Experimental template sculpt: bounded head positions only; original rig, UVs and normals retained. Native startup verifies the assembled head before applying it.\n'
-        if 'retail_moveset' in fighter:
-            extras_note += 'Retail moveset: '+fighter['retail_moveset']+'. Appearance and training remain authored by this CAF recipe.\n'
+            extras_note += "Experimental template sculpt: bounded head positions only; original rig, UVs and normals retained. Native startup verifies the assembled head before applying it.\n"
+        if "retail_moveset" in fighter:
+            extras_note += (
+                "Retail moveset: "
+                + fighter["retail_moveset"]
+                + ". Appearance and training remain authored by this CAF recipe.\n"
+            )
         if performance:
-            extras_note += 'Performance overrides (shared by all outfits): '+', '.join(performance)+'. Voice clips and AI edits are included as typed resources.\n'
-        (root / "README.md").write_text(f"# {meta['name']}\n\n{meta['description']}\n\nAuthor: {meta['author'] or 'Unspecified'}\nVersion: {meta['version']}\n\nRequires a Custom Fighter runtime that supports {RECIPE_FORMAT}.\n{extras_note}CAF appearance, training stats and retail style combination come from fighter.json.\nUnchanged voice, AI and presentation settings inherit {meta['donor']}.\n{portrait_note}\nNo Story save or currency is included. The player's own game files supply the CAF parts.\n", encoding="utf-8")
-        (root / "LICENSE.txt").write_text(meta["license"] or "No additional license granted. Original game assets are supplied locally by the player.\n", encoding="utf-8")
+            extras_note += (
+                "Performance overrides (shared by all outfits): "
+                + ", ".join(performance)
+                + ". Voice clips and AI edits are included as typed resources.\n"
+            )
+        (root / "README.md").write_text(
+            f"# {meta['name']}\n\n{meta['description']}\n\nAuthor: {meta['author'] or 'Unspecified'}\nVersion: {meta['version']}\n\nRequires a Custom Fighter runtime that supports {RECIPE_FORMAT}.\n{extras_note}CAF appearance, training stats and retail style combination come from fighter.json.\nUnchanged voice, AI and presentation settings inherit {meta['donor']}.\n{portrait_note}\nNo Story save or currency is included. The player's own game files supply the CAF parts.\n",
+            encoding="utf-8",
+        )
+        (root / "LICENSE.txt").write_text(
+            meta["license"]
+            or "No additional license granted. Original game assets are supplied locally by the player.\n",
+            encoding="utf-8",
+        )
         progress("Validating the complete fighter pack against your game files…")
         report = contract(runtime, ["validate", "--pack", str(root), "--game", str(game)], temporary, workspace)
-        require(report.get("ok") is True and report.get("native_compilation") is True, "Runtime did not confirm complete native compilation")
+        require(
+            report.get("ok") is True and report.get("native_compilation") is True,
+            "Runtime did not confirm complete native compilation",
+        )
         # The shared inventory is validated by fighter-contract, not a second
         # workshop-specific package format. Publish only after it succeeds.
         destination.parent.mkdir(parents=True, exist_ok=True)

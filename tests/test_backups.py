@@ -14,10 +14,10 @@ def make_profile(tmp_path, name="TEST"):
     folder = title / directory_name(name)
     folder.mkdir(parents=True)
     payload = bytearray(PROFILE_SIZE)
-    payload[:len(name) + 1] = name.encode() + b"\0"
+    payload[: len(name) + 1] = name.encode() + b"\0"
     payload[0x134:0x138] = bytes([0, 255, 255, 87])
     struct.pack_into("<6I", payload, 0x108, 3, 1, 1, 2, 1, 2)
-    payload[0x4d87] = 87
+    payload[0x4D87] = 87
     (folder / name).write_bytes(Container(bytes(range(64)), bytes(payload)).encode())
     (folder / "SaveMeta.xbx").write_bytes(("Name=" + name + "\r\n").encode("utf-16"))
     return discover(title).profiles[0]
@@ -55,16 +55,32 @@ def test_restore_puts_back_the_saved_bytes_and_backs_up_what_it_replaced(tmp_pat
 def test_entries_are_newest_first_per_profile_and_ignore_other_files(tmp_path):
     root = tmp_path / "backups"
     root.mkdir()
-    for name in ("20260101T000000-TEST-aaaaaaaa.djprofile", "20260301T000000-TEST-bbbbbbbb.djprofile",
-                 "20260201T000000-OTHER-cccccccc.djprofile", "notes.txt", "20260101T000000-TEST-zz.djprofile"):
+    for name in (
+        "20260101T000000-TEST-aaaaaaaa.djprofile",
+        "20260301T000000-TEST-bbbbbbbb.djprofile",
+        "20260201T000000-OTHER-cccccccc.djprofile",
+        "notes.txt",
+        "20260101T000000-TEST-zz.djprofile",
+    ):
         (root / name).write_bytes(b"x")
     assert [row["id"] for row in backups.entries(root, "TEST")] == [
-        "20260301T000000-TEST-bbbbbbbb.djprofile", "20260101T000000-TEST-aaaaaaaa.djprofile"]
+        "20260301T000000-TEST-bbbbbbbb.djprofile",
+        "20260101T000000-TEST-aaaaaaaa.djprofile",
+    ]
     assert backups.entries(tmp_path / "missing", "TEST") == []
 
 
-@pytest.mark.parametrize("backup_id", ["../escape.djprofile", "..\\escape.djprofile", "notes.txt", "", None,
-                                       "20260101T000000-TEST-aaaaaaaa.djprofile/.."])
+@pytest.mark.parametrize(
+    "backup_id",
+    [
+        "../escape.djprofile",
+        "..\\escape.djprofile",
+        "notes.txt",
+        "",
+        None,
+        "20260101T000000-TEST-aaaaaaaa.djprofile/..",
+    ],
+)
 def test_restore_refuses_anything_but_a_listed_backup_name(tmp_path, backup_id):
     profile = make_profile(tmp_path)
     with pytest.raises(SaveError):

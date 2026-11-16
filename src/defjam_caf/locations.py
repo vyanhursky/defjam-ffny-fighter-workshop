@@ -1,4 +1,5 @@
 """Recomp's native data defaults, separate from the editor's workspace."""
+
 from pathlib import Path
 import sys
 

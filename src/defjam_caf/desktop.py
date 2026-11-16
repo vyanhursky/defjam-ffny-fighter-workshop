@@ -1,4 +1,5 @@
 """Qt desktop host for the offline Three.js fighter editor."""
+
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
@@ -50,7 +51,13 @@ class Bridge(QObject):
         so nobody picks an output file for an export that was never going to work."""
         return str(runtimes.require(self.editor.runtime, feature, self.editor.recipe_format())["path"])
 
-    PAGES = {"home": "home.html", "story": "index.html", "caf": "index.html", "retail-new": "retail.html", "retail-edit": "retail.html"}
+    PAGES = {
+        "home": "home.html",
+        "story": "index.html",
+        "caf": "index.html",
+        "retail-new": "retail.html",
+        "retail-edit": "retail.html",
+    }
     STARTS = {"open", "new", "import"}
 
     def navigate(self, ident, mode, args):
@@ -61,7 +68,11 @@ class Bridge(QObject):
             raise ValueError("Please wait for the current operation to finish.")
         editor = self.editor
         unsaved = ((editor.profile or editor.project) and editor.changes()) or editor.retail.snapshot()["dirty"]
-        if unsaved and QMessageBox.question(self.window, "Unsaved changes", "Leave without saving your fighter changes?") != QMessageBox.StandardButton.Yes:
+        if (
+            unsaved
+            and QMessageBox.question(self.window, "Unsaved changes", "Leave without saving your fighter changes?")
+            != QMessageBox.StandardButton.Yes
+        ):
             return self.response.emit(json.dumps(dict(id=ident, result=False)))
         if mode.startswith("retail") and self.initial and editor.retail.data is None:
             editor.retail.data = Path(self.initial).resolve()
@@ -82,56 +93,93 @@ class Bridge(QObject):
             ident, action, args = request["id"], request["action"], request.get("args", {})
             if not isinstance(ident, str) or not isinstance(args, dict):
                 raise ValueError("Invalid editor request")
-            if action in ('open_home','open_workflow','open_retail_editor','open_caf_editor'):
-                if action=='open_retail_editor':action,args='open_workflow',{'mode':'retail-edit','start':'new'}
-                if action=='open_caf_editor':action,args='open_workflow',{'mode':'story','start':'open'}
-                return self.navigate(ident,'home' if action=='open_home' else args.get('mode'),args)
-            if action.startswith('choose_retail_'):
-                operation=action.removeprefix('choose_retail_')
-                session=self.editor.retail
-                if operation in ('runtime','data','import'):
-                    title={'runtime':'Select compatible Custom Fighter runtime checkout','data':'Select Recomp data directory','import':'Select ordinary fighter pack folder'}[operation]
-                    path=QFileDialog.getExistingDirectory(self.window,title)
-                    if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
-                    if operation=='runtime':remembered.remember(self.editor.workspace,'runtime',path)
-                    if operation=='data':
-                        data=Path(path).resolve()
-                        if not (data/'extracted').is_dir():raise ValueError('Choose the data directory containing extracted')
-                        remembered.remember(self.editor.workspace,'data',data)
-                        session.data=data
-                        session.catalog=None
-                        return self.response.emit(json.dumps(dict(id=ident,result=session.snapshot())))
-                    if operation=='import':
-                        manifest=retail.read_manifest(path)
-                        labels=[f['id']+' · '+f['name'] for f in manifest['fighters']]
-                        if not labels:labels=[r['target']+' · Retail appearance override' for r in manifest.get('overrides',[])]
-                        label,ok=QInputDialog.getItem(self.window,'Import fighter','Choose one fighter',labels,0,False)
-                        if not ok:return self.response.emit(json.dumps(dict(id=ident,result=None)))
-                        action,args='retail_import',{'folder':path,'fighter':label.split(' · ',1)[0]}
-                    else:action,args='retail_configure',{'runtime':path}
-                elif operation in ('open','save','copy','export'):
-                    if operation=='save' and session.path:
-                        action,args='retail_save',{}
+            if action in ("open_home", "open_workflow", "open_retail_editor", "open_caf_editor"):
+                if action == "open_retail_editor":
+                    action, args = "open_workflow", {"mode": "retail-edit", "start": "new"}
+                if action == "open_caf_editor":
+                    action, args = "open_workflow", {"mode": "story", "start": "open"}
+                return self.navigate(ident, "home" if action == "open_home" else args.get("mode"), args)
+            if action.startswith("choose_retail_"):
+                operation = action.removeprefix("choose_retail_")
+                session = self.editor.retail
+                if operation in ("runtime", "data", "import"):
+                    title = {
+                        "runtime": "Select compatible Custom Fighter runtime checkout",
+                        "data": "Select Recomp data directory",
+                        "import": "Select ordinary fighter pack folder",
+                    }[operation]
+                    path = QFileDialog.getExistingDirectory(self.window, title)
+                    if not path:
+                        return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                    if operation == "runtime":
+                        remembered.remember(self.editor.workspace, "runtime", path)
+                    if operation == "data":
+                        data = Path(path).resolve()
+                        if not (data / "extracted").is_dir():
+                            raise ValueError("Choose the data directory containing extracted")
+                        remembered.remember(self.editor.workspace, "data", data)
+                        session.data = data
+                        session.catalog = None
+                        return self.response.emit(json.dumps(dict(id=ident, result=session.snapshot())))
+                    if operation == "import":
+                        manifest = retail.read_manifest(path)
+                        labels = [f["id"] + " · " + f["name"] for f in manifest["fighters"]]
+                        if not labels:
+                            labels = [
+                                r["target"] + " · Retail appearance override" for r in manifest.get("overrides", [])
+                            ]
+                        label, ok = QInputDialog.getItem(
+                            self.window, "Import fighter", "Choose one fighter", labels, 0, False
+                        )
+                        if not ok:
+                            return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                        action, args = "retail_import", {"folder": path, "fighter": label.split(" · ", 1)[0]}
                     else:
-                        opening=operation=='open';exporting=operation=='export'
-                        dialog=QFileDialog.getOpenFileName if opening else QFileDialog.getSaveFileName
-                        path,_=dialog(self.window, 'Open retail fighter project' if opening else 'Export Custom Fighter Mod' if exporting else 'Save retail fighter project',
-                            '' if opening else 'fighter.zip' if exporting else 'fighter.ffnyfighter',
-                            'Fighter mod (*.zip)' if exporting else 'Fighter projects (*.ffnyfighter)')
-                        if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
-                        action,args='retail_'+('open' if opening else 'export' if exporting else 'save'),{'path':path}
-                elif operation in ('ui','texture'):
-                    path,_=QFileDialog.getOpenFileName(self.window,'Import fighter artwork','','PNG image (*.png)')
-                    if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
+                        action, args = "retail_configure", {"runtime": path}
+                elif operation in ("open", "save", "copy", "export"):
+                    if operation == "save" and session.path:
+                        action, args = "retail_save", {}
+                    else:
+                        opening = operation == "open"
+                        exporting = operation == "export"
+                        dialog = QFileDialog.getOpenFileName if opening else QFileDialog.getSaveFileName
+                        path, _ = dialog(
+                            self.window,
+                            "Open retail fighter project"
+                            if opening
+                            else "Export Custom Fighter Mod"
+                            if exporting
+                            else "Save retail fighter project",
+                            "" if opening else "fighter.zip" if exporting else "fighter.ffnyfighter",
+                            "Fighter mod (*.zip)" if exporting else "Fighter projects (*.ffnyfighter)",
+                        )
+                        if not path:
+                            return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                        action, args = (
+                            "retail_" + ("open" if opening else "export" if exporting else "save"),
+                            {"path": path},
+                        )
+                elif operation in ("ui", "texture"):
+                    path, _ = QFileDialog.getOpenFileName(
+                        self.window, "Import fighter artwork", "", "PNG image (*.png)"
+                    )
+                    if not path:
+                        return self.response.emit(json.dumps(dict(id=ident, result=None)))
                     import base64
-                    limit=(16 if operation=='texture' else 4)*1024**2
-                    with Path(path).open('rb') as stream:raw=stream.read(limit+1)
-                    if len(raw)>limit:raise ValueError('PNG exceeds '+str(limit//1024**2)+' MiB')
-                    action,args='retail_'+operation,{**args,'png':base64.b64encode(raw).decode('ascii')}
-                else:raise ValueError('Unsupported retail dialog')
+
+                    limit = (16 if operation == "texture" else 4) * 1024**2
+                    with Path(path).open("rb") as stream:
+                        raw = stream.read(limit + 1)
+                    if len(raw) > limit:
+                        raise ValueError("PNG exceeds " + str(limit // 1024**2) + " MiB")
+                    action, args = "retail_" + operation, {**args, "png": base64.b64encode(raw).decode("ascii")}
+                else:
+                    raise ValueError("Unsupported retail dialog")
             if action == "choose_setup_folder":
                 start = remembered.recall(self.editor.workspace, "app") or runtimes.default_folder() or Path.home()
-                path = QFileDialog.getExistingDirectory(self.window, "Choose your Def Jam Recompiled folder, or a source checkout", str(start))
+                path = QFileDialog.getExistingDirectory(
+                    self.window, "Choose your Def Jam Recompiled folder, or a source checkout", str(start)
+                )
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "setup_scan", {"folder": path}
@@ -153,7 +201,11 @@ class Bridge(QObject):
                 else:
                     action = "snapshot"
             if action == "choose_data":
-                path = QFileDialog.getExistingDirectory(self.window, "Select Recomp data directory", str(self.editor.data or default_data_directory() or Path.home()))
+                path = QFileDialog.getExistingDirectory(
+                    self.window,
+                    "Select Recomp data directory",
+                    str(self.editor.data or default_data_directory() or Path.home()),
+                )
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 remembered.remember(self.editor.workspace, "data", path)
@@ -161,53 +213,89 @@ class Bridge(QObject):
             elif action == "choose_export":
                 if self.editor.profile is None:
                     raise ValueError("Choose a profile first")
-                path, _ = QFileDialog.getSaveFileName(self.window, "Export complete profile", self.editor.profile.name + ".djprofile", "FFNY profiles (*.djprofile)")
+                path, _ = QFileDialog.getSaveFileName(
+                    self.window,
+                    "Export complete profile",
+                    self.editor.profile.name + ".djprofile",
+                    "FFNY profiles (*.djprofile)",
+                )
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "export", {"path": path}
             elif action in {"choose_new_project", "choose_project", "choose_project_copy"}:
                 opening = action == "choose_project"
                 dialog = QFileDialog.getOpenFileName if opening else QFileDialog.getSaveFileName
-                path, _ = dialog(self.window, "Open fighter project" if opening else "Save standalone fighter project",
-                                 "" if opening else "fighter.ffnyfighter", "Fighter projects (*.ffnyfighter)")
+                path, _ = dialog(
+                    self.window,
+                    "Open fighter project" if opening else "Save standalone fighter project",
+                    "" if opening else "fighter.ffnyfighter",
+                    "Fighter projects (*.ffnyfighter)",
+                )
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                action, args = ("open_project" if opening else "export" if action == "choose_project_copy" else "new_project"), {"path": path}
-            elif action == 'choose_performance_tools':
-                runtime = self.runtime_folder('tools')
-                if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))
-                action,args='performance_connect',dict(runtime=runtime)
-            elif action == 'choose_voice_clip':
+                action, args = (
+                    ("open_project" if opening else "export" if action == "choose_project_copy" else "new_project"),
+                    {"path": path},
+                )
+            elif action == "choose_performance_tools":
+                runtime = self.runtime_folder("tools")
+                if not runtime:
+                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                action, args = "performance_connect", dict(runtime=runtime)
+            elif action == "choose_voice_clip":
                 import base64
-                path,_=QFileDialog.getOpenFileName(self.window,'Import mono PCM16 voice clip','','WAV audio (*.wav)')
-                if not path:return self.response.emit(json.dumps(dict(id=ident,result=None)))
-                with Path(path).open('rb') as stream:audio=stream.read(8*1024**2+1)
-                if len(audio)>8*1024**2:raise ValueError('Voice clip exceeds 8 MiB')
-                action,args='performance_clip',dict(target=args['target'],wav=base64.b64encode(audio).decode('ascii'))
+
+                path, _ = QFileDialog.getOpenFileName(
+                    self.window, "Import mono PCM16 voice clip", "", "WAV audio (*.wav)"
+                )
+                if not path:
+                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                with Path(path).open("rb") as stream:
+                    audio = stream.read(8 * 1024**2 + 1)
+                if len(audio) > 8 * 1024**2:
+                    raise ValueError("Voice clip exceeds 8 MiB")
+                action, args = (
+                    "performance_clip",
+                    dict(target=args["target"], wav=base64.b64encode(audio).decode("ascii")),
+                )
             elif action == "choose_mod_export":
                 runtime = self.runtime_folder("export")
                 if not runtime:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                path, _ = QFileDialog.getSaveFileName(self.window, "Export validated Custom Fighter Mod", "fighter-mod.zip", "Fighter mod (*.zip)")
+                path, _ = QFileDialog.getSaveFileName(
+                    self.window, "Export validated Custom Fighter Mod", "fighter-mod.zip", "Fighter mod (*.zip)"
+                )
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "export_mod", {"path": path, "runtime": runtime}
-            elif action in ('choose_face_export','choose_face_import'):
-                opening = action == 'choose_face_import'
+            elif action in ("choose_face_export", "choose_face_import"):
+                opening = action == "choose_face_import"
                 dialog = QFileDialog.getOpenFileName if opening else QFileDialog.getSaveFileName
-                path, _ = dialog(self.window, 'Import sculpted head' if opening else 'Export head template',
-                                 '' if opening else 'head-template.obj', 'Wavefront head (*.obj)')
+                path, _ = dialog(
+                    self.window,
+                    "Import sculpted head" if opening else "Export head template",
+                    "" if opening else "head-template.obj",
+                    "Wavefront head (*.obj)",
+                )
                 if not path:
-                    return self.response.emit(json.dumps(dict(id=ident,result=None)))
-                action,args = ('face_import' if opening else 'face_export'),dict(path=path)
-            elif action=='choose_ui_retail':
-                runtime=self.runtime_folder('menu')
-                if not runtime:return self.response.emit(json.dumps(dict(id=ident,result=None)))
-                action,args='ui_retail',{'runtime':runtime}
-            elif action in {"choose_project_portrait", "choose_project_atlas",'choose_ui_art'}:
+                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                action, args = ("face_import" if opening else "face_export"), dict(path=path)
+            elif action == "choose_ui_retail":
+                runtime = self.runtime_folder("menu")
+                if not runtime:
+                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
+                action, args = "ui_retail", {"runtime": runtime}
+            elif action in {"choose_project_portrait", "choose_project_atlas", "choose_ui_art"}:
                 import base64
+
                 atlas = action == "choose_project_atlas"
-                title = "Import 256–2048px square RGB atlas" if atlas else "Import fighter UI artwork" if action=='choose_ui_art' else "Import fighter portrait"
+                title = (
+                    "Import 256–2048px square RGB atlas"
+                    if atlas
+                    else "Import fighter UI artwork"
+                    if action == "choose_ui_art"
+                    else "Import fighter portrait"
+                )
                 path, _ = QFileDialog.getOpenFileName(self.window, title, "", "PNG image (*.png)")
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
@@ -216,18 +304,28 @@ class Bridge(QObject):
                     raw = stream.read(limit + 1)
                 if len(raw) > limit:
                     raise ValueError("Atlas PNG is too large" if atlas else "Portrait PNG is too large")
-                action, args = ("project_atlas", {"slot": args["slot"], "png": base64.b64encode(raw).decode("ascii")}) if atlas else (
-                    ('ui_import',{'role':args['role'],'png':base64.b64encode(raw).decode('ascii')}) if action=='choose_ui_art' else
-                    ("project_portrait", {"png": base64.b64encode(raw).decode("ascii")}))
+                action, args = (
+                    ("project_atlas", {"slot": args["slot"], "png": base64.b64encode(raw).decode("ascii")})
+                    if atlas
+                    else (
+                        ("ui_import", {"role": args["role"], "png": base64.b64encode(raw).decode("ascii")})
+                        if action == "choose_ui_art"
+                        else ("project_portrait", {"png": base64.b64encode(raw).decode("ascii")})
+                    )
+                )
             elif action == "choose_import":
                 if self.editor.discovery is None:
                     raise ValueError("Choose the destination data directory first")
-                path, _ = QFileDialog.getOpenFileName(self.window, "Import complete profile", "", "FFNY profiles (*.djprofile)")
+                path, _ = QFileDialog.getOpenFileName(
+                    self.window, "Import complete profile", "", "FFNY profiles (*.djprofile)"
+                )
                 if not path:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "import", {"path": path}
             elif action == "choose_duplicate":
-                name, ok = QInputDialog.getText(self.window, "Duplicate fighter profile", "New profile ID (1–7 uppercase letters or digits):")
+                name, ok = QInputDialog.getText(
+                    self.window, "Duplicate fighter profile", "New profile ID (1–7 uppercase letters or digits):"
+                )
                 if not ok:
                     return self.response.emit(json.dumps(dict(id=ident, result=None)))
                 action, args = "duplicate", {"name": name.strip().upper()}
@@ -235,7 +333,11 @@ class Bridge(QObject):
             future = self.pool.submit(self.editor.request, action, args)
             future.add_done_callback(lambda task: self.finish(ident, task))
         except Exception as exc:
-            self.response.emit(json.dumps(dict(id=request.get("id", "") if isinstance(locals().get("request"), dict) else "", error=str(exc))))
+            self.response.emit(
+                json.dumps(
+                    dict(id=request.get("id", "") if isinstance(locals().get("request"), dict) else "", error=str(exc))
+                )
+            )
 
     def finish(self, ident, task):
         try:
@@ -258,7 +360,9 @@ class Window(QMainWindow):
         self.web = QWebEngineView(self)
         self.page = Page(self.web)
         self.page.loadFinished.connect(lambda ok: print(f"[LOAD] ok={ok} url={self.page.url().toString()}", flush=True))
-        self.page.renderProcessTerminated.connect(lambda status, code: print(f"[RENDERER] {status} exit={code}", flush=True))
+        self.page.renderProcessTerminated.connect(
+            lambda status, code: print(f"[RENDERER] {status} exit={code}", flush=True)
+        )
         self.web.setPage(self.page)
         self.guard = OfflineOnly(self)
         self.page.profile().setUrlRequestInterceptor(self.guard)
@@ -274,7 +378,9 @@ class Window(QMainWindow):
             QMessageBox.information(self, "Operation in progress", "Please wait for the current operation to finish.")
             event.ignore()
             return
-        if ((self.bridge.editor.profile or self.bridge.editor.project) and self.bridge.editor.changes()) or self.bridge.editor.retail.snapshot()['dirty']:
+        if (
+            (self.bridge.editor.profile or self.bridge.editor.project) and self.bridge.editor.changes()
+        ) or self.bridge.editor.retail.snapshot()["dirty"]:
             answer = QMessageBox.question(self, "Unsaved changes", "Discard your unsaved fighter changes and close?")
             if answer != QMessageBox.StandardButton.Yes:
                 event.ignore()
@@ -286,6 +392,7 @@ class Window(QMainWindow):
 def startup_smoke(app, window, receipt):
     import platform
     import time
+
     started = time.monotonic()
     timer = QTimer(window)
     state = {"done": False, "checking": False}
@@ -296,10 +403,22 @@ def startup_smoke(app, window, receipt):
         state["done"] = True
         timer.stop()
         receipt.parent.mkdir(parents=True, exist_ok=True)
-        receipt.write_text(json.dumps(dict(passed=not error, error=error, details=details,
-            icon_loaded=not window.windowIcon().isNull(),
-            platform=sys.platform, machine=platform.machine(), frozen=bool(getattr(sys, "frozen", False)),
-            seconds=round(time.monotonic() - started, 2)), indent=2), encoding="utf-8")
+        receipt.write_text(
+            json.dumps(
+                dict(
+                    passed=not error,
+                    error=error,
+                    details=details,
+                    icon_loaded=not window.windowIcon().isNull(),
+                    platform=sys.platform,
+                    machine=platform.machine(),
+                    frozen=bool(getattr(sys, "frozen", False)),
+                    seconds=round(time.monotonic() - started, 2),
+                ),
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
         app.exit(1 if error else 0)
 
     def tick():
@@ -309,11 +428,14 @@ def startup_smoke(app, window, receipt):
         if state["checking"] or state["done"]:
             return
         state["checking"] = True
+
         def checked(raw):
             state["checking"] = False
             if raw and not state["done"]:
                 finish(details=json.loads(raw))
-        window.page.runJavaScript("""(()=>{
+
+        window.page.runJavaScript(
+            """(()=>{
             const canvas=document.querySelector('#viewport canvas');
             const gl=canvas?.getContext('webgl2');
             if(!window.__cafState || !gl || gl.isContextLost())return null;
@@ -324,7 +446,9 @@ def startup_smoke(app, window, receipt):
                 renderer:gl.getParameter(debug?debug.UNMASKED_RENDERER_WEBGL:gl.RENDERER),
                 profiles:window.__cafState.profiles.length,selected:window.__cafState.selected,
                 preview_ready:Boolean(window.__cafPreview?.ready)});
-        })()""", checked)
+        })()""",
+            checked,
+        )
 
     window.page.renderProcessTerminated.connect(lambda status, code: finish("Renderer exited: " + str(code)))
     timer.timeout.connect(tick)
@@ -338,14 +462,17 @@ def main(argv=None):
     parser.add_argument("--smoke-test", type=Path, help="Write a read-only desktop startup receipt and exit")
     parser.add_argument("--capture", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--quit-after", type=int, help=argparse.SUPPRESS)
-    parser.add_argument('--retail',action='store_true',help='Open the retail fighter studio')
-    parser.add_argument('--project',type=Path,help='Open a retail fighter project (with --retail)')
-    parser.add_argument('--runtime',type=Path,help='Compatible development runtime for retail authoring')
+    parser.add_argument("--retail", action="store_true", help="Open the retail fighter studio")
+    parser.add_argument("--project", type=Path, help="Open a retail fighter project (with --retail)")
+    parser.add_argument("--runtime", type=Path, help="Compatible development runtime for retail authoring")
     args = parser.parse_args(argv)
     QApplication.setApplicationName("defjam-ffny-fighter-workshop")
     QApplication.setOrganizationName("FFNY Community Tools")
-    workspace = (args.workspace or Path(QStandardPaths.writableLocation(
-        QStandardPaths.StandardLocation.AppLocalDataLocation))).expanduser().resolve()
+    workspace = (
+        (args.workspace or Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)))
+        .expanduser()
+        .resolve()
+    )
     if getattr(sys, "frozen", False):
         # Windowed executables have no console. Retain local diagnostics so a
         # failed renderer is observable instead of presenting a silent blank.
@@ -357,27 +484,33 @@ def main(argv=None):
         qInstallMessageHandler(lambda kind, context, message: print(f"[QT] {message}", flush=True))
     app = QApplication(sys.argv[:1])
     # Automated package checks without --data stay independent of installed saves.
-    initial = args.data if args.smoke_test else initial_data_directory(args.data) or remembered.recall(workspace, "data")
+    initial = (
+        args.data if args.smoke_test else initial_data_directory(args.data) or remembered.recall(workspace, "data")
+    )
     # Home is the front door. Automated checks and screenshots still open the editor page directly.
     window = Window(workspace, initial, "index.html" if args.smoke_test or args.capture or args.retail else "home.html")
     if args.retail:
         # The retail studio needs the game directory, not a CAF cache/profile.
-        window.bridge.initial=None
-        window.bridge.editor.data=initial.resolve() if initial else None
-        if args.project:window.bridge.editor.retail.request('open',{'path':str(args.project)})
-        if args.runtime:window.bridge.editor.retail.request('configure',{'runtime':str(args.runtime)})
-        window.web.setUrl(QUrl.fromLocalFile(str(Path(__file__).parent/'resources/retail.html')))
+        window.bridge.initial = None
+        window.bridge.editor.data = initial.resolve() if initial else None
+        if args.project:
+            window.bridge.editor.retail.request("open", {"path": str(args.project)})
+        if args.runtime:
+            window.bridge.editor.retail.request("configure", {"runtime": str(args.runtime)})
+        window.web.setUrl(QUrl.fromLocalFile(str(Path(__file__).parent / "resources/retail.html")))
     elif args.project or args.runtime:
-        parser.error('--project and --runtime require --retail')
+        parser.error("--project and --runtime require --retail")
     app.setWindowIcon(window.windowIcon())
     window.show()
     if args.smoke_test:
         startup_smoke(app, window, args.smoke_test)
     if args.capture:
+
         def capture():
             args.capture.parent.mkdir(parents=True, exist_ok=True)
             window.grab().save(str(args.capture))
             print("[CAPTURE] " + str(args.capture), flush=True)
+
         QTimer.singleShot(18000, capture)
     if args.quit_after:
         QTimer.singleShot(args.quit_after * 1000, app.quit)

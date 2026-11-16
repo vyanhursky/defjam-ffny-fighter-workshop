@@ -380,7 +380,7 @@ def main(argv=None):
         ),
         (
             "Retail portable project and empty viewer",
-            "window.__retailState?.document?.definition.inherits==='retail/teck' && !document.getElementById('retail-start').open && !document.getElementById('preview-empty').hidden && !document.getElementById('donor-mixing').open",
+            "window.__retailState?.document?.definition.inherits==='retail/teck' && !document.getElementById('retail-start').open && !document.getElementById('preview-empty').hidden && !document.getElementById('donor-mixing').open && getComputedStyle(document.getElementById('art-image')).display==='none'",
             "document.getElementById('new').click()",
         ),
         (

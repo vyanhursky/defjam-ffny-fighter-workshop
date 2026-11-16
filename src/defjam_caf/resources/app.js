@@ -6,6 +6,7 @@ import { performanceEditor } from "./performance.mjs";
 import { gameSetup } from "./setup.mjs";
 import { workshopVersion } from "./version.mjs";
 import { responseError, attachDetails } from "./errors.mjs";
+import { shouldRefreshAppearance } from "./state-render.mjs";
 
 const $ = (id) => document.getElementById(id);
 // Home chooses a workflow and passes it in the address fragment: story (Story saves) or caf (a fighter project from a Create-a-Fighter).
@@ -133,8 +134,16 @@ async function act(action, args = {}, label = null) {
   try {
     $("status-message").classList.remove("error");
     const result = await call(action, args, label);
-    if (result?.snapshot) renderState(result.snapshot);
-    else if (result?.profiles) renderState(result);
+    const forcePreview = [
+      "select_profile",
+      "open_project",
+      "new_project",
+      "outfit_select",
+      "reset",
+      "open_data",
+    ].includes(action);
+    if (result?.snapshot) renderState(result.snapshot, forcePreview);
+    else if (result?.profiles) renderState(result, forcePreview);
     if (result?.message) {
       toast(result.message);
       $("status-message").textContent = result.message;
@@ -165,12 +174,15 @@ function projectDetails() {
 function readyFighter() {
   return Boolean(current?.fields?.has_fighter);
 }
-function renderState(state) {
-  faceDraft = null;
-  if (faceFrame !== null) cancelAnimationFrame(faceFrame);
-  faceFrame = null;
-  window.__cafFacePreview = null;
-  auditionKey = null;
+function renderState(state, forcePreview = false) {
+  const appearanceChanged = shouldRefreshAppearance(current, state, forcePreview);
+  if (appearanceChanged) {
+    faceDraft = null;
+    if (faceFrame !== null) cancelAnimationFrame(faceFrame);
+    faceFrame = null;
+    window.__cafFacePreview = null;
+    auditionKey = null;
+  }
   current = state;
   window.__cafState = state;
   $("data-path").textContent = state.data || "Choose your Recomp data directory to begin";
@@ -351,11 +363,13 @@ function renderState(state) {
   renderUIArt(state);
   renderFacePresets(state);
   renderAtlases(state);
-  syncFace(state);
+  if (appearanceChanged) syncFace(state);
   renderMovesets(state);
   performanceUI.render(state);
-  loadCategory().catch(fail);
-  queuePreview(0);
+  if (appearanceChanged) {
+    loadCategory().catch(fail);
+    queuePreview(0);
+  }
 }
 function renderBackups(state) {
   const rows = state.backups || [];

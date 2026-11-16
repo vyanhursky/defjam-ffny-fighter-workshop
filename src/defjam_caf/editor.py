@@ -1,6 +1,8 @@
 """Desktop-independent editor session; all mutations are explicit actions."""
 
 import copy
+import hashlib
+import json
 from pathlib import Path
 
 from .appearance import Appearance
@@ -73,7 +75,18 @@ class Editor:
     def base(self):
         if self.project is not None:
             source = self.outfit_draft if self.outfit_draft is not None else self.project
-            key = (id(source), self.active_outfit)
+            fighter = source["fighter"]
+            appearance = (
+                fighter
+                if self.active_outfit == outfits.DEFAULT
+                else next(row for row in source["outfits"] if row["id"] == self.active_outfit)
+            )
+            key = (
+                tuple(sorted(fighter["stats"].items())),
+                tuple(fighter["styles"]),
+                tuple(appearance["caf_values"]),
+                tuple(appearance["caf_colors"]),
+            )
             if self._project_base_document != key:
                 view = outfits.view(source, self.active_outfit)
                 self._project_base = apply_fields(
@@ -486,6 +499,8 @@ class Editor:
         )
         project_view = copy.deepcopy(self.project_source())
         if project_view is not None:
+            project_view.pop("textures", None)
+            project_view.pop("portrait", None)
             project_view.pop("performance", None)
             project_view.pop("outfits", None)
             project_view.pop("ui_art", None)
@@ -576,6 +591,18 @@ class Editor:
                     for k in self.cache.catalog["resources"][f"v2cp_a_{build}"]["images"]
                     if k.startswith("pl")
                 ]
+        from .pngs import inspect_png
+
+        visual = result["fields"]
+        key = dict(
+            appearance=projects.appearance_hash(visual) if visual else None,
+            outfit=self.active_outfit,
+            assets=str(getattr(self.cache, "root", self.data)),
+            available=result["preview_available"],
+            atlases={slot: inspect_png(value, "atlas").digest for slot, value in textures.get("atlases", {}).items()},
+            sculpt=(active or {}).get("face_sculpt"),
+        )
+        result["appearance_key"] = hashlib.sha256(json.dumps(key, sort_keys=True).encode()).hexdigest()
         return result
 
     def preview(self, changes=None, hide_clothes=False):

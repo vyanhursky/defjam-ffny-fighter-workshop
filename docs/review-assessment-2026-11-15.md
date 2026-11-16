@@ -32,7 +32,7 @@ it does not claim native game acceptance. PRs will update completion evidence.
 | B4 | Confirmed CSS overrides, duplicated layout declarations and important rules. Format first; consolidate shared tokens/components separately from workflow changes. Exclude vendored assets from formatting. |
 | B5 | Confirmed dense Python and no lint gate. Separate formatting from lint fixes; exclude attributed vendored decoders. |
 | B6 | Confirmed untyped internal document boundaries. Add typed internal contracts and a checked adoption path; broad strict checking must account for the intentionally validated dynamic input boundary. |
-| B7 | Confirmed stable catalogs repeated in snapshots. Separate versioned catalog data, invalidate on data/catalog changes, and retain script callers' documented behavior. |
+| B7 | Confirmed repeated payload, but measurement found embedded atlases/portrait dominated: 25,193,000 bytes. Remove those unused bytes from the summary (10,026 bytes after), retaining coherent catalogs in snapshots. A catalog-version protocol would add state/ordering complexity for little remaining payload benefit, so that specific proposal is declined. |
 | B8 | Confirmed nested geometry arrays. Use explicitly little-endian typed buffers; retain 32-bit index support instead of assuming Uint16 is always safe. Measure payload and conversion cost. |
 | B9 | Confirmed no Bridge pytest coverage and thin JS coverage. Add synthetic Qt/WebChannel coverage, deterministic native-dialog adapters and a scheduled asset-free tour. Original-asset smoke tests remain a separate local check. |
 | C1 | Confirmed profile/backups aside remains in project mode. Show the active project and outfit controls; keep profile selection for starting a project. |

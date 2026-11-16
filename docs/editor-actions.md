@@ -72,6 +72,10 @@ Requests carry `id`, `action`, and an `args` object. Native file pickers use
 | `retail_moveset` | `Session._request_moveset` |
 | `retail_new` | `Session._request_new` |
 | `retail_open` | `Session._request_new` |
+| `retail_outfit_copy` | `Session._request_outfit` |
+| `retail_outfit_remove` | `Session._request_outfit` |
+| `retail_outfit_rename` | `Session._request_outfit` |
+| `retail_outfit_select` | `Session._request_outfit` |
 | `retail_performance_animation` | `Session._request_performance_audio` |
 | `retail_performance_audio` | `Session._request_performance_audio` |
 | `retail_performance_clear` | `Session._request_performance_set` |

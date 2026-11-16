@@ -1,4 +1,24 @@
 /* Page layout and components */
+.retail-outfit-picker {
+  position: absolute;
+  top: 125px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  z-index: 1;
+}
+.retail-outfit-picker select {
+  width: auto;
+  max-width: 100%;
+}
+#outfit-controls > button {
+  width: 100%;
+  margin-bottom: 6px;
+}
 .retail-left {
   overflow-y: auto;
   padding: 22px;
@@ -59,7 +79,7 @@ textarea {
   flex-wrap: wrap;
 }
 #viewport {
-  top: 130px;
+  top: 180px;
   bottom: 145px;
 }
 #preview-note {
@@ -190,7 +210,7 @@ textarea {
 }
 .viewer-empty {
   position: absolute;
-  inset: 140px 20px 145px;
+  inset: 180px 20px 145px;
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -1,5 +1,31 @@
 # Progress and handoff
 
+## November 16 playtest — standalone retail outfit collections
+
+Standalone retail projects support up to three named looks, copied/selected in
+the sidebar and viewer, with per-look body/texture/art settings and shared combat,
+stats and performance. Save/undo/reset retain every look. Same-pack ordinary
+outfit imports restore the collection. The existing project schema gains optional
+outfit fields; old files remain readable. Export namespaces each painted body's
+resources/textures and merges only hash-consistent assets. Original files stay
+untouched; unreferenced source material is excluded from exports.
+
+Multiple-look export requires the explicit standalone-retail-outfits-1 runtime
+extension; older tools still preview a selected look and the readiness dialog
+explains the update requirement. Companion runtime changes target v1.2.0 and
+extend original clothing datasets to a standalone parent, sharing canonical
+progress while retaining each look's own presentation. CAF recipe groups remain
+separate. The runtime PR also fixes flat-color indexed PNG palette padding.
+
+Workshop Python339passed/3 platform skips, Node22passed, Ruff/mypy/Prettier clean.
+The 50-check real Windows Qt/WebChannel/WebGL tour passes both sizes; final
+compact spacing has an explicit picker/viewport overlap assertion. A private
+three-look original-body project previews all39surfaces per look and exports a
+324560-byte native-validated ZIP; normal isolated install/activation accept it.
+Private evidence: build/real-retail-outfits-6 and build/ui-retail-outfits-layout-final.
+Native gameplay/regression evidence and current companion links are recorded in
+the PR descriptions. Other platforms and owner hands-on acceptance remain open.
+
 ## November 16 playtest — retail source animation preview
 
 Companion runtime PR269 (v1.2.0, stacked on267) adds verified retail skin metadata

@@ -141,6 +141,8 @@ class RetailProject(TypedDict):
     ui_art: UIArt
     deployment: NotRequired[dict[str, str]]
     performance: NotRequired[Performance]
+    outfit_name: NotRequired[str]
+    outfits: NotRequired[list[dict[str, JSON]]]
 
 
 class ProjectSummary(TypedDict):

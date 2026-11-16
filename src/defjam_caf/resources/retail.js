@@ -26,7 +26,8 @@ let state,
   detailDraft = null,
   draftTimer,
   renderedPack,
-  renderedRuntime;
+  renderedRuntime,
+  renderedOutfit;
 let sceneData = null;
 // Home chooses the workflow: retail-new (a new fighter from a retail fighter) or retail-edit (change a retail fighter).
 const params = new URLSearchParams(location.hash.slice(1)),
@@ -116,8 +117,9 @@ function render(s) {
   window.__retailState = s;
   const d = s.document,
     selected = d?.definition.inherits;
-  const refreshRuntime = renderedRuntime !== s.runtime && Boolean(sceneData);
+  const refreshRuntime = (renderedRuntime !== s.runtime || renderedOutfit !== s.active_outfit) && Boolean(sceneData);
   renderedRuntime = s.runtime;
+  renderedOutfit = s.active_outfit;
   document.body.dataset.hasProject = String(Boolean(d));
   if (renderedPack !== d?.identity.pack) {
     renderedPack = d?.identity.pack;
@@ -182,6 +184,27 @@ function render(s) {
   applyWorkflow();
   $("apply-deployment").disabled = !d;
   const appearanceOnly = d?.deployment && d.deployment.mode !== "add";
+  $("outfit-controls").hidden = !d || appearanceOnly;
+  $("preview-outfit").closest("label").hidden = !d || appearanceOnly;
+  const outfits = s.outfits || [];
+  options(
+    "preview-outfit",
+    outfits.map((row, index) => ({ ...row, name: `${index + 1}. ${row.name}` })),
+    s.active_outfit,
+  );
+  $("outfit-list").replaceChildren(
+    ...outfits.map((row, index) => {
+      const button = document.createElement("button");
+      button.textContent = `${index + 1}. ${row.name}`;
+      button.className = "outfit-card";
+      button.setAttribute("aria-pressed", String(row.id === s.active_outfit));
+      button.onclick = () => act("retail_outfit_select", { id: row.id });
+      return button;
+    }),
+  );
+  $("outfit-name").value = outfits.find((row) => row.id === s.active_outfit)?.name || "";
+  $("outfit-copy").disabled = !d || outfits.length >= 3;
+  $("outfit-remove").disabled = !d || s.active_outfit === "default";
   $("deployment-status").textContent =
     d?.deployment?.mode === "override"
       ? "Replaces the existing retail appearance. No extra roster cell is created."
@@ -258,7 +281,11 @@ function performanceState() {
     project: independent
       ? { ...state.document, metadata: { ...state.document.metadata, donor: state.document.definition.inherits } }
       : null,
-    appearance_key: JSON.stringify([state?.document?.identity.pack, state?.document?.definition.components.appearance]),
+    appearance_key: JSON.stringify([
+      state?.document?.identity.pack,
+      state?.active_outfit,
+      state?.document?.definition.components.appearance,
+    ]),
     performance: {
       ...state?.performance,
       unavailable_reason:
@@ -385,6 +412,12 @@ $("import").onclick = () => {
 };
 $("save").onclick = () => act("choose_retail_save");
 $("copy").onclick = () => act("choose_retail_copy");
+$("preview-outfit").onchange = () => act("retail_outfit_select", { id: $("preview-outfit").value });
+$("outfit-name").onchange = () => act("retail_outfit_rename", { name: $("outfit-name").value });
+$("outfit-copy").onclick = () => act("retail_outfit_copy");
+$("outfit-remove").onclick = () => {
+  if (confirm("Remove this outfit? You can undo this change.")) act("retail_outfit_remove");
+};
 $("undo").onclick = () => act("retail_undo");
 $("reset").onclick = () => {
   if (discard()) act("retail_reset");

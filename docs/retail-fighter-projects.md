@@ -18,6 +18,19 @@ texture workflow; CAF wardrobe/facial presets apply to CAF bodies. Retail animat
 preview requires the subsequent runtime extension; selection/staging/export work
 through the existing runtime.
 
+Standalone retail projects also support three selectable outfits. **Copy as new
+outfit** copies the current look; use the sidebar or viewer's Outfit selector
+to switch. Rename or remove a copied outfit, with Undo available. Each look has
+its own body, textures and menu artwork; moves, stats, voice, AI and presentation
+remain shared. Saving stores every look in the portable project. Importing an
+independent ordinary pack also restores its same-pack outfit collection.
+
+Editing and previewing a selected look work with older compatible authoring
+tools. Exporting multiple looks requires the `standalone-retail-outfits-1`
+runtime extension. Export readiness explains this and points to Game setup;
+it never silently drops extra outfits. The package installs normally, retains
+one public roster entry and uses the game's original clothing selector.
+
 ## Terminology
 
 A Story profile includes game progress; a project holds fighter settings; an
@@ -57,7 +70,8 @@ The steps below describe a new standalone fighter.
    Use **Refresh 3D preview** after later changes. Orbit/zoom, Front/Back/Fit and Wireframe inspect
    the source pose. Collapsed source placeholders, untextured helpers and sparkle
    are omitted from this preview. Runtime appearance data is unchanged. It does
-   not play animations or reproduce native material shading/injury switching.
+   not reproduce native material shading/injury switching. Entrance/victory
+   source playback is available with the explicit runtime extension.
 6. Under **Textures**, choose an original shape and import a complete RGB PNG at
    native, 2× or 4× dimensions (32–2048px, at most 16 MiB). The matching runtime
    admits `eagl-appearance-png-1`. It retains native UV dimensions, controls and
@@ -83,8 +97,8 @@ The steps below describe a new standalone fighter.
 
 Retail projects have one current schema with an optional deployment purpose/target;
 earlier files remain readable. CAF projects and profile workflows stay separate.
-Generic Blender/GLB mesh reimport, arbitrary sculpting and animation authoring/
-playback remain deferred in the retail studio. An extra-outfit project adds one
+Generic Blender/GLB mesh reimport, arbitrary sculpting and animation authoring
+remain deferred in the retail studio. An extra-outfit project adds one
 appearance to a retail fighter within its three-outfit total, sharing combat,
 voice and progress rather than creating another public roster identity.
 

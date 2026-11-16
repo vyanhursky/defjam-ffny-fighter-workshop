@@ -60,7 +60,16 @@
         <span class="eyebrow">PROJECT</span><strong id="retail-project-name">No project open</strong>
         <p id="project-path" class="hint"></p>
         <p class="hint">Portable fighter project. Story profiles stay separate.</p>
-        <h3>Appearance</h3>
+        <section id="outfit-controls">
+          <h3>Outfits</h3>
+          <div id="outfit-list" class="outfit-list"></div>
+          <label>Outfit name<input id="outfit-name" maxlength="80" /></label>
+          <button id="outfit-copy">Copy as new outfit</button>
+          <button id="outfit-remove">Remove outfit</button>
+          <p class="hint">
+            Combat, voice and AI are shared. Model, textures and artwork belong to the selected outfit.
+          </p>
+        </section>
         <p class="hint">
           The imported retail body supplies the model and textures. CAF wardrobe and face presets apply to CAF bodies.
         </p>
@@ -296,6 +305,9 @@
             <p id="fighter-subtitle">Combine a model, combat donor and supplied resources.</p>
           </div>
         </div>
+        <label class="retail-outfit-picker"
+          >Outfit<select id="preview-outfit" aria-label="Preview outfit"></select
+        ></label>
         <div id="viewport"></div>
         <div id="preview-empty" class="viewer-empty">
           <strong>No model loaded yet</strong>

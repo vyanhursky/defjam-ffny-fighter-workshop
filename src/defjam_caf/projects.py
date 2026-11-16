@@ -22,6 +22,7 @@ SCHEMA = "ffny-fighter-project-7"
 EARLIER_SCHEMAS = tuple("ffny-fighter-project-%d" % n for n in range(1, 7))
 READABLE_SCHEMAS = EARLIER_SCHEMAS + (SCHEMA,)
 MAX_PROJECT = 384 * 1024 * 1024  # HD atlases of up to 2048px
+MAX_ATLAS_BYTES = 16 * 1024**2
 ATLAS_SLOTS = ("a", "b", "c", "d", "d1", "d2")
 FIGHTER_FIELDS = ("stats", "styles", "caf_values", "caf_colors")
 SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
@@ -130,10 +131,10 @@ def appearance_hash(fields):
 
 def atlas_bytes(value):
     from PIL import Image
-    require(type(value) is str and len(value) <= 22_369_624, "Atlas PNG is too large")
+    require(type(value) is str and len(value) <= 4 * ((MAX_ATLAS_BYTES + 2) // 3), "Atlas PNG is too large")
     try:
         raw = base64.b64decode(value, validate=True)
-        require(len(raw) <= 16 * 1024 * 1024, "Atlas PNG is too large")
+        require(len(raw) <= MAX_ATLAS_BYTES, "Atlas PNG is too large")
         with Image.open(io.BytesIO(raw)) as image:
             require(image.format == "PNG" and image.width == image.height and image.width in (256,512,1024,2048), "Import a square 256, 512, 1024 or 2048 PNG atlas")
             image.verify()

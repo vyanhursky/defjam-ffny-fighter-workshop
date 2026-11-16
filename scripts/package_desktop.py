@@ -84,7 +84,7 @@ def main(argv=None):
         docs = Path(temporary) / "documentation"
         collect_notices(root, docs)
         command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir", "--windowed",
-                   "--name", NAME, "--paths", str(root / "src"),
+                   "--name", NAME, "--paths", str(root / "src"), "--copy-metadata", NAME,
                    "--add-data", f"{root / 'src/defjam_caf/resources'}:defjam_caf/resources",
                    "--add-data", f"{root / 'src/defjam_caf/_vendor/LICENSE'}:defjam_caf/_vendor",
                    "--add-data", f"{docs}:documentation"]

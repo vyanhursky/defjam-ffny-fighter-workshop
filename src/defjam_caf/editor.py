@@ -192,6 +192,7 @@ class Editor:
         folder = remembered.recall(self.workspace, "app") or runtimes.default_folder()
         data = self.data or remembered.recall(self.workspace, "data")
         return dict(data=str(data) if data else None, runtime=runtime, folder=str(folder) if folder else None,
+                    workspace=str(self.workspace.resolve()), version=__version__,
                     ready=bool(data and runtime and runtime["usable"]))
 
     def close_project(self):

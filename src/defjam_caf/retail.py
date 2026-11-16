@@ -25,6 +25,7 @@ READABLE_SCHEMAS = EARLIER_SCHEMAS + (SCHEMA,)
 MAX_ASSET = 64 * 1024**2
 MAX_TOTAL = 64 * 1024**2
 MAX_TEXTURE = 16 * 1024**2
+MAX_MANIFEST_BYTES = 8 * 1024**2
 KINDS = {'appearance':'appearance','moveset':'moveset','voice':'voice','ai':'ai',
          'portrait':'portrait','intro':'cinematic','victory':'cinematic','blazin':'blazin'}
 
@@ -148,11 +149,20 @@ def new(donor, name='New fighter'):
         'ui_art':{'images':{},'donor':donor,'hd_scale':4}})
 
 
+def read_manifest(folder):
+    """Bound the actual read, including the native fighter chooser's first pass."""
+    with (Path(folder) / 'fighters.json').open('rb') as stream:
+        raw = stream.read(MAX_MANIFEST_BYTES + 1)
+    projects.require(len(raw) <= MAX_MANIFEST_BYTES, 'Pack manifest exceeds 8 MiB')
+    manifest = json.loads(raw.decode('utf-8-sig'), object_pairs_hook=projects.unique)
+    projects.require(type(manifest) is dict, 'Invalid pack manifest')
+    return manifest
+
+
 def import_pack(folder, fighter_id):
     """Read one ordinary fighter and its hash-bound transitive JSON assets."""
-    folder=Path(folder).resolve();path=folder/'fighters.json'
-    projects.require(path.stat().st_size<=8*1024**2,'Pack manifest exceeds 8 MiB')
-    manifest=json.loads(path.read_text(encoding='utf-8-sig'),object_pairs_hook=projects.unique)
+    folder=Path(folder).resolve()
+    manifest=read_manifest(folder)
     projects.require(manifest.get('schema')=='fighter-registry-draft-1' and not manifest.get('requires'),
         'Import an independent fighter pack without dependencies')
     fighter=next((f for f in manifest['fighters'] if f['id']==fighter_id),None)

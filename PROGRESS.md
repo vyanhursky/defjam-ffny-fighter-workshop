@@ -1,5 +1,20 @@
 # Progress and handoff
 
+## November 15 review — release hygiene
+
+Owner authorized independently assessing Parts A–C, source pushes and PRs,
+including companion runtime PRs assigned to milestone 1.2.0. Part E is deferred;
+no merge or new release is requested. The item-by-item assessment and PR phases
+are in docs/review-assessment-2026-11-15.md.
+
+A1/A3/A11/C15: package metadata is the version source (checkout fallback and
+explicit frozen metadata collection); all three pages share a friendly version
+label. Game setup shows the workspace. CLI, project and desktop CAF atlas imports
+share 16 MiB admission. Retail chooser and importer use one bounded manifest
+reader. Baseline: 235 passed/5 skipped. Changed tree: 239 passed/5 skipped and
+8 Node tests passed on Windows. Native package startup awaits CI; native game
+acceptance is not implied. Original saves, assets and the input review are intact.
+
 ## Beta 2 published — 2026-11-12
 
 Owner authorized merging, tagging and publishing after the Recomp v1.2.0-beta.2 results. PR #11 merged (merge commit 4d507da, #9 and #10 included);

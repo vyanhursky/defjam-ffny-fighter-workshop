@@ -1,4 +1,7 @@
 import { createTabs } from "./tabs.mjs";
+import { mountPerformancePanels } from "./performance-panels.mjs";
+import { performanceEditor } from "./performance.mjs";
+import { createExportWorkflow, mountExportDialog } from "./project-workflow.mjs";
 import { unpackPreview, geometryFor } from "./geometry.mjs";
 import { createStage, disposeModel, frameStage } from "./three-stage.mjs";
 import { createBridge } from "./bridge.mjs";
@@ -8,6 +11,8 @@ import { gameSetup } from "./setup.mjs";
 import { workshopVersion } from "./version.mjs";
 import { attachDetails } from "./errors.mjs";
 const $ = (id) => document.getElementById(id);
+mountPerformancePanels($("performance-panels"), { retail: true });
+mountExportDialog();
 const client = createBridge({
   onBusy(count, label) {
     $("busy").hidden = count <= 0;
@@ -143,6 +148,8 @@ function render(s) {
   $("import").disabled = !s.runtime;
   $("fighter-name").textContent = d?.metadata.name || "YOUR FIGHTER";
   $("project-path").textContent = s.path || "Save a portable .ffnyfighter project.";
+  $("retail-project-name").textContent = s.path ? s.path.split(/[\\/]/).pop() : d?.metadata.name || "No project open";
+  $("retail-changes").textContent = s.dirty ? "Pending project changes" : "No pending changes";
   for (const id of ["name", "author", "version", "description", "license"]) {
     $(id).value = d?.metadata[id] || "";
     $(id).disabled = !d;
@@ -233,7 +240,43 @@ function render(s) {
   }
   showArt();
   $("texture-status").textContent = d ? Object.keys(d.textures).length + " texture overrides staged." : "";
+  performance.render(performanceState());
 }
+
+function performanceState() {
+  const independent = state?.document && (state.document.deployment?.mode || "add") === "add";
+  return {
+    ...state,
+    project: independent
+      ? { ...state.document, metadata: { ...state.document.metadata, donor: state.document.definition.inherits } }
+      : null,
+    appearance_key: JSON.stringify([state?.document?.identity.pack, state?.document?.definition.components.appearance]),
+    performance: {
+      ...state?.performance,
+      unavailable_reason:
+        state?.document && !independent
+          ? "Appearance-only projects share the original fighter's voice, AI and presentation. Start a standalone fighter for independent performance."
+          : "Create or open a standalone fighter project to author performance.",
+    },
+    retail_movesets: { selected: state?.document?.definition.inherits },
+  };
+}
+const performance = performanceEditor({
+  $,
+  state: performanceState,
+  call: (action, args, label) => call("retail_" + action, args, label),
+  act: (action, args, label) =>
+    act(action === "choose_voice_clip" ? "choose_retail_voice_clip" : "retail_" + action, args, label),
+  applyState: render,
+  fail: (error) => {
+    status(error.message, true);
+    attachDetails($("toast"), error.detail);
+  },
+  parts: () => [],
+  meshes: () => [],
+  repose: () => {},
+  canAnimate: () => false,
+});
 function showArt() {
   const d = state?.document,
     role = $("role").value,
@@ -272,13 +315,14 @@ for (const id of ["name", "author", "version", "description", "license", "pack",
     };
     draftTimer = setTimeout(send, 120);
   };
-createTabs({
+const sectionTabs = createTabs({
   root: document.querySelector(".retail-right"),
   buttons: "[data-panel]",
   panels: "[data-content]",
   key: "panel",
   panelKey: "content",
   onSelect(name) {
+    if (["voice", "presentation", "ai"].includes(name)) performance.ensureConnected();
     if (
       name === "textures" &&
       !shapeRows.length &&
@@ -344,7 +388,7 @@ $("details").onclick = () => {
 };
 $("apply-deployment").onclick = () =>
   act("retail_deployment", { mode: $("deployment-mode").value, target: $("deployment-target").value });
-$("combat").onclick = () => act("retail_combat", { donor: $("combat-donor").value });
+$("combat").onclick = () => act("retail_moveset", { donor: $("combat-donor").value });
 $("body").onclick = async () => {
   const result = await act(
     "retail_appearance",
@@ -370,7 +414,20 @@ $("ui-import").onclick = () => act("choose_retail_ui", { role: $("role").value }
 $("ui-clear").onclick = () => act("retail_ui", { role: $("role").value });
 $("texture").onclick = () => act("choose_retail_texture", { shape: $("shape").value });
 $("clear-texture").onclick = () => act("retail_texture", { shape: $("shape").value });
-$("export").onclick = () => act("choose_retail_export", {}, "Compiling and validating the complete fighter…");
+const exportWorkflow = createExportWorkflow({
+  $,
+  state: () => state,
+  call: (action, args) => call("retail_" + action, args),
+  act: (action, args, label) => act(action === "save" ? "choose_retail_save" : "choose_retail_export", args, label),
+  fail: (error) => status(error.message, true),
+  hasFaceDraft: () => false,
+  hasTryOn: () => false,
+  jump: (tab) =>
+    tab === "setup"
+      ? setup.open(state?.setup)
+      : sectionTabs.show(tab === "project" ? "details" : tab === "outfits" ? "appearance" : tab),
+});
+$("export").onclick = exportWorkflow.open;
 const { scene, camera, renderer, controls } = createStage({
   THREE,
   OrbitControls,

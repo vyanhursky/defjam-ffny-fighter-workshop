@@ -140,6 +140,7 @@ class RetailProject(TypedDict):
     textures: dict[str, str]
     ui_art: UIArt
     deployment: NotRequired[dict[str, str]]
+    performance: NotRequired[Performance]
 
 
 class ProjectSummary(TypedDict):

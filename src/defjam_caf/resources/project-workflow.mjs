@@ -99,3 +99,15 @@ export function createExportWorkflow({ $, call, act, fail, state, jump, hasFaceD
   };
   return { open };
 }
+
+export function mountExportDialog() {
+  const template = document.createElement("template");
+  template.innerHTML = `<dialog id="export-ready" aria-labelledby="export-ready-title">
+    <h3 id="export-ready-title">Ready to export?</h3>
+    <p class="hint">Pending project changes will be saved before you choose the mod ZIP. The game compiler checks the complete export.</p>
+    <ul id="export-checks" class="export-checks"></ul>
+    <div class="dialog-actions"><button id="export-ready-cancel" class="quiet">Back to editing</button>
+    <button id="export-ready-confirm" class="primary" disabled>Save project and choose ZIP…</button></div>
+  </dialog>`;
+  document.body.append(template.content);
+}

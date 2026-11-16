@@ -80,7 +80,9 @@ def fixtures(output):
     catalog = dict(
         fighters=fighters,
         banks=[dict(category=name, voice=5, count=2) for name in ("Character", "Taunts", "Enviro")],
-        cinematics=[dict(key=role + "-fixture", label=role.title(), role=role) for role in ("intro", "victory")],
+        cinematics=[
+            dict(key=key, label=role.title(), role=role) for key, role in (("CI_113A", "intro"), ("CE_014A", "victory"))
+        ],
         ai=[
             dict(
                 key="char0005",
@@ -116,7 +118,19 @@ def main(argv=None):
         return (
             ("", "")
             if "Mod" in title
-            else (str(output / ("audition.wav" if title == "Save voice clip" else "fighter.ffnyfighter")), "")
+            else (
+                str(
+                    output
+                    / (
+                        "audition.wav"
+                        if title == "Save voice clip"
+                        else "retail.ffnyfighter"
+                        if "retail" in title
+                        else "fighter.ffnyfighter"
+                    )
+                ),
+                "",
+            )
         )
 
     QFileDialog.getSaveFileName = save_picker
@@ -160,6 +174,16 @@ def main(argv=None):
 
     def request(action, arguments):
         calls[action] += 1
+        if action == "retail_snapshot" and calls[action] == 1:
+            editor.performance_link = None
+        if action == "retail_performance_connect":
+            editor.performance_link = SimpleNamespace(
+                catalog=catalog,
+                call=lambda *args: dict(valid=True),
+                voice=lambda request: audio_result,
+                animation=lambda request: dict(clips=[], unsupported={}),
+            )
+            return editor.retail.snapshot()
         if action == "performance_audio":
             time.sleep(0.15)  # Exercise playback after the initiating click returns.
             return audio_result
@@ -323,17 +347,52 @@ def main(argv=None):
         (
             "Retail compact shell and full IDs",
             "document.querySelector('header').getBoundingClientRect().height<=64 && document.documentElement.scrollWidth<=innerWidth && document.getElementById('pack').getBoundingClientRect().width>=185",
-            None,
+            "document.querySelector('[data-panel=details]').click()",
         ),
         (
             "Body import automatically previews",
             "window.__retailPreview?.ready && document.getElementById('preview-empty').hidden && document.getElementById('shape').options[0].value==='A001'",
-            "document.getElementById('empty-body').click()",
+            "document.querySelector('[data-panel=appearance]').click();document.getElementById('empty-body').click()",
         ),
         (
             "Retail keyboard tabs",
-            "document.querySelector('[data-panel=textures]').getAttribute('aria-selected')==='true'",
+            "document.querySelector('[data-panel=ai]').getAttribute('aria-selected')==='true' && document.getElementById('ai-sliders').children.length>0",
             "let e=document.querySelector('[data-panel=combat]');e.click();e.focus();e.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))",
+        ),
+        (
+            "Retail AI staging",
+            "Boolean(window.__retailState?.performance.settings.ai)",
+            "document.getElementById('ai-apply').click()",
+        ),
+        (
+            "Retail voice preparation",
+            "window.__retailState?.performance.settings.voice && document.getElementById('voice-preload-status').textContent.includes('clips prepared')",
+            "document.querySelector('[data-panel=voice]').click();document.getElementById('voice-apply').click()",
+        ),
+        (
+            "Retail voice plays",
+            "!document.getElementById('voice-audio').paused && document.getElementById('voice-audio').currentTime>0",
+            "document.getElementById('voice-next').click()",
+        ),
+        (
+            "Retail entrance staging",
+            "window.__retailState?.performance.settings.intro==='CI_113A'",
+            "document.querySelector('[data-panel=presentation]').click();document.getElementById('sequence-intro').value='CI_113A';document.getElementById('apply-intro').click()",
+        ),
+        (
+            "Retail moves preserve stats and performance",
+            "window.__retailState?.document.definition.inherits==='retail/blaze' && window.__retailState.document.definition.components.stats.health===20 && window.__retailState.performance.settings.voice.preset==='retail/teck'",
+            "document.querySelector('[data-panel=combat]').click();document.getElementById('combat-donor').value='retail/blaze';document.getElementById('combat').click()",
+        ),
+        (
+            "Retail shared export readiness",
+            "document.getElementById('export-ready').open && !document.getElementById('export-ready-confirm').disabled",
+            "document.getElementById('export').click()",
+        ),
+        (
+            "Retail saves before ZIP chooser",
+            "!document.getElementById('export-ready').open && !window.__retailState.dirty",
+            "document.getElementById('export-ready-confirm').click()",
         ),
         (
             "Home for appearance workflow",
@@ -380,12 +439,15 @@ def main(argv=None):
             assert len(list((workspace / "backups").glob("*.djprofile"))) == 1
             assert calls["performance_connect"] == 2
             assert calls["performance_audio"] == 6  # Both playback actions reused the prepared clips.
+            assert calls["retail_performance_audio"] == 6
+            assert calls["retail_performance_connect"] == 1
             assert calls["retail_appearance"] == calls["retail_preview"] == 1
             assert any("Mod" in title for title in pickers)
             assert "Save voice clip" in pickers
             with wave.open(str(output / "audition.wav"), "rb") as saved_audio:
                 assert saved_audio.getnframes() == 48000
             assert len(projects.read(output / "fighter.ffnyfighter")[0]["outfits"]) == 1
+            assert projects.read(output / "retail.ffnyfighter")[0]["performance"]["intro"] == "CI_113A"
         except Exception as exc:
             error = error or repr(exc)
         (output / "receipt.json").write_text(

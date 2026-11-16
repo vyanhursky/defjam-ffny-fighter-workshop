@@ -192,24 +192,9 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
             "overrides": [],
         }
         if performance:
-            request = Path(temporary) / "performance.json"
-            request.write_text(
-                json.dumps(dict(settings=performance, pack=pack_id, donor=meta["donor"])), encoding="utf-8"
-            )
-            generated = contract(
-                runtime,
-                [
-                    "workshop-export",
-                    "--game",
-                    str(game),
-                    "--workshop-request",
-                    str(request),
-                    "--workshop-out",
-                    str(root / "performance"),
-                ],
-                temporary,
-                workspace,
-            )
+            from .performance_exports import export_settings
+
+            generated = export_settings(runtime, game, workspace, temporary, root, pack_id, meta["donor"], performance)
             manifest["resources"].extend(generated["resources"])
             manifest["fighters"][0]["components"].update(generated["components"])
         role_art = any("ui_art" in node for node in [project, *project.get("outfits", [])])

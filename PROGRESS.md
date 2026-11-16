@@ -1,5 +1,18 @@
 # Progress and handoff
 
+## November 15 review — shared CSS foundation
+
+B4 and typography portion of C12: consolidate repeated selectors/declarations
+and the three overlapping responsive blocks into one per stylesheet. Shared
+spacing/type/radius tokens replace scattered control values. Hint copy is 12px,
+eyebrows/footer 11px, disabled controls 55% opacity; locked sections retain
+readable text. Remove important rules, add visible keyboard focus and explicit
+hidden-element handling. Semantic/keyboard tabs and compact workflow layout are
+the next UI phase. Prettier/diff checks pass. Real synthetic Qt screenshots were
+inspected at 1440×940 and 1100×760: no horizontal overflow, 12px computed hints,
+typed triangle still renders. Private evidence build/ui-css/layout.json and
+captures. No original assets/saves or native game acceptance involved.
+
 ## November 15 review — frontend modules and geometry transport
 
 B3/B8: Home/CAF/retail share request correlation, error details, visible busy

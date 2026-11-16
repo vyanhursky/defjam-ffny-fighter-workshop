@@ -1,7 +1,4 @@
-.retail-main {
-  grid-template-columns: 280px minmax(360px, 1fr) 340px;
-  height: calc(100vh - 150px);
-}
+/* Page layout and components */
 .retail-left,
 .retail-right {
   overflow-y: auto;
@@ -10,9 +7,6 @@
 }
 .retail-left {
   border-right: 1px solid var(--line);
-}
-.retail-right {
-  border-left: 1px solid var(--line);
 }
 .retail-left > button {
   width: 100%;
@@ -26,7 +20,7 @@ textarea {
   width: 100%;
   background: #141914;
   border: 1px solid #3a4538;
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--ink);
   padding: 10px;
   resize: vertical;
@@ -43,14 +37,14 @@ textarea {
   align-items: center;
 }
 .retail-camera button {
-  font-size: 11px;
-  padding: 8px;
+  font-size: var(--text-small);
+  padding: var(--space-8);
 }
 .retail-camera label {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: var(--text-small);
   margin: 0;
 }
 .retail-camera input {
@@ -86,7 +80,7 @@ textarea {
 .tabs button {
   flex: 1;
   padding: 9px 3px;
-  font-size: 11px;
+  font-size: var(--text-small);
 }
 .tabs .active {
   border-color: var(--accent);
@@ -98,7 +92,7 @@ textarea {
 .art-preview {
   background: repeating-conic-gradient(#26302c 0% 25%, #35423b 0% 50%) 0/20px 20px;
   min-height: 100px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 10px;
   text-align: center;
 }
@@ -112,17 +106,10 @@ textarea {
   grid-template-columns: 1fr 90px;
   gap: 10px;
   align-items: center;
-  margin: 12px 0;
+  margin: var(--space-12) 0;
 }
 .stat-line input {
   width: 90px;
-}
-#busy {
-  inset: 121px 340px 29px 280px;
-}
-#toast {
-  left: 300px;
-  right: 360px;
 }
 .data-strip #saved {
   margin-left: auto;
@@ -130,8 +117,8 @@ textarea {
 #project-path {
   overflow-wrap: anywhere;
 }
-
 .retail-main {
+  height: calc(100vh - 150px);
   grid-template-columns: 240px minmax(420px, 1fr) minmax(340px, 38vw);
 }
 .retail-right {
@@ -148,28 +135,11 @@ textarea {
   left: 260px;
   right: calc(38vw + 20px);
 }
-@media (max-width: 1200px) {
-  .retail-main {
-    grid-template-columns: 210px minmax(420px, 1fr) minmax(340px, 1fr);
-  }
-  .retail-left,
-  .retail-right {
-    padding: 16px;
-  }
-  #busy {
-    left: 210px;
-  }
-  #toast {
-    left: 230px;
-    right: 360px;
-  }
-}
-
 .retail-workflow {
   margin-bottom: 18px;
-  padding: 12px;
+  padding: var(--space-12);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 .retail-workflow summary {
   cursor: pointer;
@@ -184,4 +154,22 @@ textarea {
 }
 .retail-workflow li {
   margin: 9px 0;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .retail-main {
+    grid-template-columns: 210px minmax(420px, 1fr) minmax(340px, 1fr);
+  }
+  .retail-left,
+  .retail-right {
+    padding: var(--space-16);
+  }
+  #busy {
+    left: 210px;
+  }
+  #toast {
+    left: 230px;
+    right: 360px;
+  }
 }

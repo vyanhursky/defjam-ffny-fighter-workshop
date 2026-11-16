@@ -9,6 +9,7 @@ Requests carry `id`, `action`, and an `args` object. Native file pickers use
 | `appearance` | `Editor._request_appearance` |
 | `blazin` | `Editor._request_blazin` |
 | `blazin_inherit` | `Editor._request_blazin_inherit` |
+| `cache_clear` | `Editor._request_cache_clear` |
 | `close_project` | `Editor._request_close_project` |
 | `duplicate` | `Editor._request_duplicate` |
 | `export` | `Editor._request_export` |

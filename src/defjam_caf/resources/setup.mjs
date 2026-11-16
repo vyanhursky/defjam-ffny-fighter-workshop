@@ -17,6 +17,7 @@ export function gameSetup({ call, act }) {
     <div class="setup-row"><code id="setup-data">Not chosen yet</code><button id="setup-data-change">Choose…</button></div>
     <p class="hint">The folder with <b>extracted</b> and <b>save</b> in it. It is normally the <b>data</b> folder inside your game folder, so it is filled in for you.</p>
     <h4>Workshop files</h4><p class="hint">Backups and the private asset cache live here:</p><code id="setup-workspace"></code>
+    <p id="setup-cache" class="hint"></p><button id="setup-clear-cache">Clear cache</button>
     <p id="setup-warning" class="hint error" aria-live="polite"></p>
     <p id="setup-message" class="hint" aria-live="polite"></p>
     <div class="dialog-actions"><button id="setup-cancel" class="quiet">Later</button><button id="setup-use" class="primary">Use these settings</button></div>`;
@@ -73,6 +74,7 @@ export function gameSetup({ call, act }) {
   async function open(setup) {
     current = setup || current;
     $("setup-workspace").textContent = current?.workspace || "";
+    showCache();
     dialog.showModal();
     try {
       show(await call("setup_scan", {}));
@@ -82,6 +84,24 @@ export function gameSetup({ call, act }) {
   }
 
   $("setup-version").onchange = showFeatures;
+  function showCache() {
+    const cache = current?.cache;
+    $("setup-cache").textContent =
+      cache?.error ||
+      `Private wardrobe cache: ${((cache?.bytes || 0) / 1024 ** 2).toFixed(1)} MiB. Reopen your data folder after clearing to rebuild it.`;
+    $("setup-clear-cache").disabled = !cache?.bytes || Boolean(cache?.error);
+  }
+  $("setup-clear-cache").onclick = async () => {
+    if (
+      !confirm(
+        "Clear the decoded wardrobe cache? Reopen your data folder to rebuild it. Projects and backups are kept.",
+      )
+    )
+      return;
+    const result = await act("cache_clear", {}, "Clearing private cache…");
+    if (result?.snapshot?.setup) current = result.snapshot.setup;
+    showCache();
+  };
   $("setup-browse").onclick = async () => {
     const result = await act("choose_setup_folder");
     if (result?.candidates) show(result);

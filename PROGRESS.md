@@ -1,5 +1,22 @@
 # Progress and handoff
 
+## November 15 review — storage and private cache hygiene
+
+A9/A10: path-hashed kernel lock files live in the default Workshop workspace's
+locks directory, shared by CLI/desktop and custom workspaces so two windows
+cannot choose different lock namespaces. Save/restore/project/import paths all
+use it. Import staging is a sibling of the title root, then renamed into place.
+The game is not a participant in this lock; existing stale-file/backup checks
+remain. Existing legacy lock files are not deleted from the player's saves.
+
+Successful cache loads/builds clean owned incomplete catalogs and retain the
+active identity plus one other most-recently-used dump. Game setup shows cache
+size and Clear cache; clearing preserves projects/drafts/backups. Cleanup checks
+resolved ownership and refuses redirected paths/descendants. Unknown files are
+kept. Usage is cached so snapshots do not repeatedly walk the cache. Synthetic
+tests use disposable lock roots. Validation: 295 passed, 5 skipped on Windows;
+Ruff and diff checks pass. GUI clear flow/native game acceptance not claimed.
+
 ## November 15 review — measured project/preview performance
 
 A4/A6/A7/B7: content-key the base container across all four fighter fields;

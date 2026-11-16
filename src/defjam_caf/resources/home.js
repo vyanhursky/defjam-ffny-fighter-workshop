@@ -47,7 +47,7 @@ const setup = gameSetup({
   call,
   act: async (action, args, label) => {
     const result = await act(action, args, label);
-    if (action === "setup_use" || action === "choose_data") await refresh();
+    if (["setup_use", "choose_data", "cache_clear"].includes(action)) await refresh();
     return result;
   },
 });

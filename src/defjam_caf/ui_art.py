@@ -1,6 +1,8 @@
 """Portable UI PNGs: shared defaults and per-outfit role overrides."""
 
 import copy
+import hashlib
+import json
 import re
 from . import projects
 from .pngs import inspect_png
@@ -157,7 +159,13 @@ def edit(document, identity, *, role=None, png=None, settings=None, clear_all=Fa
 def status(document, identity):
     effective = resolved(document, identity)
     local = node(document, identity).get("ui_art", {}).get("images", {})
+    revision = dict(
+        donor=effective["donor"],
+        scale=effective["hd_scale"],
+        images={role: inspect_png(value, "portrait").digest for role, value in effective["images"].items()},
+    )
     return dict(
+        revision=hashlib.sha256(json.dumps(revision, sort_keys=True).encode()).hexdigest(),
         donor=effective["donor"],
         hd_scale=effective["hd_scale"],
         imported=len(local),

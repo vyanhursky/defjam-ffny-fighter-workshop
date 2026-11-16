@@ -1,0 +1,328 @@
+"""Drive the real Qt/WebChannel UI with invented saves, geometry and catalog adapters.
+
+No game dump is read. Only original-resource/compiler boundaries and native
+picker/confirmation answers are deterministic adapters; state editing, projects,
+backups, transport, controls and WebGL are production paths. Captures stay local.
+"""
+
+import argparse
+import base64
+from collections import Counter
+import io
+import json
+from pathlib import Path
+import sys
+import time
+from types import SimpleNamespace
+
+from PIL import Image
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
+
+from defjam_caf import desktop, projects, remembered, runtimes, storage
+from defjam_caf.container import Container
+from defjam_caf.container import SaveError
+from defjam_caf.fields import apply_fields, renamed
+from defjam_caf.performance import AI_FIELDS
+from defjam_caf.profiles import directory_name
+
+
+def fixtures(output):
+    data = output / "data"
+    folder = data / "save/UserData/45410049" / directory_name("UITEST")
+    folder.mkdir(parents=True)
+    fighter = dict(
+        stats=dict.fromkeys(("health", "upper", "lower", "speed", "toughness"), 20),
+        styles=[0],
+        caf_values=[0, 0, 0, 0, 0, 1] + [0] * 6 + [0xFFFFFFFF] * 26,
+        caf_colors=[0] * 38,
+    )
+    save = renamed(apply_fields(projects.empty_container(), fighter), "UITEST")
+    payload = bytearray(save.payload)
+    payload[0x3210:0x321B] = b"STORY BYTES"
+    save = Container(save.metadata, bytes(payload))
+    (folder / "UITEST").write_bytes(save.encode())
+    (folder / "SaveMeta.xbx").write_bytes("Name=UITEST\r\n".encode("utf-16"))
+    (data / ".caf-disposable-test-data").write_text("Invented fixture; safe to edit.")
+    runtime = output / "runtime"
+    (runtime / "scripts").mkdir(parents=True)
+    (runtime / "setup").mkdir()
+    commands = sorted({command for _, _, needs, *_ in runtimes.FEATURES for command in needs})
+    (runtime / "scripts/fighter-contract.py").write_text(
+        "parser.add_argument('command', choices=" + repr(tuple(commands)) + ")\n"
+    )
+    (runtime / "setup/fighter_caf.py").write_text("FORMAT = 'caf-fighter-1'\n")
+    png = io.BytesIO()
+    Image.new("RGBA", (32, 32), (50, 150, 80, 255)).save(png, format="PNG")
+    preview = dict(
+        meshes=[
+            dict(
+                positions=[[-1, 0, 0], [1, 0, 0], [0, 2, 0]],
+                normals=[[0, 0, 1]] * 3,
+                uv=[[0, 0], [1, 0], [0.5, 1]],
+                indices=[0, 1, 2],
+                atlas="a",
+                slot="0",
+                transparent=False,
+            )
+        ],
+        textures={"a": "data:image/png;base64," + base64.b64encode(png.getvalue()).decode("ascii")},
+        bounds=[[-1, 0, 0], [1, 2, 0]],
+        notices=["Invented geometry; no game-asset acceptance."],
+        arm_pivots={},
+        shapes=[dict(name="A001", width=32, height=32)],
+    )
+    fighters = [
+        dict(key="retail/" + name, label=name.title(), core=index + 1, voice=5)
+        for index, name in enumerate(("blaze", "pockets", "teck"))
+    ]
+    catalog = dict(
+        fighters=fighters,
+        banks=[dict(category=name, voice=5, count=2) for name in ("Character", "Taunts", "Enviro")],
+        cinematics=[dict(key=role + "-fixture", label=role.title(), role=role) for role in ("intro", "victory")],
+        ai=[
+            dict(
+                key="char0005",
+                label="Invented AI",
+                tendencies={
+                    level: [dict.fromkeys((key for key, _ in AI_FIELDS), 3) for _ in range(4)]
+                    for level in ("easy", "normal", "hard")
+                },
+            )
+        ],
+    )
+    return data, runtime, preview, catalog
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--capture", action="store_true", help="Keep local-only screenshots")
+    parser.add_argument("--size", default="1440x940", choices=["1440x940", "1100x760"])
+    args = parser.parse_args(argv)
+    output = args.output.resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    data, runtime, preview, catalog = fixtures(output)
+    workspace = output / "workspace"
+    storage.default_lock_root = lambda: workspace / "locks"
+    runtimes.default_folder = lambda **kwargs: None
+    remembered.remember(workspace, "app", runtime)
+    remembered.remember(workspace, "runtime", runtime)
+    pickers = []
+
+    def save_picker(parent, title, *rest):
+        pickers.append(title)
+        return ("", "") if "Mod" in title else (str(output / "fighter.ffnyfighter"), "")
+
+    QFileDialog.getSaveFileName = save_picker
+    QMessageBox.question = lambda *a, **k: QMessageBox.StandardButton.Yes
+
+    class Page(desktop.Page):
+        def javaScriptConfirm(self, origin, message):
+            return True
+
+    desktop.Page = Page
+    app = QApplication(sys.argv[:1])
+    window = desktop.Window(workspace, None, "home.html")
+    window.resize(*map(int, args.size.split("x")))
+    editor = window.bridge.editor
+    editor.open_data(data)
+    editor.runtime = runtime
+    calls = Counter()
+    original = editor.request
+
+    def prepared(value):
+        if isinstance(value, dict):
+            if "profiles" in value:
+                value["preview_available"] = True
+            if "snapshot" in value:
+                value["snapshot"] = prepared(value["snapshot"])
+        return value
+
+    def request(action, arguments):
+        calls[action] += 1
+        if action in ("preview", "retail_preview"):
+            return preview
+        if action == "performance_connect":
+            if calls[action] == 1:
+                raise SaveError(
+                    "The catalogs could not be loaded. Retry or check Game setup.",
+                    "Invented catalog failure for retry coverage",
+                )
+            editor.performance_link = SimpleNamespace(catalog=catalog)
+            return prepared(editor.snapshot())
+        if action == "donors":
+            return dict(donors=catalog["fighters"])
+        return prepared(original(action, arguments))
+
+    editor.request = request
+    window.show()
+    steps = [
+        ("Home workflows", "document.querySelectorAll('.home-card').length===4", None),
+        (
+            "Story through Home",
+            "window.__cafState?.selected==='UITEST' && window.__cafPreview?.ready",
+            "document.querySelector('.home-card button').click()",
+        ),
+        (
+            "Stat editing through WebChannel",
+            "window.__cafState?.fields.cash===350 && window.__cafState.dirty",
+            "document.querySelector('[data-tab=stats]').click();let e=document.getElementById('cash');e.value=350;e.dispatchEvent(new Event('change'))",
+        ),
+        (
+            "Profile save and backup",
+            "window.__cafState && !window.__cafState.dirty",
+            "document.getElementById('save').click()",
+        ),
+        (
+            "Return Home",
+            "document.querySelectorAll('.home-card').length===4",
+            "document.getElementById('home-button').click()",
+        ),
+        (
+            "CAF start",
+            "window.__cafState?.selected==='UITEST' && !document.getElementById('start-banner').hidden",
+            "document.querySelectorAll('.home-card')[1].querySelector('button').click()",
+        ),
+        (
+            "Create portable project",
+            "Boolean(window.__cafState?.project)",
+            "document.getElementById('start-action').click()",
+        ),
+        (
+            "Project sidebar",
+            "document.body.dataset.hasProject==='true' && getComputedStyle(document.getElementById('profile-sidebar')).display==='none' && document.querySelectorAll('#project-outfits button').length===1",
+            None,
+        ),
+        (
+            "Compact layout and vertical tabs",
+            "document.querySelector('header').getBoundingClientRect().height<=64 && document.documentElement.scrollWidth<=innerWidth && new Set([...document.querySelectorAll('#editor-tabs [role=tab]')].map(e=>Math.round(e.getBoundingClientRect().x))).size===1",
+            None,
+        ),
+        ("Copy outfit", "window.__cafState?.outfits.length===2", "document.getElementById('add-outfit').click()"),
+        (
+            "Rename outfit",
+            "window.__cafState?.outfits.some(o=>o.name==='Alt look') && document.getElementById('outfit-select').value===window.__cafState.active_outfit",
+            "let e=document.getElementById('outfit-name');e.value='Alt look';e.dispatchEvent(new Event('change'))",
+        ),
+        (
+            "Keyboard tabs",
+            "document.querySelector('[data-tab=styles]').getAttribute('aria-selected')==='true'",
+            "let e=document.querySelector('[data-tab=stats]');e.click();e.focus();e.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}))",
+        ),
+        (
+            "Catalog failure stays in Entrance",
+            "document.getElementById('tab-presentation-status').textContent.includes('could not be loaded') && document.getElementById('sequence-intro').options.length>0",
+            "document.querySelector('[data-tab=presentation]').click()",
+        ),
+        (
+            "Automatic catalog retry from Entrance",
+            "Boolean(window.__cafState?.performance.catalog) && document.getElementById('sequence-intro').options.length>1",
+            "document.querySelector('#tab-presentation [data-performance-retry]').click()",
+        ),
+        (
+            "AI catalog reuse",
+            "document.getElementById('ai-sliders').children.length>0",
+            "document.querySelector('[data-tab=ai]').click()",
+        ),
+        (
+            "Named UI donors",
+            "document.getElementById('ui-donor').options.length>=3",
+            "document.querySelector('[data-tab=ui]').click()",
+        ),
+        (
+            "Pending controls stay pinned",
+            "parseInt(document.getElementById('changes-summary').textContent)===window.__cafState.changes.length && document.getElementById('save').getBoundingClientRect().bottom<innerHeight && document.getElementById('changes-summary').getBoundingClientRect().top>64",
+            "document.querySelector('.panel-scroll').scrollTop=99999;document.getElementById('pending-changes').open=true",
+        ),
+        (
+            "Readiness checklist",
+            "document.getElementById('export-ready').open && document.querySelectorAll('#export-checks li').length>=7 && !document.getElementById('export-ready-confirm').disabled",
+            "document.getElementById('export-mod').click()",
+        ),
+        (
+            "Save before cancelled ZIP picker",
+            "!document.getElementById('export-ready').open && !window.__cafState.dirty",
+            "document.getElementById('export-ready-confirm').click()",
+        ),
+    ]
+    evidence, started, state = (
+        [],
+        time.monotonic(),
+        dict(index=0, action=False, checking=False, since=time.monotonic(), done=False),
+    )
+    timer = QTimer(window)
+
+    def finish(error=None):
+        if state["done"]:
+            return
+        state["done"] = True
+        timer.stop()
+        try:
+            assert (data / "save/UserData/45410049" / directory_name("UITEST") / "UITEST").read_bytes()
+            saved = Container.read((data / "save/UserData/45410049" / directory_name("UITEST") / "UITEST").read_bytes())
+            assert saved.payload[0x3210:0x321B] == b"STORY BYTES"
+            assert len(list((workspace / "backups").glob("*.djprofile"))) == 1
+            assert calls["performance_connect"] == 2
+            assert any("Mod" in title for title in pickers)
+            assert len(projects.read(output / "fighter.ffnyfighter")[0]["outfits"]) == 1
+        except Exception as exc:
+            error = error or repr(exc)
+        (output / "receipt.json").write_text(
+            json.dumps(
+                dict(
+                    passed=not error,
+                    error=error,
+                    checks=evidence,
+                    calls=dict(calls),
+                    seconds=round(time.monotonic() - started, 2),
+                    scope="Invented saves/geometry/catalogs; native pickers adapted; no original assets or native game acceptance.",
+                ),
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        app.exit(1 if error else 0)
+
+    def tick():
+        if state["done"] or state["checking"]:
+            return
+        if state["index"] >= len(steps):
+            finish()
+            return
+        label, predicate, action = steps[state["index"]]
+        if time.monotonic() - state["since"] > 15:
+            finish("Timed out: " + label)
+            return
+        state["checking"] = True
+
+        def checked(ok):
+            state["checking"] = False
+            if ok:
+                if label == "Stat editing through WebChannel" and calls["preview"] != 1:
+                    finish("A nonvisual stat edit rebuilt the preview.")
+                    return
+                evidence.append(label)
+                print("[CHECK] " + label, flush=True)
+                if args.capture:
+                    window.grab().save(str(output / (str(state["index"]) + ".png")))
+                state["index"] += 1
+                state["action"] = False
+                state["since"] = time.monotonic()
+
+        if action and not state["action"]:
+            state["action"] = True
+            window.page.runJavaScript("(()=>{" + action + "})()", lambda _: state.update(checking=False))
+        else:
+            window.page.runJavaScript("Boolean(" + predicate + ")", checked)
+
+    timer.timeout.connect(tick)
+    timer.start(100)
+    QTimer.singleShot(90000, lambda: finish("Tour exceeded 90 seconds"))
+    result = app.exec()
+    window.bridge.pool.shutdown(wait=True)
+    return result
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

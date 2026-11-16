@@ -11,8 +11,8 @@
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script type="module" src="app.js"></script>
   </head>
-  <body>
-    <header>
+  <body class="editor-page">
+    <header class="editor-header">
       <div class="brand">
         <span class="badge">FF<span>NY</span></span>
         <div>
@@ -25,7 +25,7 @@
         ><span class="beta">LOCAL BETA</span
         ><button
           id="open-data"
-          title='Pick your game data folder: the one that contains the folders "extracted" and "save". With the Recomp app installed on Windows it is usually C:\Users\&lt;you&gt;\AppData\Local\DefJamRecompiled\data. Game setup fills it in for you.'
+          title='Pick your game data folder: the one that contains the folders "extracted" and "save". With the Recomp app installed on Windows it is usually C:\Users\<you>\AppData\Local\DefJamRecompiled\data. Game setup fills it in for you.'
         >
           Open data directory</button
         ><button
@@ -41,49 +41,166 @@
           Open project
         </button>
       </div>
+      <div class="data-strip">
+        <span class="dot"></span><span id="data-path">Choose your Recomp data directory to begin</span
+        ><button
+          id="setup-open"
+          class="chip"
+          title="Where your game and its data are, and which game version the Workshop uses for exports, voice and animation tools and the retail studio."
+        >
+          Game setup
+        </button>
+      </div>
     </header>
-    <div class="data-strip">
-      <span class="dot"></span><span id="data-path">Choose your Recomp data directory to begin</span
-      ><button
-        id="setup-open"
-        class="chip"
-        title="Where your game and its data are, and which game version the Workshop uses for exports, voice and animation tools and the retail studio."
-      >
-        Game setup
-      </button>
-    </div>
-    <div id="start-banner" class="start-banner" hidden>
+
+    <div id="start-banner" class="start-banner" hidden="">
       <b>New fighter</b><span id="start-text"></span
       ><button id="start-action" class="accent">Create fighter project…</button
       ><button id="start-open" class="quiet">Open an existing project</button>
     </div>
     <main>
       <aside class="profiles">
-        <div class="eyebrow">YOUR PROFILES</div>
-        <div id="profiles"></div>
-        <div id="profile-note" class="muted">Profiles are discovered from your local save data.</div>
-        <div class="sidebar-bottom">
-          <span class="eyebrow">BACKUPS</span>
-          <p>One is made before every profile save. Projects save separately.</p>
-          <div id="backups-box" hidden>
-            <div id="backups"></div>
-            <button id="open-backups" class="quiet">Open backups folder</button>
+        <section id="profile-sidebar" aria-label="Story profiles">
+          <div class="eyebrow">YOUR PROFILES</div>
+          <div id="profiles"></div>
+          <div id="profile-note" class="muted">Profiles are discovered from your local save data.</div>
+          <div class="sidebar-bottom">
+            <span class="eyebrow">BACKUPS</span>
+            <p>One is made before every profile save. Projects save separately.</p>
+            <div id="backups-box" hidden="">
+              <div id="backups"></div>
+              <button id="open-backups" class="quiet">Open backups folder</button>
+            </div>
+            <button id="refresh" class="quiet">Refresh profiles</button>
           </div>
-          <button id="refresh" class="quiet">Refresh profiles</button>
-        </div>
+        </section>
+
+        <section id="project-sidebar" class="project-sidebar" aria-label="Project and outfits" hidden="">
+          <span class="eyebrow">PROJECT</span><strong id="project-file-name"></strong>
+          <p id="project-folder" class="hint path"></p>
+          <p id="project-origin" class="hint"></p>
+          <h3>Outfits</h3>
+          <div id="project-outfits" class="outfit-list"></div>
+          <div id="outfit-controls">
+            <label>Outfit name<input id="outfit-name" maxlength="80" /></label>
+            <div class="two-cols">
+              <button id="add-outfit">Copy as new outfit</button><button id="remove-outfit">Remove outfit</button>
+            </div>
+            <p id="outfit-status" class="hint"></p>
+          </div>
+        </section>
       </aside>
       <aside class="inspector" aria-label="Fighter customization">
-        <nav aria-label="Customization sections">
-          <button class="tab active" data-tab="appearance">Appearance</button
-          ><button class="tab" data-tab="textures">Textures</button
-          ><button class="tab" data-tab="stats">Stats &amp; cash</button
-          ><button class="tab" data-tab="styles">Moves</button><button class="tab" data-tab="voice">Voice</button
-          ><button class="tab" data-tab="presentation">Entrance &amp; victory</button
-          ><button class="tab" data-tab="ai">AI</button><button class="tab" data-tab="ui">Menu artwork</button
-          ><button class="tab" data-tab="project">Details &amp; export</button>
+        <nav aria-label="Customization sections" id="editor-tabs" role="tablist" aria-orientation="vertical">
+          <div class="tab-group" data-nav="look" role="presentation">
+            <span class="nav-label">Look</span
+            ><button
+              id="section-appearance"
+              class="tab active"
+              data-tab="appearance"
+              role="tab"
+              aria-controls="tab-appearance"
+              aria-selected="true"
+              tabindex="0"
+            >
+              Appearance</button
+            ><button
+              id="section-textures"
+              class="tab"
+              data-tab="textures"
+              role="tab"
+              aria-controls="tab-textures"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Textures</button
+            ><button
+              id="section-ui"
+              class="tab"
+              data-tab="ui"
+              role="tab"
+              aria-controls="tab-ui"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Menu artwork
+            </button>
+          </div>
+          <div class="tab-group" data-nav="fight" role="presentation">
+            <span class="nav-label">Fight</span
+            ><button
+              id="section-stats"
+              class="tab"
+              data-tab="stats"
+              role="tab"
+              aria-controls="tab-stats"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Stats &amp; cash</button
+            ><button
+              id="section-styles"
+              class="tab"
+              data-tab="styles"
+              role="tab"
+              aria-controls="tab-styles"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Moves</button
+            ><button
+              id="section-ai"
+              class="tab"
+              data-tab="ai"
+              role="tab"
+              aria-controls="tab-ai"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              AI
+            </button>
+          </div>
+          <div class="tab-group" data-nav="presentation" role="presentation">
+            <span class="nav-label">Presentation</span
+            ><button
+              id="section-voice"
+              class="tab"
+              data-tab="voice"
+              role="tab"
+              aria-controls="tab-voice"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Voice</button
+            ><button
+              id="section-presentation"
+              class="tab"
+              data-tab="presentation"
+              role="tab"
+              aria-controls="tab-presentation"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Entrance &amp; victory
+            </button>
+          </div>
+          <div class="tab-group" data-nav="project" role="presentation">
+            <span class="nav-label">Project</span
+            ><button
+              id="section-project"
+              class="tab"
+              data-tab="project"
+              role="tab"
+              aria-controls="tab-project"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Details &amp; export
+            </button>
+          </div>
         </nav>
         <div class="panel-scroll">
-          <section id="tab-textures" class="tab-content" hidden>
+          <section id="tab-textures" class="tab-content" hidden="" role="tabpanel" aria-labelledby="section-textures">
             <div class="panel-title">
               <h3>Your own artwork.</h3>
               <p>
@@ -95,7 +212,7 @@
             <p id="portrait-status" class="hint"></p>
             <div id="portrait-source" class="choice" role="radiogroup" aria-label="Portrait source">
               <label class="choice-opt"
-                ><input type="radio" name="portrait-source" value="capture" checked /><span
+                ><input type="radio" name="portrait-source" value="capture" checked="" /><span
                   ><b>Take it from the 3D view</b><small>Saves a picture of the fighter as shown now.</small></span
                 ></label
               ><label class="choice-opt"
@@ -105,7 +222,7 @@
               >
             </div>
             <button id="capture-portrait" class="accent">Use current view as portrait</button
-            ><button id="import-portrait" class="accent" hidden>Choose portrait PNG…</button>
+            ><button id="import-portrait" class="accent" hidden="">Choose portrait PNG…</button>
             <p class="hint">
               Stored in the project. Export turns it into the in-game selector portraits and thumbnails. Titlecards,
               loading art and icons are under Menu artwork.
@@ -122,12 +239,12 @@
             <button id="clear-atlases" class="quiet">Put all original artwork back</button>
             <p id="atlas-status" class="hint"></p>
           </section>
-          <section id="tab-project" class="tab-content" hidden>
+          <section id="tab-project" class="tab-content" hidden="" role="tabpanel" aria-labelledby="section-project">
             <div class="panel-title">
               <h3>Details &amp; export.</h3>
               <p>Name your fighter, then export it as a mod. Story progress and currency stay in your profile.</p>
             </div>
-            <button id="new-project" class="accent">Create project from this fighter</button>
+
             <p id="project-path" class="hint"></p>
             <label>Fighter name<input id="project-name" maxlength="80" /></label
             ><label>Author<input id="project-author" maxlength="120" /></label>
@@ -144,25 +261,17 @@
               come from this project. Changing stable IDs creates a different mod identity.
             </p>
             <div class="rule"></div>
-            <h4>Outfits</h4>
-            <p class="hint">
-              Switch outfits with the selector above the viewer. Up to three per fighter; stats, moves and voice are
-              shared.
-            </p>
-            <label>Outfit name<input id="outfit-name" maxlength="80" /></label>
-            <div class="two-cols">
-              <button id="add-outfit">Copy as new outfit</button><button id="remove-outfit">Remove outfit</button>
-            </div>
-            <p id="outfit-status" class="hint"></p>
+
             <div class="rule"></div>
-            <button id="project-copy">Save project as…</button
-            ><button id="export-mod" class="primary">Export Custom Fighter Mod</button>
+            <div class="rule"></div>
+            <button id="project-copy">Save project as…</button>
             <p class="hint">
-              The first export asks for your game checkout and remembers it. The whole pack is checked against your game
-              files before it is saved. To play it, open Mods &gt; Fighters in the launcher, add the ZIP and enable it.
+              Export mod checks the project and the selected game version before choosing a ZIP. Install the finished
+              ZIP through Mods → Fighters in your game launcher.
             </p>
+            <button id="new-project" class="accent">Save as a new fighter (new pack ID)…</button>
           </section>
-          <section id="tab-ui" class="tab-content" hidden>
+          <section id="tab-ui" class="tab-content" hidden="" role="tabpanel" aria-labelledby="section-ui">
             <div class="panel-title">
               <h3>Menu artwork.</h3>
               <p>
@@ -171,7 +280,10 @@
               </p>
             </div>
             <p id="ui-outfit" class="hint"></p>
-            <label>UI layout / placeholder donor<input id="ui-donor" placeholder="retail/pockets" /></label>
+            <label
+              >UI layout / placeholder donor<select id="ui-donor" aria-label="Retail UI layout donor"></select
+            ></label>
+            <p id="ui-donor-status" class="hint"></p>
             <label
               >Texture output<select id="ui-scale">
                 <option value="1">Native resolution</option>
@@ -205,7 +317,7 @@
                 id="ui-image"
                 alt="Selected UI artwork"
                 style="max-width: 100%; max-height: 270px; object-fit: contain"
-                hidden
+                hidden=""
               />
             </div>
             <p id="ui-coverage" class="hint"></p>
@@ -216,12 +328,12 @@
               fighter. Import stages changes; Save project writes them. Undo and Reset cover the complete project.
             </p>
           </section>
-          <section id="tab-voice" class="tab-content" hidden>
+          <section id="tab-voice" class="tab-content" hidden="" role="tabpanel" aria-labelledby="section-voice">
             <div class="panel-title">
               <h3>Give your fighter a voice.</h3>
               <p>Independent of fighting style. Fighter projects only.</p>
             </div>
-            <button id="performance-connect">Load voice &amp; animation catalogs</button>
+            <button id="performance-connect">Reload voice &amp; animation catalogs</button>
             <p id="performance-status" class="hint"></p>
             <label>Retail voice preset<select id="voice-preset"></select></label>
             <details>
@@ -249,7 +361,7 @@
               <button id="voice-play">Audition original</button
               ><button id="voice-play-imported">Audition imported</button>
             </div>
-            <audio id="voice-audio" controls preload="none"></audio>
+            <audio id="voice-audio" controls="" preload="none"></audio>
             <p id="voice-clip-status" class="hint"></p>
             <div class="two-cols">
               <button id="voice-import">Import WAV</button><button id="voice-clear-clip">Clear clip override</button>
@@ -260,14 +372,22 @@
               default unless you import a replacement.
             </p>
           </section>
-          <section id="tab-presentation" class="tab-content" hidden>
+          <section
+            id="tab-presentation"
+            class="tab-content"
+            hidden=""
+            role="tabpanel"
+            aria-labelledby="section-presentation"
+          >
             <div class="panel-title">
               <h3>Entrance &amp; victory.</h3>
               <p>
-                Choose the original sequences your fighter uses. This needs the runtime tools connected in the Voice
-                tab.
+                Choose the original sequences your fighter uses. Catalogs load automatically when this tab opens.
+                Previews play in the 3D viewer.
               </p>
             </div>
+            <p id="tab-presentation-status" class="hint" role="status"></p>
+            <button class="quiet" data-performance-retry="">Retry loading catalogs</button>
             <label>Entrance<select id="sequence-intro"></select></label>
             <div class="two-cols">
               <button id="preview-intro">Preview entrance</button><button id="apply-intro">Stage entrance</button>
@@ -293,10 +413,10 @@
                   >Speed<select id="animation-speed">
                     <option value="0.25">0.25×</option>
                     <option value="0.5">0.5×</option>
-                    <option value="1" selected>1×</option>
+                    <option value="1" selected="">1×</option>
                     <option value="2">2×</option>
                   </select></label
-                ><label class="switch"><input id="animation-loop" type="checkbox" checked /> Loop</label>
+                ><label class="switch"><input id="animation-loop" type="checkbox" checked="" /> Loop</label>
               </div>
               <p id="animation-status" class="hint">
                 Decoded source body/root tracks at 30 source ticks/s. Preview does not reproduce cameras, face/hand
@@ -305,17 +425,19 @@
               </p>
             </details>
           </section>
-          <section id="tab-ai" class="tab-content" hidden>
+          <section id="tab-ai" class="tab-content" hidden="" role="tabpanel" aria-labelledby="section-ai">
             <div class="panel-title">
               <h3>Shape the CPU opponent.</h3>
               <p>Retail personality plus per-difficulty tendency overrides.</p>
             </div>
+            <p id="tab-ai-status" class="hint" role="status"></p>
+            <button class="quiet" data-performance-retry="">Retry loading catalogs</button>
             <label>Original AI preset<select id="ai-preset"></select></label>
             <div class="two-cols">
               <label
                 >Difficulty<select id="ai-difficulty">
                   <option>easy</option>
-                  <option selected>normal</option>
+                  <option selected="">normal</option>
                   <option>hard</option>
                 </select></label
               ><label
@@ -337,7 +459,7 @@
               <button id="ai-apply">Stage AI personality</button><button id="ai-inherit">Inherit donor AI</button>
             </div>
           </section>
-          <section id="tab-appearance" class="tab-content">
+          <section id="tab-appearance" class="tab-content" role="tabpanel" aria-labelledby="section-appearance">
             <div class="panel-title">
               <h3>Make it yours.</h3>
               <p>
@@ -351,7 +473,7 @@
             <h4>Face</h4>
             <div id="face-method" class="choice" role="radiogroup" aria-label="How to shape the face">
               <label class="choice-opt"
-                ><input type="radio" name="face-method" value="presets" checked /><span
+                ><input type="radio" name="face-method" value="presets" checked="" /><span
                   ><b>Original presets</b><small>The game's own face, eyes, nose and lip choices.</small></span
                 ></label
               ><label class="choice-opt"
@@ -365,7 +487,7 @@
               >
             </div>
             <p id="face-method-note" class="hint"></p>
-            <button id="face-method-clear" class="quiet" hidden>Remove the sculpt and use presets</button>
+            <button id="face-method-clear" class="quiet" hidden="">Remove the sculpt and use presets</button>
             <div class="face-panel" data-face="presets">
               <div id="face-presets" class="two-cols"></div>
               <p class="hint">
@@ -373,7 +495,7 @@
                 stays applied across these changes.
               </p>
             </div>
-            <div class="face-panel" data-face="sliders" hidden>
+            <div class="face-panel" data-face="sliders" hidden="">
               <div id="face-sliders"></div>
               <div class="two-cols">
                 <button id="apply-face-sliders">Apply face proportions</button
@@ -386,7 +508,7 @@
                 Windows only so far: check eyes, hair and accessories in the game.
               </p>
             </div>
-            <div class="face-panel" data-face="mesh" hidden>
+            <div class="face-panel" data-face="mesh" hidden="">
               <div class="two-cols">
                 <button id="export-face">Export head OBJ</button><button id="import-face">Import sculpted OBJ</button>
               </div>
@@ -418,7 +540,7 @@
               lighting and No clothes are temporary preview controls.
             </p>
           </section>
-          <section id="tab-stats" class="tab-content" hidden>
+          <section id="tab-stats" class="tab-content" hidden="" role="tabpanel" aria-labelledby="section-stats">
             <div class="panel-title">
               <h3>Build your edge.</h3>
               <p>Training stats use the game's normal 0–50 range.</p>
@@ -431,7 +553,7 @@
               Beta limits: $10,000,000 and 100,000 development points. Training bonuses and reward points are separate.
             </p>
           </section>
-          <section id="tab-styles" class="tab-content" hidden>
+          <section id="tab-styles" class="tab-content" hidden="" role="tabpanel" aria-labelledby="section-styles">
             <div class="panel-title">
               <h3>Choose your moves.</h3>
               <p>
@@ -449,7 +571,7 @@
               ><label>Second style<select id="style-1"></select></label
               ><label>Third style<select id="style-2"></select></label>
             </div>
-            <div id="retail-style-controls" hidden>
+            <div id="retail-style-controls" hidden="">
               <label>Retail fighter<select id="retail-moveset"></select></label>
             </div>
             <button id="apply-styles" class="accent">Apply fighting style</button>
@@ -471,21 +593,25 @@
               project. There is no move preview yet.
             </p>
           </section>
-          <section class="change-section">
-            <div class="rule"></div>
-            <div class="change-heading">
-              <span class="eyebrow">PENDING CHANGES</span>
-              <div>
-                <button id="undo" class="text-button">Undo</button><button id="reset" class="text-button">Reset</button>
-              </div>
-            </div>
-            <ul id="changes">
-              <li>No changes yet.</li>
-            </ul>
-          </section>
         </div>
         <div class="save-actions">
-          <button id="save" class="primary" disabled>Save changes</button>
+          <div class="pending-strip">
+            <details id="pending-changes">
+              <summary id="changes-summary">0 pending changes</summary>
+              <ul id="changes">
+                <li>No changes yet.</li>
+              </ul>
+            </details>
+            <div class="pending-tools">
+              <button id="undo" class="text-button" title="Undo the last staged change (Ctrl+Z / ⌘Z)">Undo</button
+              ><button id="reset" class="text-button">Reset</button>
+            </div>
+          </div>
+          <div class="primary-actions">
+            <button id="save" class="primary" disabled="" title="Save changes (Ctrl+S / ⌘S)">Save changes</button
+            ><button id="export-mod" class="primary">Export mod…</button>
+          </div>
+
           <div class="two-cols">
             <button id="export">Export profile</button><button id="duplicate">Duplicate profile</button>
           </div>
@@ -497,7 +623,7 @@
             <span class="eyebrow">CREATE-A-FIGHTER</span>
             <h2 id="fighter-name">YOUR FIGHTER</h2>
             <p id="fighter-subtitle">Open a profile to get started</p>
-            <label id="outfit-switch" class="outfit-switch" hidden
+            <label id="outfit-switch" class="outfit-switch" hidden=""
               >Outfit
               <select id="outfit-select"></select
             ></label>
@@ -549,6 +675,18 @@
         ><button id="log-open" class="text-button">Messages</button> · <span id="version">Fighter Workshop</span></span
       >
     </footer>
+    <dialog id="export-ready" aria-labelledby="export-ready-title">
+      <h3 id="export-ready-title">Ready to export?</h3>
+      <p class="hint">
+        Your pending project changes will be saved before you choose the mod ZIP. The game compiler checks the complete
+        export.
+      </p>
+      <ul id="export-checks" class="export-checks"></ul>
+      <div class="dialog-actions">
+        <button id="export-ready-cancel" class="quiet">Back to editing</button
+        ><button id="export-ready-confirm" class="primary" disabled="">Save project and choose ZIP…</button>
+      </div>
+    </dialog>
     <dialog id="result">
       <h3 id="result-title"></h3>
       <ul id="result-lines"></ul>
@@ -559,15 +697,18 @@
     </dialog>
     <dialog id="log-dialog">
       <h3>Messages</h3>
+      <p class="hint">
+        Shortcuts: Ctrl+S / ⌘S saves. Ctrl+Z / ⌘Z undoes the last staged change when you are outside a text field.
+      </p>
       <ul id="log-lines"></ul>
       <div class="dialog-actions">
         <button id="log-clear" class="quiet">Clear</button><button id="log-close" class="primary">Close</button>
       </div>
     </dialog>
-    <div id="busy" hidden>
+    <div id="busy" hidden="">
       <div class="spinner"></div>
       <strong id="busy-label">Loading your fighter…</strong><span>Everything stays on your computer.</span>
     </div>
-    <div id="toast" role="status" hidden></div>
+    <div id="toast" role="status" hidden=""></div>
   </body>
 </html>

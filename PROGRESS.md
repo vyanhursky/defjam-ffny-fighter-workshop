@@ -1,5 +1,33 @@
 # Progress and handoff
 
+## November 16 playtest — original retail artwork previews
+
+Menu artwork now stages all24 original UI layouts in one read-only operation.
+Role switching is local after preparation. Imported project PNGs take priority;
+Show original donor artwork compares against the source, and Clear falls back
+to the donor. Six all-layout roles show a labelled2-player example; advanced
+roles show the exact selected layout. Preview sizing makes small grid icons
+legible, with native dimensions retained in the caption. Staging never embeds
+references, changes project dirty/history state, or exports donor references as
+overrides. A bounded two-donor memory cache invalidates source/runtime changes;
+paths, hashes, PNG dimensions and aggregate byte/pixel budgets are validated.
+Uses the installed export-ui-reference command; no companion runtime PR needed.
+
+Private Slick Rick qualification on the existing installed b211 runtime:
+24layouts load in1.259s and0.015s cached. Real Qt tour passes40checks, including
+Game setup, all30role choices, import/compare/clear. Original saves remain
+byte-identical. Python347passed/3platform skips; Node24passed; Ruff/mypy clean.
+The expanded synthetic desktop tour covers54checks. Captures/reference PNGs
+remain private under build/ui-real-artwork and build/real-artwork-references.
+
+The local playtest launcher incorrectly placed its private wardrobe cache inside
+the source checkout; the vendor's existing private-output guard refused it.
+Launcher workspace now lives in a sibling private data folder, retains the
+player's runtime choice, and reuses a copy of the already complete cache. Actual
+Home Game setup completes in1.532s with wardrobe preview available. Home/retail
+busy overlays now display backend setup/preparation progress. The guard remains
+intact; original game data, saves and the original app cache are unchanged.
+
 ## November 16 playtest — standalone retail outfit collections
 
 Standalone retail projects support up to three named looks, copied/selected in

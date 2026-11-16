@@ -20,7 +20,7 @@ from PIL import Image
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
-from defjam_caf import desktop, projects, remembered, runtimes, storage
+from defjam_caf import desktop, projects, remembered, runtimes, storage, ui_art
 from defjam_caf.container import Container
 from defjam_caf.container import SaveError
 from defjam_caf.fields import apply_fields, renamed
@@ -147,6 +147,8 @@ def main(argv=None):
         )
 
     QFileDialog.getSaveFileName = save_picker
+    Image.new("RGBA", (64, 64), (190, 60, 130, 255)).save(output / "artwork-import.png")
+    QFileDialog.getOpenFileName = lambda *a, **k: (str(output / "artwork-import.png"), "")
     QMessageBox.question = lambda *a, **k: QMessageBox.StandardButton.Yes
     QMessageBox.exec = lambda self: QMessageBox.StandardButton.Close
 
@@ -187,6 +189,12 @@ def main(argv=None):
 
     def request(action, arguments):
         calls[action] += 1
+        if action == "retail_artwork_stage":
+            return dict(
+                donor=editor.retail.selected_view()["ui_art"]["donor"],
+                images={role: preview["textures"]["a"] for role in ui_art.PARTS},
+                layouts={role: [32, 32] for role in ui_art.PARTS},
+            )
         if action == "retail_snapshot" and calls[action] == 1:
             editor.performance_link = None
         if action == "retail_performance_connect":
@@ -391,6 +399,26 @@ def main(argv=None):
             "let e=document.querySelector('[data-panel=combat]');e.click();e.focus();e.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))",
         ),
         (
+            "Retail original artwork staging",
+            "window.__retailArtwork?.staged && window.__retailArtwork.original && document.getElementById('art-image').naturalWidth===32 && Object.keys(window.__retailState.document.ui_art.images).length===0",
+            "document.querySelector('[data-panel=art]').click();document.getElementById('art-stage').click()",
+        ),
+        (
+            "Retail source role switching",
+            "window.__retailArtwork?.role==='grid_selected_4p' && window.__retailArtwork.original && document.getElementById('art-status').textContent.includes('grid_selected_4p')",
+            "document.getElementById('role').value='grid_selected_4p';document.getElementById('role').dispatchEvent(new Event('change'))",
+        ),
+        (
+            "Retail imported artwork preview",
+            "window.__retailArtwork?.role==='grid_normal' && !window.__retailArtwork.original && document.getElementById('art-image').naturalWidth===64",
+            "document.getElementById('role').value='grid_normal';document.getElementById('role').dispatchEvent(new Event('change'));document.getElementById('ui-import').click()",
+        ),
+        (
+            "Retail original comparison",
+            "window.__retailArtwork?.original && document.getElementById('art-image').naturalWidth===32",
+            "document.getElementById('art-show-original').click()",
+        ),
+        (
             "Retail AI staging",
             "Boolean(window.__retailState?.performance.settings.ai)",
             "document.getElementById('ai-apply').click()",
@@ -508,6 +536,7 @@ def main(argv=None):
             assert calls["performance_audio"] == 6  # Both playback actions reused the prepared clips.
             assert calls["retail_performance_audio"] == 6
             assert calls["retail_performance_connect"] == 1
+            assert calls["retail_artwork_stage"] == 1
             assert calls["retail_appearance"] == 1 and calls["retail_preview"] == 4
             assert any("Mod" in title for title in pickers)
             assert "Save voice clip" in pickers

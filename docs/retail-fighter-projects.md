@@ -84,6 +84,13 @@ The steps below describe a new standalone fighter.
    disclosure, then apply UI settings in UI artwork. All roles share the existing typed PNG
    compiler and verified per-launch HD layer. Conflicting native texture hashes
    remain errors, even when different HD sources quantize to identical fallbacks.
+   **Stage artwork previews** prepares all24 original donor layouts once, without
+   adding project overrides. Cycle **Artwork role** to inspect them immediately.
+   Imported PNGs show by default; **Show original donor artwork** compares with
+   the source. Clearing an override restores the donor preview. All-layout roles
+   use a labelled2-player example; advanced roles show their exact layout and
+   native dimensions. Changing the UI donor or game invalidates the prepared
+   set, so stage again for the new choice. This uses the existing runtime tools.
 8. Apply metadata or Save As under **Details & export**. Pinned Save/Export and
    Undo/Reset remain below the active section. Metadata
    drafts participate in dirty/close protection, and invalid drafts refuse Save.

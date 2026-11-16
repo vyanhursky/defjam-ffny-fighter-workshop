@@ -1,3 +1,4 @@
+import { createAuditions, voiceRequests } from "./auditions.mjs";
 import * as THREE from "three";
 import { attachDetails } from "./errors.mjs";
 
@@ -13,6 +14,43 @@ export function performanceEditor(api) {
     last = null,
     epoch = 0;
   const categories = ["Character", "Taunts", "Enviro"];
+  let auditionEpoch = 0,
+    voiceContext = null,
+    animationBasis = null,
+    audioName = "voice-clip.wav";
+  const auditions = createAuditions({
+    load: (request) => call("performance_audio", request),
+    progress({ done, total, failed }) {
+      $("voice-preload-status").textContent =
+        done < total
+          ? `Preparing voices: ${done}/${total}. You can keep editing.`
+          : `${done - failed}/${total} clips prepared${failed ? ` · ${failed} unavailable (retry individually)` : ""}.`;
+    },
+  });
+  function syncVoiceContext() {
+    const value = JSON.stringify([
+      state()?.setup?.runtime?.path,
+      $("voice-preset").value,
+      ...categories.map((category) => $("voice-bank-" + category).value),
+    ]);
+    if (value === voiceContext) return;
+    voiceContext = value;
+    auditionEpoch++;
+    auditions.context(value);
+    $("voice-audio").pause();
+    $("voice-audio").removeAttribute("src");
+    $("voice-save").disabled = true;
+    $("voice-preload-status").textContent = "Stage voice settings to prepare all clips in the background.";
+  }
+  function prepareVoices() {
+    syncVoiceContext();
+    const banks = Object.fromEntries(
+      categories
+        .filter((category) => $("voice-bank-" + category).value !== "")
+        .map((category) => [category, Number($("voice-bank-" + category).value)]),
+    );
+    return auditions.prepare(voiceRequests(preset(), banks, catalog?.banks || []));
+  }
   let connecting = null,
     connectionError = "",
     attemptedRuntime = null;
@@ -64,7 +102,8 @@ export function performanceEditor(api) {
     return connecting;
   }
   function options(id, rows, value) {
-    const el = $(id);
+    const el = $(id),
+      previous = value ?? el.value;
     el.disabled = !rows.length;
     el.replaceChildren(...rows.map((r) => new Option(r.label, String(r.key))));
     if (!rows.length)
@@ -74,7 +113,7 @@ export function performanceEditor(api) {
           "",
         ),
       );
-    if (value !== undefined) el.value = String(value);
+    if (rows.some((row) => String(row.key) === String(previous))) el.value = String(previous);
   }
   function preset() {
     return catalog?.fighters.find((r) => r.key === $("voice-preset").value);
@@ -91,6 +130,7 @@ export function performanceEditor(api) {
       { key: "intro", label: "Entrance speech" },
       { key: "extro", label: "Victory speech" },
     ]);
+    syncVoiceContext();
     voiceStatus();
   }
   function voiceStatus() {
@@ -103,12 +143,21 @@ export function performanceEditor(api) {
     $("voice-play-imported").disabled = !override;
   }
   function render(s) {
-    stop();
-    $("voice-audio").pause();
+    if (animationBasis !== s.appearance_key) {
+      stop();
+      animationBasis = s.appearance_key;
+    }
     catalog = s.performance?.catalog;
     settings = s.performance?.settings || {};
     aiDraft = structuredClone(settings.ai || null);
     const enabled = Boolean(s.project && catalog);
+    if (!enabled) {
+      auditions.cancel();
+      auditionEpoch++;
+      voiceContext = null;
+      $("voice-audio").pause();
+      $("voice-audio").removeAttribute("src");
+    }
     for (const id of ["tab-voice", "tab-presentation", "tab-ai"])
       for (const el of $(id).querySelectorAll("input,select,button")) el.disabled = !enabled;
     $("performance-connect").disabled = !s.data;
@@ -143,6 +192,7 @@ export function performanceEditor(api) {
     }
     voiceSlots();
     $("voice-import").disabled = !enabled || !settings.voice;
+    $("voice-save").disabled = !$("voice-audio").getAttribute("src");
     for (const role of ["intro", "victory"])
       options(
         "sequence-" + role,
@@ -218,6 +268,8 @@ export function performanceEditor(api) {
     }
   }
   async function audition(imported = false) {
+    const epoch = ++auditionEpoch;
+    $("voice-audio").pause();
     try {
       const target = $("voice-slot").value,
         selected = preset();
@@ -235,11 +287,22 @@ export function performanceEditor(api) {
           voice: Number($("voice-bank-" + category).value || selected.voice),
         };
       }
-      const result = await call("performance_audio", request, "Decoding voice audition…");
+      $("voice-clip-status").textContent = "Preparing selected clip…";
+      const result = imported ? await call("performance_audio", request) : await auditions.get(request);
+      if (epoch !== auditionEpoch) return;
+      audioName =
+        [selected?.label || "voice", target, imported ? "imported" : "original"]
+          .join("-")
+          .replace(/[^A-Za-z0-9_-]+/g, "-") + ".wav";
       $("voice-audio").src = "data:" + result.mime + ";base64," + result.data;
+      $("voice-save").disabled = false;
+      voiceStatus();
       await $("voice-audio").play();
     } catch (error) {
-      fail(error);
+      if (epoch === auditionEpoch) {
+        $("voice-clip-status").textContent = error.message;
+        fail(error);
+      }
     }
   }
   function resetBones() {
@@ -388,16 +451,41 @@ export function performanceEditor(api) {
     button.onclick = () => ensureConnected({ retry: true });
   $("voice-preset").onchange = voiceSlots;
   $("voice-category").onchange = voiceSlots;
-  $("voice-slot").onchange = voiceStatus;
+  $("voice-slot").onchange = () => {
+    auditionEpoch++;
+    $("voice-audio").pause();
+    voiceStatus();
+    if ($("voice-auto").checked) audition();
+  };
+  for (const [id, step] of [
+    ["voice-previous", -1],
+    ["voice-next", 1],
+  ])
+    $(id).onclick = () => {
+      const select = $("voice-slot");
+      if (!select.options.length) return;
+      select.selectedIndex = (select.selectedIndex + step + select.options.length) % select.options.length;
+      voiceStatus();
+      audition();
+    };
+  $("voice-save").onclick = () => {
+    if (!$("voice-audio").getAttribute("src")) return;
+    const link = document.createElement("a");
+    link.href = $("voice-audio").src;
+    link.download = audioName;
+    link.click();
+  };
   for (const category of categories) $("voice-bank-" + category).onchange = voiceSlots;
-  $("voice-apply").onclick = () =>
-    save("voice", {
+  $("voice-apply").onclick = async () => {
+    const result = await save("voice", {
       preset: $("voice-preset").value,
       banks: Object.fromEntries(
         categories.filter((c) => $("voice-bank-" + c).value !== "").map((c) => [c, Number($("voice-bank-" + c).value)]),
       ),
       clips: {},
     });
+    if (result) prepareVoices();
+  };
   $("voice-inherit").onclick = () => act("performance_clear", { section: "voice" });
   $("voice-play").onclick = () => audition();
   $("voice-play-imported").onclick = () => audition(true);

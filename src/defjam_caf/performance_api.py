@@ -14,6 +14,9 @@ class Link:
         self.game = (Path(data) / "extracted").resolve()
         self.workspace = Path(workspace) / "performance"
         self.workspace.mkdir(parents=True, exist_ok=True)
+        from .audition_cache import AuditionCache
+
+        self.auditions = AuditionCache(self.runtime, self.game, self.workspace)
         if not self.game.is_dir():
             raise SaveError("Open your game data directory first")
         self.catalog = self.call("workshop-catalog")
@@ -30,7 +33,7 @@ class Link:
             return contract(self.runtime, arguments, folder, self.workspace)
 
     def voice(self, request):
-        return self.call("workshop-audio", request)
+        return self.auditions.voice(request, lambda value: self.call("workshop-audio", value))
 
     def animation(self, request):
         return self.call("workshop-animation", request)

@@ -11,7 +11,7 @@ from urllib.parse import urlencode
 from PySide6.QtCore import QObject, Signal, Slot, QUrl, QStandardPaths, QTimer, Qt, qInstallMessageHandler
 from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox
-from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineUrlRequestInterceptor
+from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings, QWebEngineUrlRequestInterceptor
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
@@ -228,6 +228,8 @@ class Window(QMainWindow):
         self.setMinimumSize(1080, 740)
         self.web = QWebEngineView(self)
         self.page = Page(self.web)
+        # Play is requested by a user action, after local decoding completes.
+        self.page.settings().setAttribute(QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture, False)
         self.page.loadFinished.connect(lambda ok: print(f"[LOAD] ok={ok} url={self.page.url().toString()}", flush=True))
         self.page.renderProcessTerminated.connect(
             lambda status, code: print(f"[RENDERER] {status} exit={code}", flush=True)
@@ -235,6 +237,9 @@ class Window(QMainWindow):
         self.web.setPage(self.page)
         self.guard = OfflineOnly(self)
         self.page.profile().setUrlRequestInterceptor(self.guard)
+        from .audio_downloads import accept_audio_download
+
+        self.page.profile().downloadRequested.connect(lambda request: accept_audio_download(self, request))
         self.channel = QWebChannel(self.page)
         self.bridge = Bridge(self, workspace, initial)
         self.channel.registerObject("editor", self.bridge)

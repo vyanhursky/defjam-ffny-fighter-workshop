@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { attachDetails } from "./errors.mjs";
 
 // Source-track playback is preview state only; it never enters project history.
 export function performanceEditor(api) {
@@ -12,9 +13,67 @@ export function performanceEditor(api) {
     last = null,
     epoch = 0;
   const categories = ["Character", "Taunts", "Enviro"];
+  let connecting = null,
+    connectionError = "",
+    attemptedRuntime = null;
+  const dynamicSelects = [
+    "voice-preset",
+    "voice-bank-Character",
+    "voice-bank-Taunts",
+    "voice-bank-Enviro",
+    "voice-slot",
+    "sequence-intro",
+    "sequence-victory",
+    "animation-bank",
+    "animation-clip",
+    "ai-preset",
+  ];
+  function connectionStatus(message, detail = null) {
+    for (const id of ["performance-status", "tab-presentation-status", "tab-ai-status"]) {
+      $(id).textContent = message;
+      attachDetails($(id), detail);
+    }
+  }
+  async function ensureConnected({ retry = false } = {}) {
+    const current = state(),
+      runtime = current?.setup?.runtime?.path;
+    if (!current?.project) return null;
+    if (catalog && !retry) return catalog;
+    if (connecting) return connecting;
+    if (!current.setup?.ready || !current.setup.runtime?.features.tools) {
+      connectionStatus("Choose a game version with voice, entrance and AI tools in Game setup.");
+      return null;
+    }
+    if (connectionError && attemptedRuntime === runtime && !retry) return null;
+    attemptedRuntime = runtime;
+    connectionError = "";
+    connectionStatus("Loading voice and animation catalogs…");
+    connecting = (async () => {
+      try {
+        const result = await call("performance_connect", {}, "Loading voice and animation catalogs…");
+        api.applyState(result.snapshot || result);
+        return catalog;
+      } catch (error) {
+        connectionError = error.message;
+        connectionStatus(connectionError, error.detail);
+        return null;
+      } finally {
+        connecting = null;
+      }
+    })();
+    return connecting;
+  }
   function options(id, rows, value) {
     const el = $(id);
+    el.disabled = !rows.length;
     el.replaceChildren(...rows.map((r) => new Option(r.label, String(r.key))));
+    if (!rows.length)
+      el.append(
+        new Option(
+          id === "animation-clip" ? "Choose an animation bank first" : "Not available in this game version",
+          "",
+        ),
+      );
     if (value !== undefined) el.value = String(value);
   }
   function preset() {
@@ -53,12 +112,22 @@ export function performanceEditor(api) {
     for (const id of ["tab-voice", "tab-presentation", "tab-ai"])
       for (const el of $(id).querySelectorAll("input,select,button")) el.disabled = !enabled;
     $("performance-connect").disabled = !s.data;
-    $("performance-status").textContent = !s.project
+    for (const button of document.querySelectorAll("[data-performance-retry]")) button.disabled = !s.project || !s.data;
+    const message = !s.project
       ? "Create or open a standalone project to author performance. Story saves retain their existing workflow."
       : !catalog
-        ? "Load the original voice and animation catalogs. This uses the game version chosen in Game setup."
+        ? connectionError || "Catalogs load automatically when Voice, Entrance & victory, or AI opens."
         : `${catalog.banks.length} voice banks · ${catalog.cinematics.length} sequences · ${catalog.ai.length} AI profiles. Shared across all outfits.`;
-    if (!catalog) return;
+    connectionStatus(message);
+    if (!catalog) {
+      const placeholder = connecting
+        ? "Loading catalogs…"
+        : s.setup?.runtime && !s.setup.runtime.features.tools
+          ? "Not available in this game version"
+          : "Catalogs are not loaded yet";
+      for (const id of dynamicSelects) $(id).replaceChildren(new Option(placeholder, ""));
+      return;
+    }
     options("voice-preset", catalog.fighters, settings.voice?.preset || s.project?.metadata.donor);
     for (const category of categories) {
       options(
@@ -314,8 +383,9 @@ export function performanceEditor(api) {
     }
     pose();
   }
-  $("performance-connect").onclick = () =>
-    act("choose_performance_tools", {}, "Reading original performance catalogs…");
+  $("performance-connect").onclick = () => ensureConnected({ retry: true });
+  for (const button of document.querySelectorAll("[data-performance-retry]"))
+    button.onclick = () => ensureConnected({ retry: true });
   $("voice-preset").onchange = voiceSlots;
   $("voice-category").onchange = voiceSlots;
   $("voice-slot").onchange = voiceStatus;
@@ -390,5 +460,5 @@ export function performanceEditor(api) {
   $("ai-difficulty").onchange = $("ai-slot").onchange = renderAI;
   $("ai-apply").onclick = () => save("ai", aiDraft);
   $("ai-inherit").onclick = () => act("performance_clear", { section: "ai" });
-  return { render, tick, stop, active: () => Boolean(clip) };
+  return { render, tick, stop, ensureConnected, active: () => Boolean(clip) };
 }

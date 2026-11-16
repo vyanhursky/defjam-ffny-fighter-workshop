@@ -59,6 +59,8 @@ class Bridge(QObject):
 
     BACKGROUND = frozenset(
         {
+            "donors",
+            "export_checklist",
             "snapshot",
             "home",
             "preview",

@@ -65,6 +65,7 @@ class Editor:
         self.last_export = None
         self.runtime = remembered.recall(self.workspace, "runtime")
         self.project = self.project_path = self.project_hash = None
+        self.project_origin = None
         self._clear_drafts()
         self.active_outfit = outfits.DEFAULT
         self._project_base_document = self._project_base = None
@@ -149,6 +150,8 @@ class Editor:
         return projects.validate(document) if validate else document
 
     def create_project(self, path):
+        if self.profile is not None:
+            self.project_origin = self.profile.name
         fields = read_fields(self.current().payload)
         document = (
             projects.from_profile(
@@ -172,6 +175,7 @@ class Editor:
         return self.snapshot()
 
     def open_project(self, path):
+        self.project_origin = None
         document, digest = projects.read(path)
         self.project, self.project_path, self.project_hash = document, Path(path), digest
         self.active_outfit = outfits.DEFAULT
@@ -255,6 +259,7 @@ class Editor:
     def close_project(self):
         """Leave the open fighter project so a workflow can start clean. Story profiles reload from the data folder."""
         self.project = self.project_path = self.project_hash = None
+        self.project_origin = None
         self.active_outfit = outfits.DEFAULT
         self._clear_drafts()
         self.edits, self.history = {}, []
@@ -524,6 +529,7 @@ class Editor:
         result.update(
             project=project_view,
             project_path=str(self.project_path) if self.project_path else None,
+            project_origin=self.project_origin,
             portrait_available=self.portrait_edit is not None or bool(active and "portrait" in active),
             outfits=outfits.entries(self.project_source()) if self.project else [],
             active_outfit=self.active_outfit,
@@ -683,6 +689,83 @@ class Editor:
         self.preview_error = "The private wardrobe cache was cleared. Reopen your data folder to rebuild it."
         self.preview_detail = None
         return dict(snapshot=self.snapshot(), message="Private wardrobe cache cleared. Backups and projects are kept.")
+
+    def _request_export_checklist(self, action, args):
+        setup = self.setup_view()
+        document = self.project_document(validate=False) if self.project is not None else None
+        metadata = document["metadata"] if document else {}
+        checks = []
+
+        def add(key, label, ok, tab, *, note=False, detail=None):
+            checks.append(
+                dict(id=key, label=label, status="note" if note else "pass" if ok else "fail", tab=tab, detail=detail)
+            )
+
+        add(
+            "project",
+            "Project is saved; pending changes will be saved before export."
+            if self.project_path
+            else "Save a fighter project before exporting.",
+            bool(document and self.project_path),
+            "project",
+        )
+        add(
+            "runtime",
+            "Selected game version supports fighter export."
+            if setup["ready"] and setup["runtime"]["features"]["export"]
+            else "Choose a game version that supports fighter export in Game setup.",
+            bool(setup["ready"] and setup["runtime"]["features"]["export"]),
+            "setup",
+        )
+        add(
+            "name",
+            "Fighter name is set." if metadata.get("name", "").strip() else "Give your fighter a name.",
+            bool(metadata.get("name", "").strip()),
+            "project",
+        )
+        version_ok = bool(projects.VERSION.fullmatch(metadata.get("version", "")))
+        add("version", "Pack version is set." if version_ok else "Set a version such as 1.0.0.", version_ok, "project")
+        if document:
+            view = self.active_view() or {}
+            portrait = self.portrait_edit is not None or bool(view.get("portrait"))
+            add(
+                "portrait",
+                "Portrait is present."
+                if portrait
+                else "Menu portraits use imported UI art or the retail donor fallback.",
+                True,
+                "textures",
+                note=not portrait,
+            )
+            add("outfits", f"{len(outfits.entries(document))} outfit(s) included.", True, "outfits")
+            try:
+                projects.validate(copy.deepcopy(document))
+                add("valid", "Project settings and embedded assets validate.", True, "project")
+            except (SaveError, ValueError, KeyError, TypeError) as exc:
+                add(
+                    "valid",
+                    "Project settings need attention. Open Details for the exact issue.",
+                    False,
+                    "project",
+                    detail=str(exc),
+                )
+        return dict(checks=checks, can_export=bool(document) and all(row["status"] != "fail" for row in checks))
+
+    def _request_donors(self, action, args):
+        if (
+            self.retail.catalog is None
+            and self.runtime
+            and self.data
+            and runtimes.describe(self.runtime, self.recipe_format())["features"]["retail"]
+        ):
+            self.retail.request("configure", {"runtime": str(self.runtime)})
+        if self.retail.catalog:
+            rows = [{"key": "retail/" + row["id"], "label": row["name"]} for row in self.retail.catalog["fighters"]]
+        elif self.performance_link:
+            rows = [{"key": row["key"], "label": row["label"]} for row in self.performance_link.catalog["fighters"]]
+        else:
+            rows = []
+        return dict(donors=rows)
 
     def request(self, action, args):
         handler = self.ACTIONS.get(action)
@@ -1063,6 +1146,9 @@ class Editor:
         row = runtimes.describe(runtime, self.recipe_format())
         if not row["usable"]:
             raise SaveError("That is not a game version: scripts/fighter-contract.py is missing")
+        if self.runtime != runtime:
+            self.performance_link = None
+            self.retail.runtime = self.retail.catalog = None
         self.runtime = runtime
         remembered.remember(self.workspace, "runtime", runtime)
         if args.get("folder"):
@@ -1190,6 +1276,8 @@ class Editor:
         return dict(snapshot=self.select_profile(name), message="Imported complete profile " + name)
 
     ACTIONS = {
+        "export_checklist": _request_export_checklist,
+        "donors": _request_donors,
         "cache_clear": _request_cache_clear,
         "performance_connect": _request_performance_connect,
         "performance_audio": _request_performance_audio,

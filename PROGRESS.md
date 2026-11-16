@@ -1,5 +1,33 @@
 # Progress and handoff
 
+## November 15 review — CAF workflow and synthetic Qt tour
+
+C1/C2/C3/C4/C5/C6/C11/C12/C13/C14/C16 and B9: CAF projects get a project/outfit
+sidebar instead of profile/backups, four headed vertical tab groups with ARIA
+and arrow/Home/End switching, a 64px header with path/runtime, pinned collapsible
+changes/Undo/Reset and Save/Export actions. Save As preserves identity; the
+separate new-fighter action explicitly generates a new pack ID. Export preflight
+links failing checks to their controls, notes portrait fallbacks/outfits/drafts,
+and saves pending project edits before choosing a ZIP. Temporary face previews
+block export; the compiler remains authoritative. The source-profile label is
+session-only when known; no provenance is invented on reopen and no schema changes.
+
+Voice/Entrance/AI connect automatically on first visit, keep catalog failures and
+Details in the active tab, expose retry and nonblank placeholders, and reconnect
+when Game setup changes. Menu art uses stable named donor choices from connected
+catalogs, preserving an unavailable saved choice; unchanged art no longer reloads
+on every snapshot. Save/Undo tooltips and Messages explain shortcuts.
+
+Validation: 303 Python tests passed/5 skipped; 19 Node tests; Ruff/Prettier/diff
+checks. The real Windows synthetic Qt/WebChannel/WebGL tour passes all 19 checks
+at 1440×940 and 1100×760, including failed/retried catalogs, unknown Story bytes,
+backup, outfit copy/rename, keyboard tabs, no preview on a cash edit, pinned
+changes and preflight save before cancelled ZIP selection. Screenshots inspected
+locally; receipts build/ui-caf-tour-wide and build/ui-caf-tour-compact. A scheduled
+and PR Linux software-WebGL tour uploads text-only receipts. Original resources,
+OS pickers and compiler responses are adapters; no native game/original-asset
+acceptance is claimed. Retail layout/donors/empty-preview is the next UI phase.
+
 ## November 15 review — shared CSS foundation
 
 B4 and typography portion of C12: consolidate repeated selectors/declarations

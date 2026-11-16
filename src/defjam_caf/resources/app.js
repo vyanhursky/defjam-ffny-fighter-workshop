@@ -1,3 +1,5 @@
+import { createTabs } from "./tabs.mjs";
+import { createProjectPanel, createExportWorkflow } from "./project-workflow.mjs";
 import { createFaceControls } from "./face.mjs";
 import { createUIArt } from "./ui-art.mjs";
 import { groupKey, filterOptions } from "./wardrobe.mjs";
@@ -139,6 +141,8 @@ async function act(action, args = {}, label = null) {
       "select_profile",
       "open_project",
       "new_project",
+      "choose_project",
+      "choose_new_project",
       "outfit_select",
       "reset",
       "open_data",
@@ -160,6 +164,7 @@ const setup = gameSetup({ call, act });
 $("setup-open").onclick = () => setup.open(current?.setup);
 function makeOptions(select, items, value) {
   select.replaceChildren(...items.map((x) => new Option(x.label, String(x.value))));
+  if (!items.length) select.append(new Option("No choices available · choose your game data", ""));
   if (value !== undefined) select.value = String(value);
   select.disabled = !items.length;
 }
@@ -175,7 +180,7 @@ function projectDetails() {
 function readyFighter() {
   return Boolean(current?.fields?.has_fighter);
 }
-const { renderBackups } = createStateRenderer({ $, act, discard });
+const { renderBackups, renderPending } = createStateRenderer({ $, act, discard });
 const { faceMethod, syncFace, renderFacePresets } = createFaceControls({
   $,
   readyFighter,
@@ -183,7 +188,8 @@ const { faceMethod, syncFace, renderFacePresets } = createFaceControls({
   act,
   renderFaceSculpt,
 });
-const { previewUIArt, renderUIArt } = createUIArt({ $, call, fail, state: () => current });
+const { previewUIArt, renderUIArt, ensureDonors } = createUIArt({ $, call, fail, state: () => current });
+const renderProjectPanel = createProjectPanel({ $, act, workflow });
 function renderState(state, forcePreview = false) {
   const appearanceChanged = shouldRefreshAppearance(current, state, forcePreview);
   if (appearanceChanged) {
@@ -244,6 +250,8 @@ function renderState(state, forcePreview = false) {
   document.querySelector(".save-actions .two-cols").style.display = state.project ? "none" : "";
   $("import").disabled = !state.data;
   renderStart(state);
+  renderProjectPanel(state);
+  $("export-mod").hidden = !state.project;
   {
     const chip = setup.chip(state.setup);
     $("setup-open").textContent = chip.text;
@@ -252,13 +260,7 @@ function renderState(state, forcePreview = false) {
   }
   if (state.version) $("version").textContent = workshopVersion(state.version);
   renderBackups(state);
-  $("changes").replaceChildren(
-    ...(state.changes.length ? state.changes : ["No changes yet."]).map((text) => {
-      const li = document.createElement("li");
-      li.textContent = text;
-      return li;
-    }),
-  );
+  renderPending(state);
   $("status-message").textContent = state.dirty
     ? `${state.changes.length} pending change(s) · review before saving`
     : "Ready · changes stay local";
@@ -376,6 +378,8 @@ function renderState(state, forcePreview = false) {
   if (appearanceChanged) syncFace(state);
   renderMovesets(state);
   performanceUI.render(state);
+  if (["voice", "presentation", "ai"].includes(sectionTabs.active())) performanceUI.ensureConnected();
+  if (sectionTabs.active() === "ui") ensureDonors();
   if (appearanceChanged) {
     loadCategory().catch(fail);
     queuePreview(0);
@@ -893,6 +897,7 @@ const performanceUI = performanceEditor({
   act,
   fail,
   state: () => current,
+  applyState: renderState,
   parts: () => sceneData?.meshes || [],
   meshes: () => [...model.children],
   repose: () => applyPose(),
@@ -910,11 +915,27 @@ $("ui-clear-all").onclick = () => act("ui_clear_all");
 $("ui-apply-settings").onclick = () =>
   act("ui_settings", { donor: $("ui-donor").value, hd_scale: Number($("ui-scale").value) });
 $("ui-retail").onclick = () => act("choose_ui_retail", {}, "Importing the complete retail UI set…");
-for (const b of document.querySelectorAll(".tab"))
-  b.onclick = () => {
-    for (const button of document.querySelectorAll(".tab")) button.classList.toggle("active", button === b);
-    for (const panel of document.querySelectorAll(".tab-content")) panel.hidden = panel.id !== `tab-${b.dataset.tab}`;
-  };
+const sectionTabs = createTabs({
+  root: document.querySelector(".inspector"),
+  onSelect(name) {
+    if (["voice", "presentation", "ai"].includes(name)) performanceUI.ensureConnected();
+    if (name === "ui") ensureDonors();
+  },
+});
+const exportWorkflow = createExportWorkflow({
+  $,
+  call,
+  act,
+  fail,
+  state: () => current,
+  jump(tab) {
+    if (tab === "setup") setup.open(current?.setup);
+    else if (tab === "outfits") $("outfit-name").focus();
+    else sectionTabs.show(tab, { focus: true });
+  },
+  hasFaceDraft: () => Boolean(faceDraft),
+  hasTryOn: () => Boolean(auditionKey),
+});
 $("open-data").onclick = $("empty-open").onclick = () => {
   if (discard()) act("choose_data", {}, "Loading profiles and original assets…");
 };
@@ -992,18 +1013,12 @@ for (const key of ["name", "author", "version", "description", "license", "donor
       $("reset").disabled = !state.dirty;
       $("save-status").textContent = state.dirty ? "● Unsaved changes" : "● Saved project";
       $("save-status").classList.toggle("dirty", state.dirty);
-      $("changes").replaceChildren(
-        ...state.changes.map((text) => {
-          const li = document.createElement("li");
-          li.textContent = text;
-          return li;
-        }),
-      );
+      renderPending(state);
     } catch (e) {
       fail(e);
     }
   };
-$("export-mod").onclick = () => act("choose_mod_export", {}, "Validating and exporting fighter mod…");
+$("export-mod").onclick = () => exportWorkflow.open();
 $("export-face").onclick = () => act("choose_face_export", {}, "Exporting head template…");
 $("import-face").onclick = () => act("choose_face_import", {}, "Validating head sculpt…");
 $("clear-face").onclick = () => act("face_clear");

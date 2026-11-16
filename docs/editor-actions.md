@@ -11,8 +11,10 @@ Requests carry `id`, `action`, and an `args` object. Native file pickers use
 | `blazin_inherit` | `Editor._request_blazin_inherit` |
 | `cache_clear` | `Editor._request_cache_clear` |
 | `close_project` | `Editor._request_close_project` |
+| `donors` | `Editor._request_donors` |
 | `duplicate` | `Editor._request_duplicate` |
 | `export` | `Editor._request_export` |
+| `export_checklist` | `Editor._request_export_checklist` |
 | `export_mod` | `Editor._request_export_mod` |
 | `face_clear` | `Editor._request_face_export` |
 | `face_export` | `Editor._request_face_export` |

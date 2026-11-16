@@ -3,6 +3,17 @@ export function shouldRefreshAppearance(previous, next, force = false) {
 }
 
 export function createStateRenderer({ $, act, discard }) {
+  function renderPending(state) {
+    const changes = state.changes || [];
+    $("changes-summary").textContent = `${changes.length} pending change${changes.length === 1 ? "" : "s"}`;
+    $("changes").replaceChildren(
+      ...(changes.length ? changes : ["No changes yet."]).map((text) => {
+        const item = document.createElement("li");
+        item.textContent = text;
+        return item;
+      }),
+    );
+  }
   function renderBackups(state) {
     const rows = state.backups || [];
     $("backups-box").hidden = !state.selected || Boolean(state.project);
@@ -43,5 +54,5 @@ export function createStateRenderer({ $, act, discard }) {
           ]),
     );
   }
-  return { renderBackups };
+  return { renderBackups, renderPending };
 }

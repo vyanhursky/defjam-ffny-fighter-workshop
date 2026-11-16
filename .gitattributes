@@ -1,0 +1,5 @@
+src/defjam_caf/resources/*.html text eol=lf
+src/defjam_caf/resources/*.css text eol=lf
+src/defjam_caf/resources/*.js text eol=lf
+src/defjam_caf/resources/*.mjs text eol=lf
+tests/*.mjs text eol=lf

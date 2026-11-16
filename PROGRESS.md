@@ -1,5 +1,13 @@
 # Progress and handoff
 
+## November 15 review — frontend formatting foundation
+
+B4 preparation: first-party HTML/CSS/JS/modules and Node tests use pinned
+Prettier 3.6.2 with a package lock, explicit LF attributes and a CI check.
+Vendored Three.js/controls and branding are untouched. This PR only formats;
+CSS consolidation and workflow behavior are separate follow-ups. Eight Node
+tests and the Prettier/diff checks pass. Native UI startup is checked in CI.
+
 ## November 15 review — Python formatting and lint
 
 B5: Ruff 0.14.0 formats first-party Python at 120 columns and checks E/F/B/UP/SIM

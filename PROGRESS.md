@@ -2,6 +2,15 @@
 
 ## November 16 — owner-authorized Workshop 0.2.0 release
 
+All four native package/startup jobs passed on source58a0fa1; annotated v0.2.0
+was pushed at that exact commit. Initial staging then correctly stopped before
+draft creation because the audit assumed one build-environment record per
+archive. Windows/Linux packaging includes both bundled and external documentation.
+The publisher now validates every copy and requires equal records, with a
+regression for conflicting dependency versions. This publisher-only correction
+does not change the release source, native packages or tag. Final publication
+still requires a green staging audit and verified uploaded asset digests.
+
 The owner accepted Windows playtesting and authorized merging every open Workshop
 PR, tagging/publishing 0.2.0, and leaving all runtime PRs untouched. All 21 open
 Workshop PRs (#12–32) were merged in dependency order into develop/0.1. Each merge

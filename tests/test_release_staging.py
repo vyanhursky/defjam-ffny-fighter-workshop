@@ -191,6 +191,27 @@ def test_rejects_modified_archive_despite_successful_ci_metadata(staged):
         release.prepare(source, staging, SHA, 123, TAG)
 
 
+@pytest.mark.parametrize("conflicting", [False, True])
+def test_bundled_and_external_documentation_require_matching_environment_records(staged, conflicting):
+    source, staging = staged
+    archive = next((staging / "artifacts/workshop-windows-x64").glob("*.zip"))
+    with zipfile.ZipFile(archive, "a") as bundle:
+        raw = bundle.read("defjam-ffny-fighter-workshop/documentation/build-environment.json")
+        if conflicting:
+            record = json.loads(raw)
+            record["dependencies"]["Pillow"] = "invented-other-version"
+            raw = json.dumps(record).encode()
+        bundle.writestr("defjam-ffny-fighter-workshop/_internal/documentation/build-environment.json", raw)
+    Path(str(archive) + ".sha256").write_text(
+        hashlib.sha256(archive.read_bytes()).hexdigest() + "  " + archive.name + "\n"
+    )
+    if conflicting:
+        with pytest.raises(AssertionError, match="Conflicting build environment"):
+            release.prepare(source, staging, SHA, 123, TAG)
+    else:
+        release.prepare(source, staging, SHA, 123, TAG)
+
+
 def test_rejects_game_executable_even_with_recomputed_checksum(staged):
     source, staging = staged
     archive = next((staging / "artifacts/workshop-windows-x64").glob("*.zip"))

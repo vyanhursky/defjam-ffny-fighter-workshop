@@ -170,7 +170,7 @@ class Dialogs:
         if len(audio) > 8 * 1024**2:
             raise SaveError("Voice clip exceeds 8 MiB")
         action, args = (
-            "performance_clip",
+            "retail_performance_clip" if action == "choose_retail_voice_clip" else "performance_clip",
             dict(target=args["target"], wav=base64.b64encode(audio).decode("ascii")),
         )
         return Prepared(action, args)
@@ -274,6 +274,7 @@ class Dialogs:
         ),
         "choose_performance_tools": DialogSpec(_prepare_performance_tools),
         "choose_voice_clip": DialogSpec(_prepare_voice_clip),
+        "choose_retail_voice_clip": DialogSpec(_prepare_voice_clip),
         "choose_mod_export": DialogSpec(_prepare_mod_export),
         "choose_face_export": DialogSpec(
             kind="save",

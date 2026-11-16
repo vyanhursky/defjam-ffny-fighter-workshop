@@ -40,7 +40,7 @@
     </header>
 
     <main class="retail-main">
-      <aside class="retail-left">
+      <aside class="retail-left project-sidebar">
         <details id="retail-start" open="">
           <summary>Start a fighter</summary>
           <div class="start-controls">
@@ -56,151 +56,237 @@
             <div class="rule"></div>
           </div>
         </details>
-        <label>Display name<input id="name" maxlength="80" /></label
-        ><label>Author<input id="author" maxlength="120" /></label>
 
-        <label>Pack ID<input id="pack" /></label><label>Fighter ID<input id="fighter" /></label>
-
-        <label>Version<input id="version" /></label
-        ><label>Description<textarea id="description" rows="3"></textarea></label
-        ><label>Credits / license<textarea id="license" rows="3"></textarea></label
-        ><button id="details">Apply project details</button>
-        <div class="rule"></div>
+        <span class="eyebrow">PROJECT</span><strong id="retail-project-name">No project open</strong>
         <p id="project-path" class="hint"></p>
-        <button id="save" class="primary" title="Save project (Ctrl+S)">Save project</button
-        ><button id="copy">Save project as…</button>
+        <p class="hint">Portable fighter project. Story profiles stay separate.</p>
+        <h3>Appearance</h3>
+        <p class="hint">
+          The imported retail body supplies the model and textures. CAF wardrobe and face presets apply to CAF bodies.
+        </p>
       </aside>
-      <aside class="retail-right">
-        <div class="tabs" role="tablist" aria-label="Retail project sections">
-          <button
-            data-panel="combat"
-            class="active tab"
-            id="retail-tab-combat"
-            role="tab"
-            aria-controls="retail-panel-combat"
-          >
-            Fighter</button
-          ><button
-            data-panel="textures"
-            class="tab"
-            id="retail-tab-textures"
-            role="tab"
-            aria-controls="retail-panel-textures"
-          >
-            Textures</button
-          ><button data-panel="art" class="tab" id="retail-tab-art" role="tab" aria-controls="retail-panel-art">
-            UI artwork
-          </button>
-        </div>
-        <details id="retail-workflow" class="retail-workflow">
-          <summary>Workflow guide · replace an appearance or add an outfit</summary>
-          <ol>
-            <li>
-              Open <strong>New…</strong>, choose the starting fighter and purpose, then start the project. The starting
-              fighter supplies combat, body and UI defaults. For an open appearance project, choose
-              <strong>Existing fighter</strong> and <strong>Apply project purpose &amp; target</strong>.
-            </li>
-            <li>
-              Use <strong>Import original body</strong>; the preview loads automatically. To mix donors, open
-              <strong>Advanced: mix donors</strong>. Import the body before painting; importing a body again clears
-              previous texture imports.
-            </li>
-            <li>
-              In <strong>Textures</strong>, select a shape and <strong>Import RGB PNG…</strong> with the same UV layout.
-              For Pockets pants, use the complete <strong>A001</strong> atlas. Refresh the preview.
-            </li>
-            <li>
-              <strong>Apply project details</strong>, <strong>Save project</strong> as an editable .ffnyfighter, then
-              <strong>Export Custom Fighter Mod…</strong> to a new ZIP filename.
-            </li>
-            <li>
-              In the matching game build, import and enable the ZIP under <strong>Mods &gt; Fighters</strong>. Select
-              the original fighter, choose the added numbered outfit if applicable, then verify it in battle.
-            </li>
-          </ol>
-          <p class="hint">
-            Replacement changes the original appearance; an added outfit keeps the original. The limit is three outfits
-            total, with shared combat, stats and voice. Test replacement and extra-outfit packs separately. Body PNGs do
-            not recolor the separate 2D selector portraits.
-          </p>
-          <p class="hint">
-            To continue editing, open the saved project. To recover an exported pack, extract its ZIP, then use
-            <strong>Import fighter from pack…</strong> and select the folder containing fighters.json. Independent
-            single-fighter packs and single-target appearance overrides are supported.
-          </p>
-        </details>
-        <section data-content="combat" id="retail-panel-combat" role="tabpanel" aria-labelledby="retail-tab-combat">
-          <p id="donor-summary" class="hint"></p>
-          <details id="donor-mixing">
-            <summary>Advanced: mix donors</summary>
-            <p class="hint">
-              Combat supplies moves and stats. Body supplies the model and textures. UI supplies menu layouts and
-              fallback artwork.
-            </p>
-            <label>Combat donor<select id="combat-donor"></select></label
-            ><button id="combat">Use donor moveset &amp; stats</button
-            ><label>Body donor<select id="body-donor"></select></label
-            ><label>UI layout donor<select id="ui-donor"></select></label>
-          </details>
-          <h3>Retail target</h3>
-          <label>Existing fighter<select id="deployment-target"></select></label
-          ><button id="apply-deployment">Apply project purpose &amp; target</button>
-          <p id="deployment-status" class="hint"></p>
-          <div class="rule"></div>
-
-          <p class="hint">
-            Copies the original fighter's combat baseline. Supplied voice, Blazin’, entrance and victory resources
-            remain selectable below.
-          </p>
-          <h3>Original body</h3>
-          <button id="body">Import original body</button>
-          <p class="hint">
-            The runtime checks the body against the chosen combat rig before export. Preview is a static source pose.
-          </p>
-          <div id="components"></div>
-          <div class="rule"></div>
-          <span class="eyebrow">FIGHTER STATS · 0–100</span>
-          <div id="stats"></div>
-          <button id="apply-stats">Apply stats</button>
-          <p class="hint">Native retail stats differ from CAF training values.</p>
-        </section>
-        <section
-          data-content="textures"
-          hidden=""
-          id="retail-panel-textures"
-          role="tabpanel"
-          aria-labelledby="retail-tab-textures"
-        >
-          <h3>Paint the fighter.</h3>
-          <label>Texture shape<select id="shape"></select></label><button id="texture">Import RGB PNG…</button
-          ><button id="clear-texture">Clear texture override</button>
-          <p class="hint">
-            Import a complete atlas with the original UV layout. Native material alpha is retained. HD artwork
-            accompanies a compatible native fallback. Model resources can be supplied through an ordinary fighter pack;
-            generic Blender mesh reimport is not available.
-          </p>
-          <p id="texture-status" class="hint"></p>
-        </section>
-        <section data-content="art" hidden="" id="retail-panel-art" role="tabpanel" aria-labelledby="retail-tab-art">
-          <h3>Complete the roster.</h3>
-          <p class="hint">Change the UI layout donor in Fighter → Advanced: mix donors.</p>
-          <label
-            >Output scale<select id="ui-scale">
-              <option value="1">Native</option>
-              <option value="2">2× HD</option>
-              <option value="4">4× HD</option>
-            </select></label
-          ><button id="ui-settings">Apply UI settings</button><label>Artwork role<select id="role"></select></label>
-          <div class="two-cols">
-            <button id="ui-import">Import PNG…</button><button id="ui-clear">Clear role</button>
+      <aside class="retail-right inspector">
+        <nav id="retail-tabs" role="tablist" aria-label="Project sections" aria-orientation="vertical">
+          <div class="tab-group">
+            <span class="nav-label">Look</span
+            ><button
+              class="tab active"
+              role="tab"
+              data-panel="appearance"
+              id="retail-tab-appearance"
+              aria-controls="retail-panel-appearance"
+            >
+              Appearance</button
+            ><button
+              class="tab"
+              role="tab"
+              data-panel="textures"
+              id="retail-tab-textures"
+              aria-controls="retail-panel-textures"
+            >
+              Textures</button
+            ><button class="tab" role="tab" data-panel="art" id="retail-tab-art" aria-controls="retail-panel-art">
+              Menu artwork
+            </button>
           </div>
-          <div class="art-preview"><img id="art-image" alt="Imported fighter artwork" hidden="" /></div>
-          <p id="art-status" class="hint"></p>
-          <p class="hint">
-            Six master images cover all 24 selector, loading, titlecard, result and grid roles. Advanced roles override
-            one player layout.
-          </p>
-        </section>
+          <div class="tab-group">
+            <span class="nav-label">Fight</span
+            ><button class="tab" role="tab" data-panel="stats" id="retail-tab-stats" aria-controls="retail-panel-stats">
+              Stats</button
+            ><button
+              class="tab"
+              role="tab"
+              data-panel="combat"
+              id="retail-tab-combat"
+              aria-controls="retail-panel-combat"
+            >
+              Moves</button
+            ><button class="tab" role="tab" data-panel="ai" id="retail-tab-ai" aria-controls="tab-ai">AI</button>
+          </div>
+          <div class="tab-group">
+            <span class="nav-label">Presentation</span
+            ><button class="tab" role="tab" data-panel="voice" id="retail-tab-voice" aria-controls="tab-voice">
+              Voice</button
+            ><button
+              class="tab"
+              role="tab"
+              data-panel="presentation"
+              id="retail-tab-presentation"
+              aria-controls="tab-presentation"
+            >
+              Entrance &amp; victory
+            </button>
+          </div>
+          <div class="tab-group">
+            <span class="nav-label">Project</span
+            ><button
+              class="tab"
+              role="tab"
+              data-panel="details"
+              id="retail-tab-details"
+              aria-controls="retail-panel-details"
+            >
+              Details &amp; export
+            </button>
+          </div>
+        </nav>
+        <div class="panel-scroll">
+          <section
+            data-content="appearance"
+            id="retail-panel-appearance"
+            role="tabpanel"
+            aria-labelledby="retail-tab-appearance"
+          >
+            <h3>Retail appearance</h3>
+            <details id="retail-workflow" class="retail-workflow">
+              <summary>Workflow guide · replace an appearance or add an outfit</summary>
+              <ol>
+                <li>
+                  Open <strong>New…</strong>, choose the starting fighter and purpose, then start the project. The
+                  starting fighter supplies combat, body and UI defaults. For an open appearance project, choose
+                  <strong>Existing fighter</strong> and <strong>Apply project purpose &amp; target</strong>.
+                </li>
+                <li>
+                  Use <strong>Import original body</strong>; the preview loads automatically. To mix donors, open
+                  <strong>Advanced: mix donors</strong>. Import the body before painting; importing a body again clears
+                  previous texture imports.
+                </li>
+                <li>
+                  In <strong>Textures</strong>, select a shape and <strong>Import RGB PNG…</strong> with the same UV
+                  layout. For Pockets pants, use the complete <strong>A001</strong> atlas. Refresh the preview.
+                </li>
+                <li>
+                  <strong>Apply project details</strong>, <strong>Save project</strong> as an editable .ffnyfighter,
+                  then <strong>Export Custom Fighter Mod…</strong> to a new ZIP filename.
+                </li>
+                <li>
+                  In the matching game build, import and enable the ZIP under <strong>Mods &gt; Fighters</strong>.
+                  Select the original fighter, choose the added numbered outfit if applicable, then verify it in battle.
+                </li>
+              </ol>
+              <p class="hint">
+                Replacement changes the original appearance; an added outfit keeps the original. The limit is three
+                outfits total, with shared combat, stats and voice. Test replacement and extra-outfit packs separately.
+                Body PNGs do not recolor the separate 2D selector portraits.
+              </p>
+              <p class="hint">
+                To continue editing, open the saved project. To recover an exported pack, extract its ZIP, then use
+                <strong>Import fighter from pack…</strong> and select the folder containing fighters.json. Independent
+                single-fighter packs and single-target appearance overrides are supported.
+              </p>
+            </details>
+            <p id="donor-summary" class="hint"></p>
+            <details id="donor-mixing">
+              <summary>Advanced: body and UI donors</summary>
+              <p class="hint">
+                Body supplies the model and textures. UI supplies menu layouts and fallback artwork. Choose the moveset
+                separately in Moves.
+              </p>
+              <label>Body donor<select id="body-donor"></select></label
+              ><label>UI layout donor<select id="ui-donor"></select></label>
+            </details>
+            <button id="body">Import original body</button>
+            <p class="hint">
+              Importing a body clears previous texture imports. The compiler checks its rig against the moveset.
+            </p>
+          </section>
+          <section
+            data-content="stats"
+            id="retail-panel-stats"
+            hidden=""
+            role="tabpanel"
+            aria-labelledby="retail-tab-stats"
+          >
+            <h3>Fighter stats</h3>
+            <div id="stats"></div>
+            <button id="apply-stats">Apply stats</button>
+            <p class="hint">Retail stats use the original 0–100 scale.</p>
+          </section>
+          <section data-content="combat" id="retail-panel-combat" role="tabpanel" aria-labelledby="retail-tab-combat">
+            <label>Moveset donor<select id="combat-donor"></select></label
+            ><button id="combat">Use moveset, keep stats</button>
+            <h3>Moves</h3>
+
+            <label>Existing fighter<select id="deployment-target"></select></label
+            ><button id="apply-deployment">Apply project purpose &amp; target</button>
+            <p id="deployment-status" class="hint"></p>
+
+            <p class="hint">
+              Choose a complete original fighter moveset. Current stats and explicit performance settings stay intact;
+              unstaged donor defaults follow the new donor. The original body must be compatible with its rig.
+            </p>
+            <details>
+              <summary>Supplied resource overrides</summary>
+              <div id="components"></div>
+            </details>
+          </section>
+          <section
+            data-content="textures"
+            hidden=""
+            id="retail-panel-textures"
+            role="tabpanel"
+            aria-labelledby="retail-tab-textures"
+          >
+            <h3>Paint the fighter.</h3>
+            <label>Texture shape<select id="shape"></select></label><button id="texture">Import RGB PNG…</button
+            ><button id="clear-texture">Clear texture override</button>
+            <p class="hint">
+              Import a complete atlas with the original UV layout. Native material alpha is retained. HD artwork
+              accompanies a compatible native fallback. Model resources can be supplied through an ordinary fighter
+              pack; generic Blender mesh reimport is not available.
+            </p>
+            <p id="texture-status" class="hint"></p>
+          </section>
+          <section data-content="art" hidden="" id="retail-panel-art" role="tabpanel" aria-labelledby="retail-tab-art">
+            <h3>Complete the roster.</h3>
+            <p class="hint">Change the UI layout donor in Fighter → Advanced: mix donors.</p>
+            <label
+              >Output scale<select id="ui-scale">
+                <option value="1">Native</option>
+                <option value="2">2× HD</option>
+                <option value="4">4× HD</option>
+              </select></label
+            ><button id="ui-settings">Apply UI settings</button><label>Artwork role<select id="role"></select></label>
+            <div class="two-cols">
+              <button id="ui-import">Import PNG…</button><button id="ui-clear">Clear role</button>
+            </div>
+            <div class="art-preview"><img id="art-image" alt="Imported fighter artwork" hidden="" /></div>
+            <p id="art-status" class="hint"></p>
+            <p class="hint">
+              Six master images cover all 24 selector, loading, titlecard, result and grid roles. Advanced roles
+              override one player layout.
+            </p>
+          </section>
+          <div id="performance-panels"></div>
+          <section
+            data-content="details"
+            id="retail-panel-details"
+            hidden=""
+            role="tabpanel"
+            aria-labelledby="retail-tab-details"
+          >
+            <h3>Details &amp; export</h3>
+            <label>Display name<input id="name" maxlength="80" /></label
+            ><label>Author<input id="author" maxlength="120" /></label><label>Pack ID<input id="pack" /></label
+            ><label>Fighter ID<input id="fighter" /></label><label>Version<input id="version" /></label
+            ><label>Description<textarea id="description" rows="3"></textarea></label
+            ><label>Credits / license<textarea id="license" rows="3"></textarea></label
+            ><button id="details">Apply project details</button><button id="copy">Save project as…</button>
+          </section>
+        </div>
+        <div class="save-actions">
+          <div class="pending-strip">
+            <span id="retail-changes" class="hint">No pending changes</span>
+            <div class="pending-tools">
+              <button id="undo" title="Undo last change (Ctrl+Z)" class="text-button">Undo</button
+              ><button id="reset" class="text-button">Reset to saved</button>
+            </div>
+          </div>
+          <div class="primary-actions">
+            <button id="save" class="primary" title="Save project (Ctrl+S)">Save project</button
+            ><button id="export" class="primary">Export mod…</button>
+          </div>
+        </div>
       </aside>
       <section class="fighter-stage">
         <div class="stage-heading">
@@ -222,10 +308,6 @@
           ><label><input type="checkbox" id="wireframe" /> Wireframe</label>
         </div>
         <p id="preview-note" class="hint"></p>
-        <div class="retail-bottom">
-          <button id="undo" title="Undo last change (Ctrl+Z)">Undo</button><button id="reset">Reset to saved</button
-          ><button id="export" class="primary">Export Custom Fighter Mod…</button>
-        </div>
       </section>
     </main>
     <footer><span id="status-message">Ready</span><span id="workshop-version">Fighter Workshop</span></footer>

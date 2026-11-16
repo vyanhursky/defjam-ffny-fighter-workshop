@@ -143,3 +143,26 @@ def set_clip(value, target, raw):
         wav_info(raw)
         result["voice"]["clips"][target] = base64.b64encode(raw).decode("ascii")
     return validate(result)
+
+
+def edited(value, operation, arguments, link):
+    """Shared performance edits; the owning CAF/retail session commits history."""
+    result = copy.deepcopy(value or {})
+    if operation == "clear":
+        require(arguments.get("section") in ("voice", "intro", "victory", "ai"), "Unknown performance section")
+        result.pop(arguments["section"], None)
+        return validate(result)
+    require(link is not None, "Connect compatible fighter tools first")
+    if operation == "clip":
+        raw = base64.b64decode(arguments["wav"], validate=True) if arguments.get("wav") is not None else None
+        result = set_clip(result, arguments["target"], raw)
+    else:
+        require(operation == "set", "Unknown performance operation")
+        section = arguments["section"]
+        require(section in ("voice", "intro", "victory", "ai"), "Unknown performance section")
+        result[section] = copy.deepcopy(arguments["value"])
+        if section == "voice" and not arguments.get("reset_clips"):
+            result[section]["clips"] = copy.deepcopy((value or {}).get("voice", {}).get("clips", {}))
+    validate(result)
+    link.call("workshop-check", result)
+    return result

@@ -163,7 +163,8 @@ export function performanceEditor(api) {
     $("performance-connect").disabled = !s.data;
     for (const button of document.querySelectorAll("[data-performance-retry]")) button.disabled = !s.project || !s.data;
     const message = !s.project
-      ? "Create or open a standalone project to author performance. Story saves retain their existing workflow."
+      ? s.performance?.unavailable_reason ||
+        "Create or open a standalone project to author performance. Story saves retain their existing workflow."
       : !catalog
         ? connectionError || "Catalogs load automatically when Voice, Entrance & victory, or AI opens."
         : `${catalog.banks.length} voice banks · ${catalog.cinematics.length} sequences · ${catalog.ai.length} AI profiles. Shared across all outfits.`;
@@ -221,6 +222,19 @@ export function performanceEditor(api) {
       for (const id of ["tab-voice", "tab-presentation", "tab-ai"])
         for (const el of $(id).querySelectorAll("input,select,button")) el.disabled = true;
     $("performance-connect").disabled = !s.data;
+    if (api.canAnimate && !api.canAnimate()) {
+      for (const id of [
+        "preview-intro",
+        "preview-victory",
+        "animation-load",
+        "animation-play",
+        "animation-stop",
+        "animation-time",
+      ])
+        $(id).disabled = true;
+      $("animation-status").textContent =
+        "Animation preview is unavailable for this fighter in the selected game version.";
+    }
   }
   async function save(section, value) {
     return act("performance_set", { section, value }, "Staging " + section + "…");

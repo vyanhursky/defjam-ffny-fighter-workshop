@@ -127,14 +127,24 @@ def descriptors(value):
 
 def validate(document):
     has_deployment = type(document) is dict and "deployment" in document
+    has_performance = type(document) is dict and "performance" in document
     projects.require(
         type(document) is dict
         and set(document)
         == {"schema", "identity", "metadata", "definition", "resources", "assets", "ui_art", "textures"}
         | ({"deployment"} if has_deployment else set())
+        | ({"performance"} if has_performance else set())
         and document["schema"] in READABLE_SCHEMAS,
         "Unsupported retail fighter project fields",
     )
+    if has_performance:
+        from . import performance
+
+        performance.validate(document["performance"])
+        projects.require(
+            not document["performance"] or document.get("deployment", {}).get("mode", "add") == "add",
+            "Retail appearance workflows retain their parent's performance",
+        )
     if has_deployment:
         deployment = document["deployment"]
         projects.require(
@@ -419,6 +429,8 @@ class Session:
         return self.snapshot()
 
     def snapshot(self):
+        from . import performance
+
         rows = []
         if self.catalog:
             rows = [
@@ -426,6 +438,8 @@ class Session:
                 for r in self.catalog["fighters"]
             ]
         view = self.effective()
+        dirty = view != self.saved
+        settings = performance.status(view.pop("performance", None)) if view is not None else {}
         if view is not None:
             view["asset_count"] = len(view.pop("assets"))
         data = self.data or self.owner.data
@@ -438,9 +452,15 @@ class Session:
             "donors": rows,
             "document": view,
             "path": str(self.path) if self.path else None,
-            "dirty": self.effective() != self.saved,
+            "dirty": dirty,
             "undo": bool(self.history) or self.draft is not None,
             "roles": [{"id": r, "name": ui_art.MASTERS.get(r, r.replace("_", " "))} for r in ui_art.ROLES],
+            "performance": dict(
+                settings=settings,
+                catalog=self.owner.performance_link.catalog if self.owner.performance_link else None,
+                ai_fields=[dict(id=key, label=label) for key, label in performance.AI_FIELDS],
+                project_available=bool(view and view.get("deployment", {}).get("mode", "add") == "add"),
+            ),
         }
 
     def request(self, action, args):
@@ -453,7 +473,22 @@ class Session:
             raise SaveError("Unsupported retail fighter action")
         candidate = (
             None
-            if action in ["snapshot", "draft", "configure", "new", "open", "import", "close", "undo", "reset", "save"]
+            if action
+            in [
+                "snapshot",
+                "draft",
+                "configure",
+                "new",
+                "open",
+                "import",
+                "close",
+                "undo",
+                "reset",
+                "save",
+                "performance_connect",
+                "performance_audio",
+                "performance_animation",
+            ]
             else self.effective()
         )
         return handler(self, action, args, workspace, candidate)
@@ -497,6 +532,112 @@ class Session:
             self.runtime = old
             raise
         return self.snapshot()
+
+    def _request_performance_connect(self, action, args, workspace, candidate=None):
+        from .performance_api import Link
+        from . import runtimes
+
+        runtime = runtimes.require(self.shared_runtime(), "tools", self.owner.recipe_format())["path"]
+        self.owner.performance_link = Link(runtime, self.data or self.owner.data, self.owner.workspace)
+        return self.snapshot()
+
+    def _request_export_checklist(self, action, args, workspace, candidate=None):
+        from . import runtimes
+
+        document = self.effective()
+        runtime = runtimes.describe(self.shared_runtime(), self.owner.recipe_format())
+        checks = [
+            dict(
+                label="Project will be saved before export."
+                if not self.path or self.effective() != self.saved
+                else "Project saved.",
+                status="pass",
+                tab="project",
+            ),
+            dict(
+                label="Selected game supports retail fighter export."
+                if runtime and runtime["features"]["retail"]
+                else "Choose a game version with retail fighter export.",
+                status="pass" if runtime and runtime["features"]["retail"] else "fail",
+                tab="setup",
+            ),
+        ]
+        if document.get("performance") and not (runtime and runtime["features"]["tools"]):
+            checks.append(
+                dict(
+                    label="Performance export needs compatible voice, AI and animation tools.",
+                    status="fail",
+                    tab="setup",
+                )
+            )
+        try:
+            validate(document)
+            checks.append(dict(label="Project details and imported assets are valid.", status="pass", tab="project"))
+        except SaveError as error:
+            checks.append(dict(label=str(error), status="fail", tab="project"))
+        checks.append(
+            dict(
+                label="Imported body is included."
+                if document["definition"]["components"].get("appearance")
+                else "Body inherits the original donor.",
+                status="note",
+                tab="appearance",
+            )
+        )
+        checks.append(
+            dict(
+                label="Imported menu art is included."
+                if document["ui_art"]["images"]
+                else "Menu artwork uses donor fallbacks.",
+                status="note",
+                tab="textures",
+            )
+        )
+        return dict(checks=checks, can_export=all(row["status"] != "fail" for row in checks))
+
+    def _request_performance_audio(self, action, args, workspace, candidate=None):
+        from . import performance
+
+        link = self.owner.performance_link
+        projects.require(link is not None, "Connect compatible fighter tools first")
+        if action == "performance_animation":
+            return link.animation(args)
+        if args.get("override"):
+            encoded = self.effective().get("performance", {}).get("voice", {}).get("clips", {}).get(args["override"])
+            projects.require(encoded is not None, "No imported clip in this slot")
+            performance.audio_bytes(encoded)
+            return dict(mime="audio/wav", data=encoded)
+        return link.voice(args)
+
+    def _request_performance_set(self, action, args, workspace, candidate=None):
+        from . import performance
+
+        projects.require(
+            candidate.get("deployment", {}).get("mode", "add") == "add",
+            "Retail appearance workflows retain their parent's performance",
+        )
+        candidate["performance"] = performance.edited(
+            candidate.get("performance"), action.removeprefix("performance_"), args, self.owner.performance_link
+        )
+        return self.commit(candidate)
+
+    def _request_moveset(self, action, args, workspace, candidate=None):
+        projects.require(
+            candidate.get("deployment", {}).get("mode", "add") == "add",
+            "Retail appearance workflows retain their parent's combat",
+        )
+        projects.require(
+            self.catalog and any("retail/" + row["id"] == args["donor"] for row in self.catalog["fighters"]),
+            "Unknown moveset donor",
+        )
+        inherited = candidate["definition"]["inherits"]
+        baseline = next(row for row in self.catalog["fighters"] if "retail/" + row["id"] == inherited)
+        candidate["definition"]["components"].setdefault("stats", copy.deepcopy(baseline["components"]["stats"]))
+        candidate["definition"]["inherits"] = args["donor"]
+        candidate["definition"]["components"].pop("moveset", None)
+        # Explicit performance settings and appearance assets remain intact.
+        # The compiler still proves the new motion family's rig compatibility.
+        return self.commit(candidate)
 
     def _request_new(self, action, args, workspace, candidate=None):
         if action == "new":
@@ -649,7 +790,7 @@ class Session:
                 candidate["definition"]["components"]["appearance"] = candidate["identity"]["pack"] + "/retail-body"
                 candidate["textures"] = {}
                 return self.commit(candidate)
-            self.stage(root, temporary)
+            self.stage(root, temporary, include_performance=action != "preview")
             if action == "preview":
                 report = self.api(["preview-fighter", "--game", str(self.game()), "--pack", str(root)], temporary)
                 return report["preview"]
@@ -690,6 +831,14 @@ class Session:
         "deployment": _request_deployment,
         "details": _request_details,
         "combat": _request_combat,
+        "moveset": _request_moveset,
+        "performance_connect": _request_performance_connect,
+        "export_checklist": _request_export_checklist,
+        "performance_audio": _request_performance_audio,
+        "performance_animation": _request_performance_audio,
+        "performance_set": _request_performance_set,
+        "performance_clear": _request_performance_set,
+        "performance_clip": _request_performance_set,
         "component": _request_component,
         "stats": _request_stats,
         "ui": _request_ui,
@@ -700,7 +849,7 @@ class Session:
         "export": _request_preview,
     }
 
-    def stage(self, root, temporary):
+    def stage(self, root, temporary, *, include_performance=True):
         document = self.effective()
         native = manifest(document)
         for name, value in document["assets"].items():
@@ -751,6 +900,24 @@ class Session:
             native["resources"] = [r for r in native["resources"] if r["id"] != "workshop-ui"]
             native["resources"].append({"id": "workshop-ui", "kind": "portrait", "compatibility": {}, "source": source})
             native["fighters"][0]["components"]["portrait"] = native["id"] + "/workshop-ui"
+        if include_performance and document.get("performance"):
+            from .performance_exports import export_settings
+
+            generated = export_settings(
+                self.shared_runtime(),
+                self.game(),
+                self.owner.workspace / "retail",
+                temporary,
+                root,
+                document["identity"]["pack"],
+                document["definition"]["inherits"],
+                document["performance"],
+            )
+            identifiers = {row["id"] for row in generated["resources"]}
+            native["resources"] = [row for row in native["resources"] if row["id"] not in identifiers] + generated[
+                "resources"
+            ]
+            native["fighters"][0]["components"].update(generated["components"])
         selected = {v for k, v in native["fighters"][0]["components"].items() if k in KINDS}
         native["resources"] = [r for r in native["resources"] if native["id"] + "/" + r["id"] in selected]
         deployment = document.get("deployment", dict(mode="add", target=document["definition"]["inherits"]))

@@ -805,33 +805,9 @@ class Editor:
         if self.project is None:
             raise SaveError("Create a standalone fighter project to author performance resources")
         document = self.project_document()
-        settings = copy.deepcopy(document.get("performance", {}))
-        if action == "performance_clip":
-            import base64
-
-            raw = base64.b64decode(args["wav"], validate=True) if args.get("wav") is not None else None
-            settings = performance.set_clip(settings, args["target"], raw)
-            if self.performance_link is None:
-                raise SaveError("Connect compatible fighter tools first")
-            self.performance_link.call("workshop-check", settings)
-        elif action == "performance_clear":
-            if args.get("section") not in ("voice", "intro", "victory", "ai"):
-                raise SaveError("Unknown performance section")
-            settings.pop(args["section"], None)
-        else:
-            if self.performance_link is None:
-                raise SaveError("Connect compatible fighter tools first")
-            section = args["section"]
-            if section not in ("voice", "intro", "victory", "ai"):
-                raise SaveError("Unknown performance section")
-            settings[section] = copy.deepcopy(args["value"])
-            if section == "voice" and not args.get("reset_clips"):
-                settings[section]["clips"] = copy.deepcopy(
-                    document.get("performance", {}).get("voice", {}).get("clips", {})
-                )
-            performance.validate(settings)
-            self.performance_link.call("workshop-check", settings)
-        document["performance"] = performance.validate(settings)
+        document["performance"] = performance.edited(
+            document.get("performance", {}), action.removeprefix("performance_"), args, self.performance_link
+        )
         candidate = projects.validate(document)
         if candidate == self.project_document():
             return self.snapshot()

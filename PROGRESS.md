@@ -1,5 +1,34 @@
 # Progress and handoff
 
+## November 16 playtest — shared standalone performance/menu parity
+
+The priority Workshop-only phase shares Voice/AI/Entrance panels, performance
+edits/export staging and readiness between CAF and standalone retail projects.
+Retail adopts the same grouped vertical navigation, project sidebar, pinned
+changes/Undo/Reset/Save/Export, and Details metadata. Voice supports presets,
+banks, imports, preparation/playback and WAV saving. AI and entrance/victory
+settings round-trip with undo/reset. Moves retains current stats and explicit
+performance while changing the donor motion family; the compiler proves rig
+compatibility. Unstaged donor defaults follow the new donor. Appearance-only
+replacement/outfit projects explain and retain their parent's shared performance.
+
+Performance is optional in the existing retail schema; old projects remain
+readable. Snapshots redact audio. Generated resources stay in private staging,
+outside source project state; separate namespaces preserve imported resources.
+Static preview skips performance compilation. No runtime update is needed for
+these settings/exports. Retail animation and standalone outfit collections are
+the subsequent runtime-dependent phase.
+
+Validation: real synthetic Windows Qt/WebChannel/WebGL/audio tour passes 42
+checks at both sizes, including first-load retail catalogs, voice preparation/
+play, AI/entrance, moves retaining stats/voice and shared readiness/save. Captures
+inspected privately. Existing installed runtime b211c535 passes actual native
+compilation/ZIP export with Warren G voice on Blaze, AI and entrance/victory,
+then an invented WAV override and edited AI tendency (402176-byte ZIP). No game
+launched; compilation is not gameplay acceptance. Private evidence under
+build/real-retail-parity and build/ui-retail-parity-*. Python 326 passed/3 platform
+skips; Node22, mypy/Ruff/Prettier pass. No assets/captures tracked or uploaded.
+
 ## November 16 playtest — voice audition preparation and WAV saving
 
 Owner authorized shared standalone CAF/retail menu parity and faster voice

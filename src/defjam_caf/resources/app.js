@@ -1,5 +1,6 @@
 import { createTabs } from "./tabs.mjs";
-import { createProjectPanel, createExportWorkflow } from "./project-workflow.mjs";
+import { mountPerformancePanels } from "./performance-panels.mjs";
+import { createProjectPanel, createExportWorkflow, mountExportDialog } from "./project-workflow.mjs";
 import { createFaceControls } from "./face.mjs";
 import { createUIArt } from "./ui-art.mjs";
 import { groupKey, filterOptions } from "./wardrobe.mjs";
@@ -17,6 +18,8 @@ import { attachDetails } from "./errors.mjs";
 import { shouldRefreshAppearance, createStateRenderer } from "./state-render.mjs";
 
 const $ = (id) => document.getElementById(id);
+mountPerformancePanels($("performance-panels"));
+mountExportDialog();
 // Home chooses a workflow and passes it in the address fragment: story (Story saves) or caf (a fighter project from a Create-a-Fighter).
 const params = new URLSearchParams(location.hash.slice(1)),
   workflow = params.get("mode") === "caf" ? "caf" : "story",

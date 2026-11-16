@@ -10,6 +10,14 @@ data folder containing extracted files. Use Recomp **1.2.0 beta 2** or a
 compatible source checkout; stable 1.2.0 lacks the required authoring commands.
 The runtime verifies the original database and supplies the fighter catalog.
 
+Standalone projects share the CAF editor's grouped Look, Fight, Presentation and
+Project sections, Voice/AI/Entrance panels and readiness dialog. Catalogs load on
+first visit; voice preparation, clip navigation and WAV saving work here too.
+See [performance authoring](performance-editor.md). Retail bodies keep their model/
+texture workflow; CAF wardrobe/facial presets apply to CAF bodies. Retail animation
+preview requires the subsequent runtime extension; selection/staging/export work
+through the existing runtime.
+
 ## Terminology
 
 A Story profile includes game progress; a project holds fighter settings; an
@@ -28,12 +36,13 @@ The steps below describe a new standalone fighter.
    multi-target/global override packs remain refused. Import follows hash-bound JSON references
    and embeds the selected resource files; it does not install or enable a pack.
 2. One starting fighter supplies combat/body/UI defaults. Once started, the
-   setup block collapses; **New…** reopens it. Under **Advanced: mix donors**,
-   choose a different **Combat donor** for the original moveset and inherited native
+   setup block collapses; **New…** reopens it. In **Moves**, select a **Moveset
+   donor** and **Use moveset, keep stats**. Current stats and explicit performance
+   stay intact; unstaged defaults follow the new donor. Native
    health, speed, toughness and charisma. These are 0–100 retail values, distinct
-   from CAF training values. Applying the donor clears explicit stat overrides.
+   from CAF training values; edit them separately under **Stats**.
 3. Use **Import original body** in Fighter or the empty viewer. **Body donor**
-   under Advanced selects a different body to import; it does not label the origin
+   under Appearance's Advanced disclosure selects a different body to import; it does not label the origin
    of a previously imported body. You can also keep an imported owned appearance.
    Original meshes, textures and facial data come from the player's verified
    archive. Four-character texture names are scoped to the project, including
@@ -57,15 +66,17 @@ The steps below describe a new standalone fighter.
    are refused. Native color quantization is separate from the source HD raster.
 7. Import six master UI images or 24 player-layout variants for selector/loading
    portraits, titlecards, result icons and grid states. UI donor and 1×/2×/4×
-   output are independent of combat. Change the UI donor in Fighter's Advanced
+   output are independent of combat. Change the UI donor in Appearance's Advanced
    disclosure, then apply UI settings in UI artwork. All roles share the existing typed PNG
    compiler and verified per-launch HD layer. Conflicting native texture hashes
    remain errors, even when different HD sources quantize to identical fallbacks.
-8. Apply details, review staged changes, Undo/Reset, Save or Save As. Metadata
+8. Apply metadata or Save As under **Details & export**. Pinned Save/Export and
+   Undo/Reset remain below the active section. Metadata
    drafts participate in dirty/close protection, and invalid drafts refuse Save.
    Original-source files stay untouched. Embedded asset/art budgets and the
    portable file-size limit prevent saving a file that cannot be reopened.
-9. Export **Custom Fighter Mod** to a fresh ZIP path. The runtime compiles the
+9. Use **Export mod…**, inspect readiness and save pending changes before choosing
+   a fresh ZIP path. The runtime compiles the
    complete ordinary pack and every menu layout first. Export excludes unused
    resources and assets, Story saves, private source paths and game executables.
    Native gameplay, resource cleanup and art approval remain separate checks.

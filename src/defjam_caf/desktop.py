@@ -70,6 +70,9 @@ class Bridge(QObject):
             "performance_animation",
             "retail_snapshot",
             "retail_preview",
+            "retail_performance_audio",
+            "retail_performance_animation",
+            "retail_export_checklist",
         }
     )
 

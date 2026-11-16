@@ -228,6 +228,16 @@ share 16 MiB admission. Retail chooser and importer use one bounded manifest
 reader. Baseline: 235 passed/5 skipped. Changed tree: 239 passed/5 skipped and
 8 Node tests passed on Windows. Native package startup awaits CI; native game
 acceptance is not implied. Original saves, assets and the input review are intact.
+## November 15 review — current player guides
+
+A2: README and the CAF project, retail project and beta test guides now describe
+the shipped Beta 2 Home workflows, Game setup, Moves, HD atlas admission,
+experimental project facial controls and performance editors. Shared terminology
+distinguishes Story profiles, projects, outfits, game versions and recipes.
+Numbered schema/runtime labels were removed from these current player guides;
+historical evidence and release notes remain intact. Checked local Markdown
+links and UI control names against the current source. Documentation-only;
+no new native platform or gameplay acceptance is claimed.
 
 ## Beta 2 published — 2026-11-12
 

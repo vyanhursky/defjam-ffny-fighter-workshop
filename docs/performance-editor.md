@@ -1,12 +1,15 @@
 # Fighter performance authoring
 
-This development feature extends roadmap fighter modpack authoring. It requires
-the matching CAF v6 runtime source checkout and the player's supported game data.
-It is not in the Beta 1 download. Story-save editing retains its existing scope.
+Performance tools belong to standalone fighter projects and require a compatible
+game version selected in **Game setup**, plus the player's supported game data.
+They ship in Workshop Beta 2; current source connects catalogs automatically.
+Story-save editing retains its existing scope.
 
-Open a standalone project, then **Voice → Connect fighter runtime tools** and
-select the companion source checkout. The connection is local to this editor
-session; it is never stored in or executed from a fighter project. Original
+Open a standalone project and visit **Voice**, **Entrance & victory**, or **AI**.
+The first visit loads the selected game's catalogs. Inline errors offer Retry;
+Voice also offers **Reload voice & animation catalogs**. Game setup remembers
+the selected runtime outside the project; it is never executed from a project.
+Original
 catalogs and audition audio are read from the player's game files offline.
 
 ## Voice
@@ -25,7 +28,7 @@ as its default unless replaced. It does not preserve every randomized stream.
 
 ## Entrance, victory and playback
 
-The **Animation** tab stages entrance and victory sequences independently of the
+The **Entrance & victory** tab stages entrance and victory sequences independently of the
 motion core. Inherit restores the presentation donor for that role. Original
 sequences retain their native camera and secondary resources in the game export.
 
@@ -55,14 +58,14 @@ resets unstaged slider edits; Inherit removes the project AI override.
 
 ## Persistence and export
 
-Project v7 stores shared performance separately from outfit appearance. Undo,
+Projects store shared performance separately from outfit appearance. Undo,
 Reset, Save and Save As include these settings and original WAV bytes. Preview
 snapshots expose clip duration/hash metadata rather than copying embedded audio
 into the page state. Export writes ordinary typed voice, AI and cinematic
 resources through the companion compiler; the whole package is validated before
 publishing the ZIP. No Story progression, currency or machine paths are included.
 
-CAF v6 and new identity binding tables distinguish fighters by stable roster
+The matching runtime's identity binding tables distinguish fighters by stable roster
 identity and participant. Two CAFs sharing a retail motion core can therefore
 have different voices, AI and sequences. Old project/runtime formats retain their
 existing meaning. The feature requires the matching runtime; full in-game and

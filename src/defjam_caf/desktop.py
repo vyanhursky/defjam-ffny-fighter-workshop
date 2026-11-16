@@ -10,16 +10,17 @@ from urllib.parse import urlencode
 
 from PySide6.QtCore import QObject, Signal, Slot, QUrl, QStandardPaths, QTimer, Qt, qInstallMessageHandler
 from PySide6.QtGui import QDesktopServices, QIcon
-from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QInputDialog, QMessageBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineUrlRequestInterceptor
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
-from . import projects, remembered, retail, runtimes
+from . import remembered, runtimes
+from .dialogs import Dialogs
 from .editor import Editor
 from .container import SaveError
 from .diagnostics import log_detail
-from .locations import default_data_directory, initial_data_directory
+from .locations import initial_data_directory
 
 
 class OfflineOnly(QWebEngineUrlRequestInterceptor):
@@ -54,6 +55,7 @@ class Bridge(QObject):
         self.visible_busy = 0
         self._requests = {}
         self._pending_navigation = None
+        self.dialogs = Dialogs(self)
 
     BACKGROUND = frozenset(
         {
@@ -155,90 +157,6 @@ class Bridge(QObject):
                 if action == "open_caf_editor":
                     action, args = "open_workflow", {"mode": "story", "start": "open"}
                 return self.navigate(ident, "home" if action == "open_home" else args.get("mode"), args)
-            if action.startswith("choose_retail_"):
-                operation = action.removeprefix("choose_retail_")
-                session = self.editor.retail
-                if operation in ("runtime", "data", "import"):
-                    title = {
-                        "runtime": "Select compatible Custom Fighter runtime checkout",
-                        "data": "Select Recomp data directory",
-                        "import": "Select ordinary fighter pack folder",
-                    }[operation]
-                    path = QFileDialog.getExistingDirectory(self.window, title)
-                    if not path:
-                        return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                    if operation == "runtime":
-                        remembered.remember(self.editor.workspace, "runtime", path)
-                    if operation == "data":
-                        data = Path(path).resolve()
-                        if not (data / "extracted").is_dir():
-                            raise SaveError("Choose the data directory containing extracted")
-                        remembered.remember(self.editor.workspace, "data", data)
-                        session.data = data
-                        session.catalog = None
-                        return self.response.emit(json.dumps(dict(id=ident, result=session.snapshot())))
-                    if operation == "import":
-                        manifest = retail.read_manifest(path)
-                        labels = [f["id"] + " · " + f["name"] for f in manifest["fighters"]]
-                        if not labels:
-                            labels = [
-                                r["target"] + " · Retail appearance override" for r in manifest.get("overrides", [])
-                            ]
-                        label, ok = QInputDialog.getItem(
-                            self.window, "Import fighter", "Choose one fighter", labels, 0, False
-                        )
-                        if not ok:
-                            return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                        action, args = "retail_import", {"folder": path, "fighter": label.split(" · ", 1)[0]}
-                    else:
-                        action, args = "retail_configure", {"runtime": path}
-                elif operation in ("open", "save", "copy", "export"):
-                    if operation == "save" and session.path:
-                        action, args = "retail_save", {}
-                    else:
-                        opening = operation == "open"
-                        exporting = operation == "export"
-                        dialog = QFileDialog.getOpenFileName if opening else QFileDialog.getSaveFileName
-                        path, _ = dialog(
-                            self.window,
-                            "Open retail fighter project"
-                            if opening
-                            else "Export Custom Fighter Mod"
-                            if exporting
-                            else "Save retail fighter project",
-                            "" if opening else "fighter.zip" if exporting else "fighter.ffnyfighter",
-                            "Fighter mod (*.zip)" if exporting else "Fighter projects (*.ffnyfighter)",
-                        )
-                        if not path:
-                            return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                        action, args = (
-                            "retail_" + ("open" if opening else "export" if exporting else "save"),
-                            {"path": path},
-                        )
-                elif operation in ("ui", "texture"):
-                    path, _ = QFileDialog.getOpenFileName(
-                        self.window, "Import fighter artwork", "", "PNG image (*.png)"
-                    )
-                    if not path:
-                        return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                    import base64
-
-                    limit = (16 if operation == "texture" else 4) * 1024**2
-                    with Path(path).open("rb") as stream:
-                        raw = stream.read(limit + 1)
-                    if len(raw) > limit:
-                        raise SaveError("PNG exceeds " + str(limit // 1024**2) + " MiB")
-                    action, args = "retail_" + operation, {**args, "png": base64.b64encode(raw).decode("ascii")}
-                else:
-                    raise SaveError("Unsupported retail dialog")
-            if action == "choose_setup_folder":
-                start = remembered.recall(self.editor.workspace, "app") or runtimes.default_folder() or Path.home()
-                path = QFileDialog.getExistingDirectory(
-                    self.window, "Choose your Def Jam Recompiled folder, or a source checkout", str(start)
-                )
-                if not path:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                action, args = "setup_scan", {"folder": path}
             if action == "open_folder":
                 # Only folders the Workshop itself reported: the last export's folder or its own backups folder.
                 if args.get("target") == "backups":
@@ -256,135 +174,10 @@ class Bridge(QObject):
                     self.initial = None
                 else:
                     action = "snapshot"
-            if action == "choose_data":
-                path = QFileDialog.getExistingDirectory(
-                    self.window,
-                    "Select Recomp data directory",
-                    str(self.editor.data or default_data_directory() or Path.home()),
-                )
-                if not path:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                remembered.remember(self.editor.workspace, "data", path)
-                action, args = "open_data", {"path": path}
-            elif action == "choose_export":
-                if self.editor.profile is None:
-                    raise SaveError("Choose a profile first")
-                path, _ = QFileDialog.getSaveFileName(
-                    self.window,
-                    "Export complete profile",
-                    self.editor.profile.name + ".djprofile",
-                    "FFNY profiles (*.djprofile)",
-                )
-                if not path:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                action, args = "export", {"path": path}
-            elif action in {"choose_new_project", "choose_project", "choose_project_copy"}:
-                opening = action == "choose_project"
-                dialog = QFileDialog.getOpenFileName if opening else QFileDialog.getSaveFileName
-                path, _ = dialog(
-                    self.window,
-                    "Open fighter project" if opening else "Save standalone fighter project",
-                    "" if opening else "fighter.ffnyfighter",
-                    "Fighter projects (*.ffnyfighter)",
-                )
-                if not path:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                action, args = (
-                    ("open_project" if opening else "export" if action == "choose_project_copy" else "new_project"),
-                    {"path": path},
-                )
-            elif action == "choose_performance_tools":
-                runtime = self.runtime_folder("tools")
-                if not runtime:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                action, args = "performance_connect", dict(runtime=runtime)
-            elif action == "choose_voice_clip":
-                import base64
-
-                path, _ = QFileDialog.getOpenFileName(
-                    self.window, "Import mono PCM16 voice clip", "", "WAV audio (*.wav)"
-                )
-                if not path:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                with Path(path).open("rb") as stream:
-                    audio = stream.read(8 * 1024**2 + 1)
-                if len(audio) > 8 * 1024**2:
-                    raise SaveError("Voice clip exceeds 8 MiB")
-                action, args = (
-                    "performance_clip",
-                    dict(target=args["target"], wav=base64.b64encode(audio).decode("ascii")),
-                )
-            elif action == "choose_mod_export":
-                runtime = self.runtime_folder("export")
-                if not runtime:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                path, _ = QFileDialog.getSaveFileName(
-                    self.window, "Export validated Custom Fighter Mod", "fighter-mod.zip", "Fighter mod (*.zip)"
-                )
-                if not path:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                action, args = "export_mod", {"path": path, "runtime": runtime}
-            elif action in ("choose_face_export", "choose_face_import"):
-                opening = action == "choose_face_import"
-                dialog = QFileDialog.getOpenFileName if opening else QFileDialog.getSaveFileName
-                path, _ = dialog(
-                    self.window,
-                    "Import sculpted head" if opening else "Export head template",
-                    "" if opening else "head-template.obj",
-                    "Wavefront head (*.obj)",
-                )
-                if not path:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                action, args = ("face_import" if opening else "face_export"), dict(path=path)
-            elif action == "choose_ui_retail":
-                runtime = self.runtime_folder("menu")
-                if not runtime:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                action, args = "ui_retail", {"runtime": runtime}
-            elif action in {"choose_project_portrait", "choose_project_atlas", "choose_ui_art"}:
-                import base64
-
-                atlas = action == "choose_project_atlas"
-                title = (
-                    "Import 256–2048px square RGB atlas"
-                    if atlas
-                    else "Import fighter UI artwork"
-                    if action == "choose_ui_art"
-                    else "Import fighter portrait"
-                )
-                path, _ = QFileDialog.getOpenFileName(self.window, title, "", "PNG image (*.png)")
-                if not path:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                limit = projects.MAX_ATLAS_BYTES if atlas else 4 * 1024 * 1024
-                with Path(path).open("rb") as stream:
-                    raw = stream.read(limit + 1)
-                if len(raw) > limit:
-                    raise SaveError("Atlas PNG is too large" if atlas else "Portrait PNG is too large")
-                action, args = (
-                    ("project_atlas", {"slot": args["slot"], "png": base64.b64encode(raw).decode("ascii")})
-                    if atlas
-                    else (
-                        ("ui_import", {"role": args["role"], "png": base64.b64encode(raw).decode("ascii")})
-                        if action == "choose_ui_art"
-                        else ("project_portrait", {"png": base64.b64encode(raw).decode("ascii")})
-                    )
-                )
-            elif action == "choose_import":
-                if self.editor.discovery is None:
-                    raise SaveError("Choose the destination data directory first")
-                path, _ = QFileDialog.getOpenFileName(
-                    self.window, "Import complete profile", "", "FFNY profiles (*.djprofile)"
-                )
-                if not path:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                action, args = "import", {"path": path}
-            elif action == "choose_duplicate":
-                name, ok = QInputDialog.getText(
-                    self.window, "Duplicate fighter profile", "New profile ID (1–7 uppercase letters or digits):"
-                )
-                if not ok:
-                    return self.response.emit(json.dumps(dict(id=ident, result=None)))
-                action, args = "duplicate", {"name": name.strip().upper()}
+            prepared = self.dialogs.prepare(action, args)
+            if prepared.action is None:
+                return self.response.emit(json.dumps(dict(id=ident, result=prepared.result)))
+            action, args = prepared.action, prepared.args
             if self._pending_navigation is not None:
                 return self.response.emit(json.dumps(dict(id=ident, result=None)))
             future = self.pool.submit(self.editor.request, action, args)

@@ -1,5 +1,23 @@
 # Progress and handoff
 
+## November 15 review — final A–C integration and documentation
+
+All 41 A–C items have independent assessments and source PRs; Part E is deferred.
+The final source stack combines the implementation, capability reader and current
+player guides. See docs/review-assessment-2026-11-15.md for all 16 Workshop PRs,
+merge order, per-item decisions, measured improvements and qualification limits.
+Docs distinguish published Beta 2 packages from current workflow updates, remove
+stale manual catalog steps and synchronize CAF/retail/performance walkthroughs.
+
+Integrated Windows source: 310 Python tests passed/5 skipped, 19 Node tests,
+mypy/Ruff/Prettier pass. The 31-step synthetic Windows Qt/WebChannel/WebGL tour
+passes both review sizes; Linux PR/nightly tour adds independent software-graphics
+coverage. Original-resource and picker boundaries are adapters, not native game
+acceptance. Runtime companion DefJamFFNY-recomp #267 is explicitly assigned to
+v1.2.0, has green CI, and its actual manifest passes Workshop's reader with every
+declared feature enabled. Full source runtime tests: 1875 passed/778 skipped;
+source hygiene zero failures. No merges, releases or asset publication performed.
+
 ## November 15 review — checked internal contracts
 
 B6: TypedDict contracts cover fighter/retail projects, outfits, appearance assets,

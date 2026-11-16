@@ -5,9 +5,9 @@ Windows: 235 Python tests passed, 5 skipped. Source PRs and pushes are authorize
 merges and a new release are not part of this work. Companion runtime PRs must
 be announced separately and assigned to milestone 1.2.0.
 
-Each item below was checked against its implementation, rather than accepting
-the proposed fix as a requirement. “Confirmed” describes the source finding;
-it does not claim native game acceptance. PRs will update completion evidence.
+All 41 items in A–C were assessed and addressed in the PR series below, including
+two adjusted implementation decisions (B6 and B7). “Confirmed” describes the
+source finding; it does not claim native game acceptance.
 
 | Item | Assessment and implementation decision |
 | --- | --- |
@@ -31,7 +31,7 @@ it does not claim native game acceptance. PRs will update completion evidence.
 | B3 | Confirmed three bridge implementations, dropped retail actions, and mixed rendering concerns. Share transport and scene primitives, then extract pure wardrobe, face and artwork helpers with Node tests. |
 | B4 | Confirmed CSS overrides, duplicated layout declarations and important rules. Format first; consolidate shared tokens/components separately from workflow changes. Exclude vendored assets from formatting. |
 | B5 | Confirmed dense Python and no lint gate. Separate formatting from lint fixes; exclude attributed vendored decoders. |
-| B6 | Confirmed untyped internal document boundaries. Add typed internal contracts and a checked adoption path; broad strict checking must account for the intentionally validated dynamic input boundary. |
+| B6 | Confirmed untyped internal document boundaries. Added typed contracts, fully strict outfit operations, checked project functions and the snapshot builder with pinned mypy in CI. Whole-editor strict migration is deliberately incremental: untyped handlers and imported codec/catalog calls remain explicit exceptions. |
 | B7 | Confirmed repeated payload, but measurement found embedded atlases/portrait dominated: 25,193,000 bytes. Remove those unused bytes from the summary (10,026 bytes after), retaining coherent catalogs in snapshots. A catalog-version protocol would add state/ordering complexity for little remaining payload benefit, so that specific proposal is declined. |
 | B8 | Confirmed nested geometry arrays. Use explicitly little-endian typed buffers; retain 32-bit index support instead of assuming Uint16 is always safe. Measure payload and conversion cost. |
 | B9 | Confirmed no Bridge pytest coverage and thin JS coverage. Add synthetic Qt/WebChannel coverage, deterministic native-dialog adapters and a scheduled asset-free tour. Original-asset smoke tests remain a separate local check. |
@@ -61,6 +61,77 @@ CSS; workflow improvements and synthetic UI coverage. A4, A15 and B6 are
 explicitly included although missing from the review's suggested PR sequence.
 
 ## Completion evidence
+
+### Review and merge order
+
+These are stacked source PRs. Follow the order below, then update the next PR's
+base as its parent lands. Nothing has been merged or released by this work.
+The originally parallel capability and documentation PRs now sit on top of the
+implementation stack so their diffs remain focused and the final head combines
+every change.
+
+| Order | PR | Review items / purpose |
+| --- | --- | --- |
+| 1 | [#12](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/12) | A1/A3/A11/C15: version, shared atlas limit, bounded manifest reads |
+| 2 | [#15](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/15) | B5: mechanical Python format, lint gate |
+| 3 | [#16](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/16) | B4 preparation: mechanical first-party UI format |
+| 4 | [#17](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/17) | B1: dispatch handlers/tables and reset helpers |
+| 5 | [#18](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/18) | A5/A13/A14/A15/C17/B9: GUI-thread completion, errors, navigation tests |
+| 6 | [#19](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/19) | B2/B9: native dialog preparation and cancellation/bounds tests |
+| 7 | [#20](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/20) | A4/A6/A7/B7: content cache keys, bounded PNG metadata, lean snapshots |
+| 8 | [#21](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/21) | A9/A10: shared workspace locks, sibling import staging, safe cache retention/clear |
+| 9 | [#22](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/22) | A12: pinned core build environment and complete resolved provenance |
+| 10 | [#23](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/23) | B3/B8: shared frontend/viewers, modules and typed geometry transport |
+| 11 | [#24](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/24) | B4/C12: consolidated CSS, readable type/focus/disabled states |
+| 12 | [#25](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/25) | C1–C6/C11–C14/C16/B9: CAF workflow and scheduled synthetic Qt tour |
+| 13 | [#26](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/26) | C7–C9 and retail C11/C12/C16: donors, layout, body/preview workflow |
+| 14 | [#27](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/27) | B6: checked document contracts and explicit typing adoption scope |
+| 15 | [#14](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/14) | A8/C10: manifest reader and distinct installed build labels |
+| 16 | [#13](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/pull/13) | A2: player guides synchronized with final source UI and this audit |
+
+**Companion runtime change:**
+[DefJamFFNY-recomp #267](https://github.com/vyanhursky/DefJamFFNY-recomp/pull/267),
+assigned to **v1.2.0**, publishes the capability manifest and verifies it against
+the real CLI/recipe constants with AST drift tests. It leaves the existing CLI
+literal readable by older Workshop versions. Workshop's absent-manifest fallback
+also keeps earlier runtimes usable. This is the only runtime companion PR in
+this review. No runtime merge, packaged release or game launch was performed.
+
+### Integrated validation and limits
+
+- Windows integrated source: **310 Python tests passed, 5 skipped**; **19 Node
+  tests passed**; configured mypy adoption set, Ruff and Prettier pass. The static
+  negative probe rejects wrong fighter/snapshot keys and incompatible argument
+  types. The 5 Python skips are target-specific platform checks, not hidden failures.
+- Real Windows synthetic Qt/WebChannel/WebGL tour passes **31 checks** at
+  **1440×940 and 1100×760**. It covers all four Home workflows, unknown Story bytes,
+  backup, project/outfit changes, failed/retried automatic catalogs, keyboard tabs,
+  pinned changes, export readiness/save, retail donors and all deployment modes,
+  and exactly one automatic preview after body import. Captures were inspected
+  locally and stay untracked. Scheduled/PR Linux tours upload text receipts only.
+- Original-resource/catalog/compiler boundaries and native picker answers are
+  deterministic adapters. Synthetic editor coverage does not establish original
+  asset decoding, real compiler output, native gameplay or manual macOS/Linux
+  acceptance. Native package CI separately builds and relocates each of four targets.
+- Runtime companion: **1,875 source unit tests passed, 778 skipped**, source
+  hygiene has zero failures. The pinned toolkit submodule was initialized before
+  the clean native run; earlier sandbox junction/submodule failures were resolved.
+  The actual Workshop reader accepts this companion manifest with every declared
+  feature enabled. Runtime CI is green; milestone assignment was verified.
+- Invented HD project benchmark: repeated validation **118.59 ms → 0.33–0.36 ms**
+  warm; state payload **25,193,000 → 10,026 bytes** after excluding unused embedded
+  image data. B7's catalog-version protocol is declined because the measured
+  remaining catalog payload is small and coherent snapshots avoid ordering state.
+- Invented 12,000-vertex geometry: **2,090,522 → 544,373 bytes**; five-run median
+  encoding **29.48 ms → 6.81 ms** including typed packing. No real-game performance
+  claim is inferred from synthetic measurements.
+- B6 intentionally adopts checking at document/project/outfit/snapshot boundaries;
+  other editor handlers remain a documented migration, not claimed fully strict.
+  A12 pins core dependencies and records the full resolved environment; it does
+  not promise byte-identical archives or a fully locked transitive dependency graph.
+- Part E remains deferred. Original saves/assets and unrelated worktrees remain
+  untouched. No screenshots, extracted game content or generated binaries are
+  added to Git; no PRs are merged and no release is published.
 
 - Release hygiene (A1/A3/A11/C15): 239 Python tests passed, 5 skipped;
   8 Node tests passed. Includes an uninstalled-checkout version test, a real

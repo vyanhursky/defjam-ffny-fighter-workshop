@@ -1,3 +1,9 @@
+import { createFaceControls } from "./face.mjs";
+import { createUIArt } from "./ui-art.mjs";
+import { groupKey, filterOptions } from "./wardrobe.mjs";
+import { unpackPreview, geometryFor } from "./geometry.mjs";
+import { createStage, disposeModel, frameStage } from "./three-stage.mjs";
+import { createBridge } from "./bridge.mjs";
 import * as THREE from "three";
 import { OrbitControls } from "./vendor/OrbitControls.js";
 import { poseMesh } from "./poses.mjs";
@@ -5,8 +11,8 @@ import { blendFace, faceDraft as makeFaceDraft } from "./face-preview.mjs";
 import { performanceEditor } from "./performance.mjs";
 import { gameSetup } from "./setup.mjs";
 import { workshopVersion } from "./version.mjs";
-import { responseError, attachDetails } from "./errors.mjs";
-import { shouldRefreshAppearance } from "./state-render.mjs";
+import { attachDetails } from "./errors.mjs";
+import { shouldRefreshAppearance, createStateRenderer } from "./state-render.mjs";
 
 const $ = (id) => document.getElementById(id);
 // Home chooses a workflow and passes it in the address fragment: story (Story saves) or caf (a fighter project from a Create-a-Fighter).
@@ -40,10 +46,7 @@ async function startFlow() {
     else await act("choose_project", {}, "Opening fighter project…");
   }
 }
-let bridge,
-  current = null,
-  serial = 0,
-  busyCount = 0,
+let current = null,
   options = [],
   selectionKey = null,
   previewEpoch = 0;
@@ -55,12 +58,20 @@ let auditionKey = null,
 let faceDraft = null,
   faceFrame = null,
   faceSceneEpoch = -1;
-const pending = new Map();
+const client = createBridge({
+  onBusy(count, label) {
+    $("busy").hidden = count <= 0;
+    if (label) $("busy-label").textContent = label;
+  },
+  onProgress(message) {
+    $("busy-label").textContent = message;
+    $("status-message").textContent = message;
+  },
+});
 window.__cafAct = (...args) => act(...args);
-const messageLog = [];
+const messageLog = client.messages;
 function record(message, error = false) {
-  messageLog.push({ time: new Date(), message, error });
-  if (messageLog.length > 100) messageLog.shift();
+  client.record(message, error);
   $("log-open").textContent = error ? "Messages ●" : "Messages";
 }
 function toast(message, error = false) {
@@ -71,18 +82,8 @@ function toast(message, error = false) {
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => ($("toast").hidden = true), error ? 12000 : 6500);
 }
-function call(action, args = {}, label = null) {
-  const id = String(++serial);
-  if (label) {
-    busyCount++;
-    $("busy-label").textContent = label;
-    $("busy").hidden = false;
-  }
-  return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject, label });
-    bridge.dispatch(JSON.stringify({ id, action, args }));
-  });
-}
+const call = (action, args = {}, label = null) => client.call(action, args, label);
+
 function fail(error) {
   if (/Game setup/.test(error.message || "")) setup.open(current?.setup);
   toast(error.message || String(error), true);
@@ -174,6 +175,15 @@ function projectDetails() {
 function readyFighter() {
   return Boolean(current?.fields?.has_fighter);
 }
+const { renderBackups } = createStateRenderer({ $, act, discard });
+const { faceMethod, syncFace, renderFacePresets } = createFaceControls({
+  $,
+  readyFighter,
+  makeOptions,
+  act,
+  renderFaceSculpt,
+});
+const { previewUIArt, renderUIArt } = createUIArt({ $, call, fail, state: () => current });
 function renderState(state, forcePreview = false) {
   const appearanceChanged = shouldRefreshAppearance(current, state, forcePreview);
   if (appearanceChanged) {
@@ -371,46 +381,7 @@ function renderState(state, forcePreview = false) {
     queuePreview(0);
   }
 }
-function renderBackups(state) {
-  const rows = state.backups || [];
-  $("backups-box").hidden = !state.selected || Boolean(state.project);
-  $("backups").replaceChildren(
-    ...(rows.length
-      ? rows.slice(0, 4).map((row) => {
-          const line = document.createElement("div");
-          line.className = "backup-row";
-          const when = new Date(row.when);
-          const text = document.createElement("span");
-          text.textContent =
-            when.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
-            " " +
-            when.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-          const button = document.createElement("button");
-          button.textContent = "Restore";
-          button.onclick = () => {
-            if (!discard()) return;
-            if (
-              confirm(
-                "Restore " +
-                  state.selected +
-                  " from the backup of " +
-                  when.toLocaleString() +
-                  "?\n\nYour current save is backed up first. Close the game before restoring.",
-              )
-            )
-              act("restore_backup", { id: row.id }, "Restoring backup…");
-          };
-          line.append(text, button);
-          return line;
-        })
-      : [
-          Object.assign(document.createElement("div"), {
-            className: "backup-row",
-            textContent: "No backups of this profile yet.",
-          }),
-        ]),
-  );
-}
+
 const ATLAS_SLOTS = [
   ["a", "Body", "A", "Skin and body artwork."],
   ["b", "Apparel & accessories", "B", "Shirts, jackets, hats, jewellery and other worn items."],
@@ -461,36 +432,7 @@ function syncPortrait() {
 }
 for (const radio of document.querySelectorAll("input[name=portrait-source]")) radio.onchange = syncPortrait;
 syncPortrait();
-function faceMethod() {
-  return document.querySelector("input[name=face-method]:checked").value;
-}
-function syncFace(state) {
-  const sculpt = state?.face_sculpt || {},
-    project = Boolean(state?.project);
-  const radios = Object.fromEntries(
-    [...document.querySelectorAll("input[name=face-method]")].map((radio) => [radio.value, radio]),
-  );
-  const locked = { presets: Boolean(sculpt.present), sliders: !project || Boolean(sculpt.imported), mesh: !project };
-  let method = faceMethod();
-  if (sculpt.imported) method = "mesh";
-  else if (sculpt.present) method = "sliders";
-  if (locked[method]) method = "presets";
-  for (const [name, radio] of Object.entries(radios)) {
-    radio.disabled = locked[name] || !readyFighter();
-    radio.closest(".choice-opt").classList.toggle("locked", locked[name]);
-  }
-  radios[method].checked = true;
-  for (const panel of document.querySelectorAll(".face-panel")) panel.hidden = panel.dataset.face !== method;
-  $("face-method-note").textContent = !project
-    ? "Standalone fighter projects also offer proportion sliders and imported head meshes."
-    : sculpt.imported
-      ? "This outfit uses an imported head mesh, so presets and sliders are off."
-      : sculpt.present
-        ? "This outfit has slider changes saved, so the original presets are off."
-        : "Each outfit uses one method at a time.";
-  $("face-method-clear").hidden = !sculpt.present;
-  $("face-method-clear").disabled = !sculpt.present;
-}
+
 for (const radio of document.querySelectorAll("input[name=face-method]")) radio.onchange = () => syncFace(current);
 $("face-method-clear").onclick = () => act("face_clear");
 function choiceFor(select, descriptions) {
@@ -644,28 +586,7 @@ function revertFacePreview() {
   renderFaceSculpt(current);
   applyFacePreview();
 }
-function renderFacePresets(state) {
-  renderFaceSculpt(state);
-  const root = $("face-presets");
-  root.replaceChildren();
-  for (const row of state.face_presets || []) {
-    const label = document.createElement("label");
-    label.textContent = row.label;
-    const select = document.createElement("select");
-    select.id = "face-" + row.id;
-    makeOptions(select, row.options, row.value);
-    if (!row.options.some((option) => option.value === row.value)) {
-      const preserved = new Option("Unavailable saved preset · preserved", String(row.value));
-      preserved.disabled = true;
-      select.prepend(preserved);
-      select.value = String(row.value);
-    }
-    select.disabled = !readyFighter() || !row.options.length;
-    select.onchange = () => act("appearance", { changes: { [row.id]: Number(select.value) } }, "Updating face…");
-    label.append(select);
-    root.append(label);
-  }
-}
+
 function renderBlazin(state) {
   const catalog = state.blazin,
     rows = catalog?.options || [],
@@ -699,9 +620,7 @@ function renderBlazin(state) {
   $("inherit-blazin").disabled = !readyFighter() || !rows.length;
   $("blazin-status").textContent = catalog?.error || `${rows.length} moves available · all fighters and styles`;
 }
-function groupKey(o) {
-  return `${o.garment}||${(Number(o.key.split(":")[1]) & 0xff00ffff) >>> 0}`;
-}
+
 async function loadCategory() {
   const epoch = ++categoryEpoch;
   if (!readyFighter() || !current.preview_available) {
@@ -718,7 +637,7 @@ async function loadCategory() {
 }
 function wardrobe() {
   const query = $("search").value.toLowerCase().trim(),
-    filtered = options.filter((o) => o.label.toLowerCase().includes(query));
+    filtered = filterOptions(options, query);
   const groups = new Map();
   for (const o of filtered) if (!groups.has(groupKey(o))) groups.set(groupKey(o), o.garment);
   const selected = options.find((o) => o.key === selectionKey),
@@ -781,18 +700,9 @@ function tryOn() {
   queuePreview();
 }
 
-const scene = new THREE.Scene();
-scene.background = null;
-const camera = new THREE.PerspectiveCamera(32, 1, 0.01, 1000);
-const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setClearColor(0, 0);
-renderer.outputColorSpace = THREE.SRGBColorSpace;
+const { scene, camera, renderer, controls } = createStage({ THREE, OrbitControls, viewport: $("viewport") });
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
-$("viewport").append(renderer.domElement);
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
 controls.dampingFactor = 0.075;
 controls.minDistance = 0.2;
 controls.maxDistance = 100;
@@ -810,11 +720,7 @@ let model = new THREE.Group(),
 scene.add(model);
 function dispose() {
   performanceUI.stop();
-  for (const child of model.children) {
-    child.geometry?.dispose();
-    child.material?.dispose();
-    child.skeleton?.dispose();
-  }
+  disposeModel(model);
   for (const texture of atlasTextures) texture.dispose();
   atlasTextures = [];
   scene.remove(model);
@@ -822,28 +728,10 @@ function dispose() {
   scene.add(model);
 }
 function frame(view = "fit") {
-  if (!bounds) return;
-  const [lo, hi] = bounds;
-  const center = new THREE.Vector3(...lo).add(new THREE.Vector3(...hi)).multiplyScalar(0.5),
-    height = hi[1] - lo[1];
-  let target = center,
-    distance = height * 1.98;
-  if (view === "face") {
-    target = new THREE.Vector3(center.x, hi[1] - height * 0.12, center.z);
-    distance = height * 0.61;
-  }
-  controls.target.copy(target);
-  camera.position.set(
-    target.x,
-    target.y + (view === "face" ? 0 : height * 0.03),
-    target.z + (view === "back" ? -distance : distance),
-  );
-  camera.near = Math.max(0.001, height * 0.001);
-  camera.far = height * 100;
-  camera.updateProjectionMatrix();
-  controls.update();
+  frameStage({ THREE, camera, controls, bounds, view });
 }
 async function renderScene(data, keepCamera, epoch) {
+  data = unpackPreview(data);
   const textures = {};
   const loader = new THREE.TextureLoader();
   await Promise.all(
@@ -867,11 +755,7 @@ async function renderScene(data, keepCamera, epoch) {
   sceneData = data;
   faceSceneEpoch = epoch;
   for (const part of data.meshes) {
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(part.positions.flat(), 3));
-    geometry.setAttribute("normal", new THREE.Float32BufferAttribute(part.normals.flat(), 3));
-    geometry.setAttribute("uv", new THREE.Float32BufferAttribute(part.uv.flat(), 2));
-    geometry.setIndex(part.indices);
+    const geometry = geometryFor(THREE, part);
     const material = materialFor(textures[part.atlas], part.transparent);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData = { atlas: part.atlas, transparent: part.transparent, source: part };
@@ -1002,12 +886,7 @@ async function updatePreview(epoch) {
     }
   }
 }
-new ResizeObserver(() => {
-  const box = $("viewport");
-  renderer.setSize(box.clientWidth, box.clientHeight, false);
-  camera.aspect = box.clientWidth / Math.max(1, box.clientHeight);
-  camera.updateProjectionMatrix();
-}).observe($("viewport"));
+
 const performanceUI = performanceEditor({
   $,
   call,
@@ -1024,57 +903,6 @@ renderer.setAnimationLoop((now) => {
   renderer.render(scene, camera);
 });
 
-let uiArtEpoch = 0;
-async function previewUIArt() {
-  const epoch = ++uiArtEpoch,
-    role = $("ui-role").value;
-  $("ui-image").hidden = true;
-  const row = current?.ui_art?.roles.find((r) => r.id === role);
-  $("ui-clear").disabled = !current?.project || !row?.own;
-  $("ui-role-status").textContent = row
-    ? `${row.label} · ${row.origin.source}${row.origin.role ? " · " + row.origin.role : ""}`
-    : "Create or open a fighter project to import UI artwork.";
-  if (!current?.project || !role) return;
-  try {
-    const result = await call("ui_preview", { role });
-    if (epoch !== uiArtEpoch) return;
-    $("ui-image").hidden = !result?.png;
-    if (result?.png) $("ui-image").src = result.png;
-    window.__cafUIArt = { role, ready: true, hasImage: Boolean(result?.png) };
-  } catch (e) {
-    if (epoch === uiArtEpoch) fail(e);
-  }
-}
-function renderUIArt(state) {
-  const ui = state.ui_art,
-    role = $("ui-role").value;
-  $("ui-donor").value = ui?.donor || "retail/blaze";
-  $("ui-scale").value = String(ui?.hd_scale || 4);
-  $("ui-role").replaceChildren();
-  const groups = new Map();
-  for (const row of ui?.roles || []) {
-    let group = groups.get(row.group);
-    if (!group) {
-      group = document.createElement("optgroup");
-      group.label = row.group;
-      groups.set(row.group, group);
-      $("ui-role").append(group);
-    }
-    group.append(new Option(row.label, row.id));
-  }
-  if ((ui?.roles || []).some((r) => r.id === role)) $("ui-role").value = role;
-  for (const id of ["ui-donor", "ui-scale", "ui-role", "ui-apply-settings", "ui-retail", "ui-import", "ui-clear-all"])
-    $(id).disabled = !state.project;
-  const outfit = state.outfits?.find((r) => r.id === state.active_outfit);
-  $("ui-outfit").textContent = state.project
-    ? `Editing ${outfit?.name || "Outfit 1"}. ${state.active_outfit === "default" ? "These UI defaults are shared with the other outfits." : "Overrides apply to this outfit."}`
-    : "UI artwork belongs to standalone fighter projects.";
-  const variants = (ui?.roles || []).filter((r) => r.group !== "All layouts");
-  $("ui-coverage").textContent = ui
-    ? `${variants.filter((r) => r.available).length}/24 roles use project images. Remaining roles inherit the UI donor. ${ui.hd_scale === 1 ? "Native output." : ui.hd_scale + "× HD tiles accompany the native fallback."}`
-    : "";
-  previewUIArt();
-}
 $("ui-role").onchange = previewUIArt;
 $("ui-import").onclick = () => act("choose_ui_art", { role: $("ui-role").value }, "Importing UI artwork…");
 $("ui-clear").onclick = () => act("ui_clear", { role: $("ui-role").value });
@@ -1269,22 +1097,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 new QWebChannel(qt.webChannelTransport, (channel) => {
-  bridge = channel.objects.editor;
-  bridge.response.connect((raw) => {
-    const message = JSON.parse(raw),
-      task = pending.get(message.id);
-    if (!task) return;
-    pending.delete(message.id);
-    if (task.label) {
-      busyCount--;
-      $("busy").hidden = busyCount <= 0;
-    }
-    if (message.error) task.reject(responseError(message));
-    else task.resolve(message.result);
-  });
-  bridge.progress.connect((message) => {
-    $("busy-label").textContent = message;
-    $("status-message").textContent = message;
-  });
+  client.connect(channel.objects.editor);
+
   act("boot", {}, "Loading local fighter data…").then(startFlow);
 });

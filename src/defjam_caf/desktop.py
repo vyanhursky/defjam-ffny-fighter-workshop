@@ -180,7 +180,7 @@ class Bridge(QObject):
             action, args = prepared.action, prepared.args
             if self._pending_navigation is not None:
                 return self.response.emit(json.dumps(dict(id=ident, result=None)))
-            future = self.pool.submit(self.editor.request, action, args)
+            future = self.pool.submit(self._request, action, args)
             self._requests[ident] = action not in self.BACKGROUND
             self.busy += 1
             self.visible_busy += self._requests[ident]
@@ -190,6 +190,14 @@ class Bridge(QObject):
 
     def finish(self, ident, task):
         self._completed.emit(ident, task)
+
+    def _request(self, action, args):
+        result = self.editor.request(action, args)
+        if action in {"preview", "retail_preview"}:
+            from .preview_transport import pack_preview
+
+            return pack_preview(result)
+        return result
 
     @Slot(str, object)
     def _deliver(self, ident, task):

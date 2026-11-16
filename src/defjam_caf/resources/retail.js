@@ -1,13 +1,20 @@
+import { unpackPreview, geometryFor } from "./geometry.mjs";
+import { createStage, disposeModel, frameStage } from "./three-stage.mjs";
+import { createBridge } from "./bridge.mjs";
 import * as THREE from "three";
 import { OrbitControls } from "./vendor/OrbitControls.js";
 import { gameSetup } from "./setup.mjs";
 import { workshopVersion } from "./version.mjs";
-import { responseError, attachDetails } from "./errors.mjs";
-const $ = (id) => document.getElementById(id),
-  pending = new Map();
-let serial = 0,
-  bridge,
-  state,
+import { attachDetails } from "./errors.mjs";
+const $ = (id) => document.getElementById(id);
+const client = createBridge({
+  onBusy(count, label) {
+    $("busy").hidden = count <= 0;
+    if (label) $("busy-label").textContent = label;
+  },
+});
+const pending = client.pending;
+let state,
   shapeRows = [],
   epoch = 0,
   detailDraft = null,
@@ -47,14 +54,10 @@ async function startFlow() {
     else await act("choose_retail_open");
   }
 }
-function call(action, args = {}) {
-  const id = String(++serial);
-  return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject });
-    bridge.dispatch(JSON.stringify({ id, action, args }));
-  });
-}
+const call = (action, args = {}, label = null) => client.call(action, args, label);
+
 function status(text, error = false) {
+  client.record(text, error);
   $("status-message").textContent = text;
   $("toast").textContent = text;
   $("toast").classList.toggle("error", error);
@@ -63,28 +66,25 @@ function status(text, error = false) {
   status.timer = setTimeout(() => ($("toast").hidden = true), 10000);
 }
 async function act(action, args = {}, label = "Updating fighter…") {
-  if (pending.size) return null;
-  $("busy-label").textContent = label;
-  $("busy").hidden = false;
-  try {
-    if (detailDraft) {
-      await call("retail_draft", detailDraft);
-      detailDraft = null;
+  return client.enqueue(async () => {
+    try {
+      if (detailDraft) {
+        await call("retail_draft", detailDraft);
+        detailDraft = null;
+      }
+      const result = await call(action, args, label);
+      if (result?.retail) render(result);
+      if (result?.snapshot?.retail) render(result.snapshot);
+      if (result?.message) status(result.message);
+      return result;
+    } catch (e) {
+      if (/Game setup/.test(e.message)) setup.open(state?.setup);
+      status(e.message, true);
+      attachDetails($("toast"), e.detail);
+      if (e.detail) clearTimeout(status.timer);
+      return null;
     }
-    const result = await call(action, args);
-    if (result?.retail) render(result);
-    if (result?.snapshot?.retail) render(result.snapshot);
-    if (result?.message) status(result.message);
-    return result;
-  } catch (e) {
-    if (/Game setup/.test(e.message)) setup.open(state?.setup);
-    status(e.message, true);
-    attachDetails($("toast"), e.detail);
-    if (e.detail) clearTimeout(status.timer);
-    return null;
-  } finally {
-    $("busy").hidden = true;
-  }
+  });
 }
 // Game setup is shared with the fighter editor; after it changes, the studio reloads its own catalog.
 const setup = gameSetup({
@@ -314,28 +314,28 @@ $("ui-clear").onclick = () => act("retail_ui", { role: $("role").value });
 $("texture").onclick = () => act("choose_retail_texture", { shape: $("shape").value });
 $("clear-texture").onclick = () => act("retail_texture", { shape: $("shape").value });
 $("export").onclick = () => act("choose_retail_export", {}, "Compiling and validating the complete fighter…");
-const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-$("viewport").append(renderer.domElement);
-const scene = new THREE.Scene(),
-  model = new THREE.Group();
+const { scene, camera, renderer, controls } = createStage({
+  THREE,
+  OrbitControls,
+  viewport: $("viewport"),
+  fov: 35,
+  far: 5000,
+});
+const model = new THREE.Group();
 scene.add(model);
-const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 5000),
-  controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
 let bounds,
   images = [];
 function frame(direction = 1) {
-  if (!bounds) return;
-  const center = new THREE.Vector3(...bounds[0]).add(new THREE.Vector3(...bounds[1])).multiplyScalar(0.5),
-    height = bounds[1][1] - bounds[0][1];
-  controls.target.copy(center);
-  camera.position.set(center.x, center.y + height * 0.04, center.z + direction * height * 1.9);
-  camera.near = Math.max(0.01, height / 1000);
-  camera.far = height * 100;
-  camera.updateProjectionMatrix();
-  controls.update();
+  frameStage({
+    THREE,
+    camera,
+    controls,
+    bounds,
+    view: direction < 0 ? "back" : "fit",
+    factor: 1.9,
+    lift: 0.04,
+    near: 0.01,
+  });
 }
 $("fit").onclick = () => frame();
 $("front").onclick = () => frame();
@@ -345,13 +345,9 @@ $("wireframe").onchange = () => {
 };
 $("preview").onclick = async () => {
   const mine = ++epoch,
-    result = await act("retail_preview", {}, "Decoding the static model…");
+    result = unpackPreview(await act("retail_preview", {}, "Decoding the static model…"));
   if (!result || mine !== epoch) return;
-  for (const mesh of [...model.children]) {
-    mesh.geometry.dispose();
-    mesh.material.dispose();
-    model.remove(mesh);
-  }
+  disposeModel(model);
   for (const image of images) image.dispose();
   images = [];
   const loader = new THREE.TextureLoader(),
@@ -366,11 +362,7 @@ $("preview").onclick = async () => {
     }),
   );
   for (const part of result.meshes) {
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(part.positions.flat(), 3));
-    geometry.setAttribute("normal", new THREE.Float32BufferAttribute(part.normals.flat(), 3));
-    geometry.setAttribute("uv", new THREE.Float32BufferAttribute(part.uv.flat(), 2));
-    geometry.setIndex(part.indices);
+    const geometry = geometryFor(THREE, part);
     model.add(
       new THREE.Mesh(
         geometry,
@@ -390,25 +382,12 @@ $("preview").onclick = async () => {
   $("preview-note").textContent = result.notices.join(" · ");
   window.__retailPreview = { ready: true, meshes: result.meshes.length, shapes: result.shapes };
 };
-new ResizeObserver(() => {
-  const box = $("viewport");
-  renderer.setSize(box.clientWidth, box.clientHeight, false);
-  camera.aspect = box.clientWidth / Math.max(1, box.clientHeight);
-  camera.updateProjectionMatrix();
-}).observe($("viewport"));
+
 renderer.setAnimationLoop(() => {
   controls.update();
   renderer.render(scene, camera);
 });
 new QWebChannel(qt.webChannelTransport, (channel) => {
-  bridge = channel.objects.editor;
-  bridge.response.connect((raw) => {
-    const r = JSON.parse(raw),
-      task = pending.get(r.id);
-    if (!task) return;
-    pending.delete(r.id);
-    if (r.error) task.reject(responseError(r));
-    else task.resolve(r.result);
-  });
+  client.connect(channel.objects.editor);
   act("retail_snapshot").then(startFlow);
 });

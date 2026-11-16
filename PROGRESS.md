@@ -1,5 +1,25 @@
 # Progress and handoff
 
+## November 15 review — frontend modules and geometry transport
+
+B3/B8: Home/CAF/retail share request correlation, error details, visible busy
+counts, bounded message history and serial action support. Retail actions queue
+instead of disappearing while a request is pending. Both viewers share renderer,
+controls, resize, framing and disposal. Face controls, UI artwork, wardrobe pure
+helpers and backup/state rendering are separate modules. Original deformation
+and performance playback remain in their established modules.
+
+Only WebChannel preview responses use bounded little-endian float32 attributes
+and uint16/uint32 indices; editor/script preview APIs retain list geometry.
+Browser decoding checks dimensions/types/index bounds and retains source rows
+for posing while constructing GPU attributes from typed buffers. Invented 12,000
+vertex fixture: 2,090,522 → 544,373 JSON bytes; five-run median list encoding
+29.48 ms versus packing plus encoding 6.81 ms. Synthetic metrics do not claim
+real-game performance. Windows tests: 300 passed/5 skipped; 17 Node tests passed;
+Ruff/Prettier checks pass. Real Windows Qt/WebChannel/WebGL2 rendered the invented
+triangle with preview_ready=true in 0.27 s (build/ui-geometry/triangle-startup.json).
+No original assets or saves were used, and no native gameplay is claimed.
+
 ## November 15 review — build dependency provenance
 
 A12: native CI pins setuptools/wheel, Qt, PyInstaller, Pillow and NumPy via

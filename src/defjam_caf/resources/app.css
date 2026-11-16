@@ -1006,8 +1006,8 @@ body [hidden] {
   .panel-scroll {
     padding: 0 18px;
   }
-/* Pages: profile and project sidebar */
-.profiles {
+  /* Pages: profile and project sidebar */
+  .profiles {
     padding-left: 9px;
     padding-right: 9px;
   }

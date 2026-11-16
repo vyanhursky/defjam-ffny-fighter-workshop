@@ -60,7 +60,10 @@ def test_a_version_is_judged_feature_by_feature_from_its_files(tmp_path):
 def test_scan_lists_versions_newest_first_and_marks_the_installed_one(tmp_path):
     root, old, new = app_folder(tmp_path)
     found = runtimes.scan(root, FORMAT)
-    assert [row["label"] for row in found["candidates"]] == ["Game 1.3.0", "Game 1.2.0"]
+    assert [row["label"] for row in found["candidates"]] == [
+        "Game 1.3.0 · build aaaaaaaa",
+        "Game 1.2.0 · build e950a7ff",
+    ]
     assert [row["note"] for row in found["candidates"]] == ["", "installed"]
     assert found["data"] == str(root / "data") and found["current"] == "1.2.0"
     assert found["candidates"][0]["complete"] and not found["candidates"][1]["complete"]
@@ -95,6 +98,50 @@ def test_default_folder_is_only_offered_where_the_app_installs(tmp_path):
     assert runtimes.default_folder(platform="linux", home=tmp_path, environ={}) is None
 
 
+def test_manifest_survives_script_refactor_and_invalidates_cache(tmp_path):
+    path = source(tmp_path / "runtime", OLD)
+    (path / runtimes.CONTRACT).write_text("COMMAND_NAMES = make_commands()\n")
+    manifest = path / runtimes.MANIFEST
+    manifest.write_text(json.dumps(dict(api=1, commands=NEW, recipe_format=FORMAT)))
+    assert runtimes.inspect(path, FORMAT)["complete"]
+    manifest.write_text(json.dumps(dict(api=1, commands=OLD, recipe_format="other-format")))
+    assert not runtimes.inspect(path, FORMAT)["features"]["export"]
+    manifest.unlink()
+    assert not runtimes.inspect(path, FORMAT)["usable"]
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "{",
+        '{"api":2,"commands":[],"recipe_format":"caf-fighter-1"}',
+        '{"api":true,"commands":[],"recipe_format":"caf-fighter-1"}',
+        '{"api":1,"api":1}',
+        " " * (runtimes.MAX_MANIFEST_BYTES + 1),
+    ],
+)
+def test_present_invalid_manifest_never_falls_back_to_regex(tmp_path, raw):
+    path = source(tmp_path / "runtime", NEW, FORMAT)
+    (path / runtimes.MANIFEST).write_text(raw)
+    row = runtimes.inspect(path, FORMAT)
+    assert not row["usable"] and row["manifest_error"]
+
+
+def test_release_label_matches_header_and_scan_without_mutating_cached_inspection(tmp_path):
+    root, old, _ = app_folder(tmp_path)
+    (root / "app/installed.json").write_text(json.dumps({"version": "v1.2.0-beta.2", "source": str(old)}))
+    found = next(r for r in runtimes.scan(root, FORMAT)["candidates"] if r["path"] == str(old))
+    assert found["label"] == "Game 1.2.0 beta 2 · build e950a7ff"
+    assert runtimes.describe(old, FORMAT)["label"] == found["label"]
+    assert "label" not in runtimes.inspect(old, FORMAT)
+
+
+def test_relative_version_source_keeps_its_build_label(tmp_path, monkeypatch):
+    checkout = source(tmp_path / "1.2.0-abcdef012345/source", NEW, FORMAT)
+    monkeypatch.chdir(tmp_path)
+    assert runtimes.describe(checkout.relative_to(tmp_path), FORMAT)["label"] == "Game 1.2.0 · build abcdef01"
+
+
 def test_the_choice_is_remembered_and_actions_refuse_a_version_that_cannot_do_them(tmp_path):
     root, old, new = app_folder(tmp_path)
     workspace = tmp_path / "work"
@@ -107,7 +154,9 @@ def test_the_choice_is_remembered_and_actions_refuse_a_version_that_cannot_do_th
     assert len(found["candidates"]) == 2
 
     snapshot = editor.request("setup_use", {"runtime": str(old), "folder": str(root)})
-    assert snapshot["setup"]["runtime"]["label"] == "Game 1.2.0" and snapshot["setup"]["folder"] == str(root)
+    assert snapshot["setup"]["runtime"]["label"] == "Game 1.2.0 · build e950a7ff" and snapshot["setup"][
+        "folder"
+    ] == str(root)
     assert snapshot["setup"]["ready"]
     with pytest.raises(SaveError, match="Voice, entrance and AI tools is not available in Game 1.2.0"):
         editor.request("performance_connect", {})

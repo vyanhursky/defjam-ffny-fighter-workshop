@@ -203,6 +203,16 @@ calls retain side effects, and imported pytest fixtures remain registered.
 Validation after formatting and after lint fixes: 239 Python tests passed,
 5 skipped; 8 Node tests passed. Ruff format/check and diff check pass. This is
 source maintenance, with no new native-game acceptance claim.
+## November 15 review — runtime capabilities and labels
+
+A8/C10: prefer a bounded, strictly checked capability manifest, with the legacy
+source reader only when no manifest exists. Manifest changes invalidate the
+cache, whose rows are no longer mutated by scan/header labels. Installed release
+records and short build hashes distinguish builds consistently in setup/header.
+Reader validation: 246 Python tests passed, 5 skipped on Windows, including
+manifest/script-refactor, absent/invalid/oversized/changed manifests and label
+agreement. The companion producer is a separate source-only runtime PR for
+milestone v1.2.0; this entry does not claim it is merged or shipped.
 
 ## November 15 review — release hygiene
 

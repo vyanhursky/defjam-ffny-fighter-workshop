@@ -62,10 +62,7 @@ class Editor:
         self.last_export = None
         self.runtime = remembered.recall(self.workspace, "runtime")
         self.project = self.project_path = self.project_hash = None
-        self.portrait_edit = None
-        self.metadata_edit = None
-        self.texture_edit = None
-        self.outfit_draft = None
+        self._clear_drafts()
         self.active_outfit = outfits.DEFAULT
         self._project_base_document = self._project_base = None
         from .retail import Session
@@ -156,9 +153,7 @@ class Editor:
         digest = projects.write(path, document)
         self.project, self.project_path, self.project_hash = document, Path(path), digest
         self.profile = None
-        self.portrait_edit = self.metadata_edit = None
-        self.texture_edit = None
-        self.outfit_draft = None
+        self._clear_drafts()
         self.edits, self.history = {}, []
         return self.snapshot()
 
@@ -239,7 +234,7 @@ class Editor:
         """Leave the open fighter project so a workflow can start clean. Story profiles reload from the data folder."""
         self.project = self.project_path = self.project_hash = None
         self.active_outfit = outfits.DEFAULT
-        self.outfit_draft = self.portrait_edit = self.metadata_edit = self.texture_edit = None
+        self._clear_drafts()
         self.edits, self.history = {}, []
         return self.open_data(self.data) if self.data else self.snapshot()
 
@@ -640,480 +635,560 @@ class Editor:
         result["preview_only"] = dict(changes=changes or {}, hide_clothes=hide_clothes)
         return result
 
+    def _clear_drafts(self):
+        self.outfit_draft = self.portrait_edit = self.metadata_edit = self.texture_edit = None
+
     def request(self, action, args):
-        if action == "performance_connect":
-            from .performance_api import Link
+        handler = self.ACTIONS.get(action)
+        if handler is None and isinstance(action, str) and action.startswith("retail_"):
+            handler = self.ACTIONS["retail_*"]
+        if handler is None:
+            raise SaveError("Unsupported editor action")
+        return handler(self, action, args)
 
-            if self.data is None:
-                raise SaveError("Open your game data directory first")
-            self.performance_link = Link(self.need_runtime(args, "tools"), self.data, self.workspace)
-            return self.snapshot()
-        if action in ("performance_audio", "performance_animation"):
-            if self.performance_link is None:
-                raise SaveError("Connect compatible fighter tools first")
-            if action == "performance_audio" and args.get("override"):
-                from . import performance
+    def _request_performance_connect(self, action, args):
+        from .performance_api import Link
 
-                encoded = (
-                    self.project_document()
-                    .get("performance", {})
-                    .get("voice", {})
-                    .get("clips", {})
-                    .get(args["override"])
-                )
-                if encoded is None:
-                    raise SaveError("No imported clip in this slot")
-                performance.audio_bytes(encoded)
-                return dict(mime="audio/wav", data=encoded)
-            return (self.performance_link.voice if action == "performance_audio" else self.performance_link.animation)(
-                args
-            )
-        if action in ("performance_set", "performance_clip", "performance_clear"):
+        if self.data is None:
+            raise SaveError("Open your game data directory first")
+        self.performance_link = Link(self.need_runtime(args, "tools"), self.data, self.workspace)
+        return self.snapshot()
+
+    def _request_performance_audio(self, action, args):
+        if self.performance_link is None:
+            raise SaveError("Connect compatible fighter tools first")
+        if action == "performance_audio" and args.get("override"):
             from . import performance
 
-            if self.project is None:
-                raise SaveError("Create a standalone fighter project to author performance resources")
-            document = self.project_document()
-            settings = copy.deepcopy(document.get("performance", {}))
-            if action == "performance_clip":
-                import base64
+            encoded = (
+                self.project_document().get("performance", {}).get("voice", {}).get("clips", {}).get(args["override"])
+            )
+            if encoded is None:
+                raise SaveError("No imported clip in this slot")
+            performance.audio_bytes(encoded)
+            return dict(mime="audio/wav", data=encoded)
+        return (self.performance_link.voice if action == "performance_audio" else self.performance_link.animation)(args)
 
-                raw = base64.b64decode(args["wav"], validate=True) if args.get("wav") is not None else None
-                settings = performance.set_clip(settings, args["target"], raw)
-                if self.performance_link is None:
-                    raise SaveError("Connect compatible fighter tools first")
-                self.performance_link.call("workshop-check", settings)
-            elif action == "performance_clear":
-                if args.get("section") not in ("voice", "intro", "victory", "ai"):
-                    raise SaveError("Unknown performance section")
-                settings.pop(args["section"], None)
-            else:
-                if self.performance_link is None:
-                    raise SaveError("Connect compatible fighter tools first")
-                section = args["section"]
-                if section not in ("voice", "intro", "victory", "ai"):
-                    raise SaveError("Unknown performance section")
-                settings[section] = copy.deepcopy(args["value"])
-                if section == "voice" and not args.get("reset_clips"):
-                    settings[section]["clips"] = copy.deepcopy(
-                        document.get("performance", {}).get("voice", {}).get("clips", {})
-                    )
-                performance.validate(settings)
-                self.performance_link.call("workshop-check", settings)
-            document["performance"] = performance.validate(settings)
-            candidate = projects.validate(document)
-            if candidate == self.project_document():
-                return self.snapshot()
-            self.remember()
-            self.outfit_draft = candidate
-            self.edits = {}
-            self.portrait_edit = self.texture_edit = self.metadata_edit = None
+    def _request_performance_set(self, action, args):
+        from . import performance
+
+        if self.project is None:
+            raise SaveError("Create a standalone fighter project to author performance resources")
+        document = self.project_document()
+        settings = copy.deepcopy(document.get("performance", {}))
+        if action == "performance_clip":
+            import base64
+
+            raw = base64.b64decode(args["wav"], validate=True) if args.get("wav") is not None else None
+            settings = performance.set_clip(settings, args["target"], raw)
+            if self.performance_link is None:
+                raise SaveError("Connect compatible fighter tools first")
+            self.performance_link.call("workshop-check", settings)
+        elif action == "performance_clear":
+            if args.get("section") not in ("voice", "intro", "victory", "ai"):
+                raise SaveError("Unknown performance section")
+            settings.pop(args["section"], None)
+        else:
+            if self.performance_link is None:
+                raise SaveError("Connect compatible fighter tools first")
+            section = args["section"]
+            if section not in ("voice", "intro", "victory", "ai"):
+                raise SaveError("Unknown performance section")
+            settings[section] = copy.deepcopy(args["value"])
+            if section == "voice" and not args.get("reset_clips"):
+                settings[section]["clips"] = copy.deepcopy(
+                    document.get("performance", {}).get("voice", {}).get("clips", {})
+                )
+            performance.validate(settings)
+            self.performance_link.call("workshop-check", settings)
+        document["performance"] = performance.validate(settings)
+        candidate = projects.validate(document)
+        if candidate == self.project_document():
             return self.snapshot()
-        if action == "fighting_style":
-            mode = args.get("mode")
-            if mode not in ("caf", "retail"):
-                raise SaveError("Choose CAF combination or Retail fighter moveset")
-            row = None
-            if mode == "retail":
-                if not self.movesets:
-                    raise SaveError(self.moveset_error)
-                row = self.movesets.select(args.get("fighter"))
-            if self.project is None:
-                if row:
-                    return self.stage({"moveset_core": row["core"]})
-                return self.stage({"styles": args["styles"]})
-            document = self.project_document()
+        self.remember()
+        self.outfit_draft = candidate
+        self.edits = {}
+        self.portrait_edit = self.texture_edit = self.metadata_edit = None
+        return self.snapshot()
+
+    def _request_fighting_style(self, action, args):
+        mode = args.get("mode")
+        if mode not in ("caf", "retail"):
+            raise SaveError("Choose CAF combination or Retail fighter moveset")
+        row = None
+        if mode == "retail":
+            if not self.movesets:
+                raise SaveError(self.moveset_error)
+            row = self.movesets.select(args.get("fighter"))
+        if self.project is None:
             if row:
-                document["fighter"]["retail_moveset"] = row["key"]
-            else:
-                document["fighter"].pop("retail_moveset", None)
-                document["fighter"]["styles"] = args["styles"]
-            candidate = projects.validate(document)
-            self.remember()
-            self.outfit_draft = candidate
-            self.edits = {}
-            self.portrait_edit = self.texture_edit = self.metadata_edit = None
-            return self.snapshot()
-        if action in ("face_export", "face_import", "face_sliders", "face_clear"):
-            from . import face_geometry
+                return self.stage({"moveset_core": row["core"]})
+            return self.stage({"styles": args["styles"]})
+        document = self.project_document()
+        if row:
+            document["fighter"]["retail_moveset"] = row["key"]
+        else:
+            document["fighter"].pop("retail_moveset", None)
+            document["fighter"]["styles"] = args["styles"]
+        candidate = projects.validate(document)
+        self.remember()
+        self.outfit_draft = candidate
+        self.edits = {}
+        self.portrait_edit = self.texture_edit = self.metadata_edit = None
+        return self.snapshot()
 
-            if self.project is None:
-                raise SaveError(
-                    "Create a standalone fighter project for sculpting. Story saves store original presets only."
-                )
-            if self.appearance is None:
-                raise SaveError("Load original game assets before sculpting a face")
-            document = self.project_document(validate=action != "face_clear")
-            view = outfits.view(document, self.active_outfit)
-            reference = face_geometry.template(self.cache, self.appearance, view["fighter"])
-            if action == "face_export":
-                path = Path(args["path"])
-                if path.exists():
-                    raise SaveError("Choose a new template filename; existing files are preserved")
-                from .storage import atomic_bytes
+    def _request_face_export(self, action, args):
+        from . import face_geometry
 
-                atomic_bytes(path, face_geometry.obj(reference, view.get("face_sculpt")))
-                return dict(message="Exported sculptable head OBJ. Preserve vertex order, triangulation and UVs.")
-            if action == "face_clear":
-                view.pop("face_sculpt", None)
-            elif action == "face_sliders":
-                if view.get("face_sculpt") and not view["face_sculpt"]["sliders"]:
-                    raise SaveError(
-                        "Clear the imported sculpt before using sliders; export it first to preserve your work"
-                    )
-                view["face_sculpt"] = face_geometry.sliders(reference, args["values"])
-            else:
-                with Path(args["path"]).open("rb") as stream:
-                    raw = stream.read(face_geometry.MAX_OBJ + 1)
-                view["face_sculpt"] = face_geometry.import_obj(raw, reference)
-            candidate = projects.validate(outfits.replace_view(document, self.active_outfit, view))
-            self.remember()
-            self.outfit_draft, self.edits = candidate, {}
-            self.portrait_edit = self.texture_edit = self.metadata_edit = None
-            return dict(snapshot=self.snapshot(), message="Face sculpt staged; Save project preserves it")
-        if action.startswith("retail_"):
-            if self.retail.data is None and self.data is None:
-                # Opened straight from Home: the remembered data folder is enough for the studio, no fighter editor load.
-                self.retail.data = remembered.recall(self.workspace, "data")
-            result = self.retail.request(action.removeprefix("retail_"), args)
-            if (
-                action in ("retail_open", "retail_save")
-                and self.retail.path is not None
-                and self.retail.document is not None
-            ):
-                mode = (
-                    "retail-new"
-                    if self.retail.document.get("deployment", {}).get("mode", "add") == "add"
-                    else "retail-edit"
+        if self.project is None:
+            raise SaveError(
+                "Create a standalone fighter project for sculpting. Story saves store original presets only."
+            )
+        if self.appearance is None:
+            raise SaveError("Load original game assets before sculpting a face")
+        document = self.project_document(validate=action != "face_clear")
+        view = outfits.view(document, self.active_outfit)
+        reference = face_geometry.template(self.cache, self.appearance, view["fighter"])
+        if action == "face_export":
+            path = Path(args["path"])
+            if path.exists():
+                raise SaveError("Choose a new template filename; existing files are preserved")
+            from .storage import atomic_bytes
+
+            atomic_bytes(path, face_geometry.obj(reference, view.get("face_sculpt")))
+            return dict(message="Exported sculptable head OBJ. Preserve vertex order, triangulation and UVs.")
+        if action == "face_clear":
+            view.pop("face_sculpt", None)
+        elif action == "face_sliders":
+            if view.get("face_sculpt") and not view["face_sculpt"]["sliders"]:
+                raise SaveError("Clear the imported sculpt before using sliders; export it first to preserve your work")
+            view["face_sculpt"] = face_geometry.sliders(reference, args["values"])
+        else:
+            with Path(args["path"]).open("rb") as stream:
+                raw = stream.read(face_geometry.MAX_OBJ + 1)
+            view["face_sculpt"] = face_geometry.import_obj(raw, reference)
+        candidate = projects.validate(outfits.replace_view(document, self.active_outfit, view))
+        self.remember()
+        self.outfit_draft, self.edits = candidate, {}
+        self.portrait_edit = self.texture_edit = self.metadata_edit = None
+        return dict(snapshot=self.snapshot(), message="Face sculpt staged; Save project preserves it")
+
+    def _request_retail_action(self, action, args):
+        if self.retail.data is None and self.data is None:
+            # Opened straight from Home: the remembered data folder is enough for the studio, no fighter editor load.
+            self.retail.data = remembered.recall(self.workspace, "data")
+        result = self.retail.request(action.removeprefix("retail_"), args)
+        if (
+            action in ("retail_open", "retail_save")
+            and self.retail.path is not None
+            and self.retail.document is not None
+        ):
+            mode = (
+                "retail-new"
+                if self.retail.document.get("deployment", {}).get("mode", "add") == "add"
+                else "retail-edit"
+            )
+            remembered.add_recent(self.workspace, mode, self.retail.path)
+        return result
+
+    def _request_ui_preview(self, action, args):
+        if self.project is None:
+            return {"png": None}
+        effective = ui_art.resolved(self.project_document(validate=False), self.active_outfit)
+        value = effective["images"].get(args["role"])
+        return {
+            "png": "data:image/png;base64," + value if value else None,
+            "origin": effective["origins"].get(args["role"], {"source": "Retail UI donor"}),
+        }
+
+    def _request_ui_import(self, action, args):
+        if self.project is None:
+            raise SaveError("Create or open a fighter project first")
+        candidate = self.project_document(validate=False)
+        if action == "ui_retail":
+            import base64
+            import tempfile
+            from .fighter_mod import contract
+
+            if self.data is None or not (Path(self.data) / "extracted").is_dir():
+                raise SaveError("Load original game assets before importing retail UI artwork")
+            effective = ui_art.resolved(candidate, self.active_outfit)
+            self.workspace.mkdir(parents=True, exist_ok=True)
+            with tempfile.TemporaryDirectory(prefix="ui-reference-", dir=self.workspace) as temporary:
+                output = Path(temporary) / "reference"
+                report = contract(
+                    self.need_runtime(args, "menu"),
+                    [
+                        "export-ui-reference",
+                        "--game",
+                        str((Path(self.data) / "extracted").resolve()),
+                        "--donor",
+                        effective["donor"],
+                        "--portrait-out",
+                        str(output),
+                    ],
+                    temporary,
+                    self.workspace,
                 )
-                remembered.add_recent(self.workspace, mode, self.retail.path)
-            return result
-        if action == "ui_preview":
-            if self.project is None:
-                return {"png": None}
-            effective = ui_art.resolved(self.project_document(validate=False), self.active_outfit)
-            value = effective["images"].get(args["role"])
-            return {
-                "png": "data:image/png;base64," + value if value else None,
-                "origin": effective["origins"].get(args["role"], {"source": "Retail UI donor"}),
-            }
-        if action in ("ui_import", "ui_clear", "ui_clear_all", "ui_settings", "ui_retail"):
-            if self.project is None:
-                raise SaveError("Create or open a fighter project first")
+                pack = {"donor": effective["donor"], "hd_scale": effective["hd_scale"], "images": {}}
+                for role, spec in report["source"]["images"].items():
+                    # Source paths are generated by the reviewed runtime, but
+                    # still constrain reads to this private temporary folder.
+                    path = (output / spec["path"]).resolve()
+                    if not path.is_relative_to(output.resolve()):
+                        raise SaveError("UI reference file leaves its output folder")
+                    raw = path.read_bytes()
+                    if len(raw) > 4 * 1024**2:
+                        raise SaveError("UI reference PNG is too large")
+                    import hashlib
+
+                    if hashlib.sha256(raw).hexdigest() != spec["sha256"]:
+                        raise SaveError("UI reference hash changed")
+                    pack["images"][role] = base64.b64encode(raw).decode("ascii")
+                ui_art.validate(pack)
+                candidate = ui_art.upgrade(candidate)
+                ui_art.node(candidate, self.active_outfit)["ui_art"] = pack
+        elif action == "ui_settings":
+            candidate = ui_art.edit(
+                candidate, self.active_outfit, settings={"donor": args["donor"], "hd_scale": args["hd_scale"]}
+            )
+        else:
+            raw = args.get("png")
+            if raw and raw.startswith("data:image/png;base64,"):
+                raw = raw.split(",", 1)[1]
+            candidate = ui_art.edit(
+                candidate, self.active_outfit, role=args.get("role"), png=raw, clear_all=action == "ui_clear_all"
+            )
+        ui_art.check_budget(candidate)
+        self.remember()
+        self.flush_outfit()
+        self.outfit_draft = candidate
+        return self.snapshot()
+
+    def _request_outfit_select(self, action, args):
+        if self.project is None:
+            raise SaveError("Create or open a fighter project before editing outfits")
+        if action == "outfit_select":
+            if args["id"] not in {row["id"] for row in outfits.entries(self.project_source())}:
+                raise SaveError("This outfit is unavailable")
+            self.flush_outfit()
+            self.active_outfit = args["id"]
+        else:
             candidate = self.project_document(validate=False)
-            if action == "ui_retail":
-                import base64
-                import tempfile
-                from .fighter_mod import contract
-
-                if self.data is None or not (Path(self.data) / "extracted").is_dir():
-                    raise SaveError("Load original game assets before importing retail UI artwork")
-                effective = ui_art.resolved(candidate, self.active_outfit)
-                self.workspace.mkdir(parents=True, exist_ok=True)
-                with tempfile.TemporaryDirectory(prefix="ui-reference-", dir=self.workspace) as temporary:
-                    output = Path(temporary) / "reference"
-                    report = contract(
-                        self.need_runtime(args, "menu"),
-                        [
-                            "export-ui-reference",
-                            "--game",
-                            str((Path(self.data) / "extracted").resolve()),
-                            "--donor",
-                            effective["donor"],
-                            "--portrait-out",
-                            str(output),
-                        ],
-                        temporary,
-                        self.workspace,
-                    )
-                    pack = {"donor": effective["donor"], "hd_scale": effective["hd_scale"], "images": {}}
-                    for role, spec in report["source"]["images"].items():
-                        # Source paths are generated by the reviewed runtime, but
-                        # still constrain reads to this private temporary folder.
-                        path = (output / spec["path"]).resolve()
-                        if not path.is_relative_to(output.resolve()):
-                            raise SaveError("UI reference file leaves its output folder")
-                        raw = path.read_bytes()
-                        if len(raw) > 4 * 1024**2:
-                            raise SaveError("UI reference PNG is too large")
-                        import hashlib
-
-                        if hashlib.sha256(raw).hexdigest() != spec["sha256"]:
-                            raise SaveError("UI reference hash changed")
-                        pack["images"][role] = base64.b64encode(raw).decode("ascii")
-                    ui_art.validate(pack)
-                    candidate = ui_art.upgrade(candidate)
-                    ui_art.node(candidate, self.active_outfit)["ui_art"] = pack
-            elif action == "ui_settings":
-                candidate = ui_art.edit(
-                    candidate, self.active_outfit, settings={"donor": args["donor"], "hd_scale": args["hd_scale"]}
-                )
+            if action == "outfit_add":
+                candidate, selected = outfits.add(candidate, self.active_outfit)
+            elif action == "outfit_rename":
+                candidate = outfits.rename(candidate, self.active_outfit, args["name"])
+                selected = self.active_outfit
             else:
-                raw = args.get("png")
-                if raw and raw.startswith("data:image/png;base64,"):
-                    raw = raw.split(",", 1)[1]
-                candidate = ui_art.edit(
-                    candidate, self.active_outfit, role=args.get("role"), png=raw, clear_all=action == "ui_clear_all"
-                )
-            ui_art.check_budget(candidate)
+                candidate = outfits.remove(candidate, self.active_outfit)
+                selected = outfits.DEFAULT
             self.remember()
             self.flush_outfit()
-            self.outfit_draft = candidate
-            return self.snapshot()
-        if action in ("outfit_select", "outfit_add", "outfit_rename", "outfit_remove"):
-            if self.project is None:
-                raise SaveError("Create or open a fighter project before editing outfits")
-            if action == "outfit_select":
-                if args["id"] not in {row["id"] for row in outfits.entries(self.project_source())}:
-                    raise SaveError("This outfit is unavailable")
-                self.flush_outfit()
-                self.active_outfit = args["id"]
-            else:
-                candidate = self.project_document(validate=False)
-                if action == "outfit_add":
-                    candidate, selected = outfits.add(candidate, self.active_outfit)
-                elif action == "outfit_rename":
-                    candidate = outfits.rename(candidate, self.active_outfit, args["name"])
-                    selected = self.active_outfit
-                else:
-                    candidate = outfits.remove(candidate, self.active_outfit)
-                    selected = outfits.DEFAULT
-                self.remember()
-                self.flush_outfit()
-                self.outfit_draft, self.active_outfit = candidate, selected
-            return self.snapshot()
-        if action == "blazin":
-            if not self.blazin:
-                raise SaveError(self.blazin_error)
-            rows = self.blazin.select(args["moves"])
-            return self.stage(
-                {"finishers": [row["record"] for row in rows]}
-                if self.project
-                else {"blazin_values": [row["value"] for row in rows]}
-            )
-        if action == "blazin_inherit":
-            return self.stage({"finishers": None})
-        if action in ("project_atlas", "project_atlas_clear"):
-            if self.project is None:
-                raise SaveError("Create or open a fighter project first")
-            if action == "project_atlas_clear":
-                fields = read_fields(self.current().payload)
-                textures = {"appearance_sha256": projects.appearance_hash(fields), "atlases": {}}
-                if args.get("slot"):
-                    shown = (
-                        self.texture_edit
-                        if self.texture_edit is not None
-                        else (self.active_view() or {}).get("textures", {})
-                    )
-                    kept = {key: value for key, value in shown.get("atlases", {}).items() if key != args["slot"]}
-                    textures = {
-                        "appearance_sha256": shown.get("appearance_sha256", textures["appearance_sha256"]),
-                        "atlases": kept,
-                    }
-            else:
-                raw = args["png"]
-                if raw.startswith("data:image/png;base64,"):
-                    raw = raw.split(",", 1)[1]
-                import base64
+            self.outfit_draft, self.active_outfit = candidate, selected
+        return self.snapshot()
 
-                document = projects.with_atlas(
-                    outfits.view(self.project_document(), self.active_outfit), args["slot"], projects.atlas_bytes(raw)
+    def _request_blazin(self, action, args):
+        if not self.blazin:
+            raise SaveError(self.blazin_error)
+        rows = self.blazin.select(args["moves"])
+        return self.stage(
+            {"finishers": [row["record"] for row in rows]}
+            if self.project
+            else {"blazin_values": [row["value"] for row in rows]}
+        )
+
+    def _request_blazin_inherit(self, action, args):
+        return self.stage({"finishers": None})
+
+    def _request_project_atlas(self, action, args):
+        if self.project is None:
+            raise SaveError("Create or open a fighter project first")
+        if action == "project_atlas_clear":
+            fields = read_fields(self.current().payload)
+            textures = {"appearance_sha256": projects.appearance_hash(fields), "atlases": {}}
+            if args.get("slot"):
+                shown = (
+                    self.texture_edit
+                    if self.texture_edit is not None
+                    else (self.active_view() or {}).get("textures", {})
                 )
-                textures = document["textures"]
-            self.remember()
-            self.texture_edit = textures
-            return self.snapshot()
-        if action == "project_portrait":
-            if self.project is None:
-                raise SaveError("Create or open a fighter project first")
+                kept = {key: value for key, value in shown.get("atlases", {}).items() if key != args["slot"]}
+                textures = {
+                    "appearance_sha256": shown.get("appearance_sha256", textures["appearance_sha256"]),
+                    "atlases": kept,
+                }
+        else:
             raw = args["png"]
             if raw.startswith("data:image/png;base64,"):
                 raw = raw.split(",", 1)[1]
-            projects.portrait_bytes(raw)
-            self.remember()
-            self.portrait_edit = raw
-            return self.snapshot()
-        if action == "home":
-            return dict(setup=self.setup_view(), recents=remembered.recents(self.workspace), version=__version__)
-        if action == "close_project":
-            return self.close_project()
-        if action == "new_project":
-            result = self.create_project(args["path"])
-            remembered.add_recent(self.workspace, "caf", args["path"])
-            return result
-        if action == "open_project":
-            result = self.open_project(args["path"])
-            remembered.add_recent(self.workspace, "caf", args["path"])
-            return result
-        if action == "project_metadata_draft":
-            if self.project is None:
-                raise SaveError("Create or open a fighter project first")
-            # Preserve incomplete form values; validate only when saving/exporting.
-            if set(args) != {"metadata", "identity"} or not all(isinstance(args[k], dict) for k in args):
-                raise SaveError("Invalid project details")
-            self.metadata_edit = copy.deepcopy(args)
-            if all(self.project.get(k) == v for k, v in args.items()):
-                self.metadata_edit = None
-            return self.snapshot()
-        if action == "project_metadata":
-            if self.project is None:
-                raise SaveError("Create or open a fighter project first")
+
+            document = projects.with_atlas(
+                outfits.view(self.project_document(), self.active_outfit), args["slot"], projects.atlas_bytes(raw)
+            )
+            textures = document["textures"]
+        self.remember()
+        self.texture_edit = textures
+        return self.snapshot()
+
+    def _request_project_portrait(self, action, args):
+        if self.project is None:
+            raise SaveError("Create or open a fighter project first")
+        raw = args["png"]
+        if raw.startswith("data:image/png;base64,"):
+            raw = raw.split(",", 1)[1]
+        projects.portrait_bytes(raw)
+        self.remember()
+        self.portrait_edit = raw
+        return self.snapshot()
+
+    def _request_home(self, action, args):
+        return dict(setup=self.setup_view(), recents=remembered.recents(self.workspace), version=__version__)
+
+    def _request_close_project(self, action, args):
+        return self.close_project()
+
+    def _request_new_project(self, action, args):
+        result = self.create_project(args["path"])
+        remembered.add_recent(self.workspace, "caf", args["path"])
+        return result
+
+    def _request_open_project(self, action, args):
+        result = self.open_project(args["path"])
+        remembered.add_recent(self.workspace, "caf", args["path"])
+        return result
+
+    def _request_project_metadata_draft(self, action, args):
+        if self.project is None:
+            raise SaveError("Create or open a fighter project first")
+        # Preserve incomplete form values; validate only when saving/exporting.
+        if set(args) != {"metadata", "identity"} or not all(isinstance(args[k], dict) for k in args):
+            raise SaveError("Invalid project details")
+        self.metadata_edit = copy.deepcopy(args)
+        if all(self.project.get(k) == v for k, v in args.items()):
+            self.metadata_edit = None
+        return self.snapshot()
+
+    def _request_project_metadata(self, action, args):
+        if self.project is None:
+            raise SaveError("Create or open a fighter project first")
+        document = self.project_document()
+        document["metadata"].update(args["metadata"])
+        if "identity" in args:
+            document["identity"] = args["identity"]
+        projects.validate(document)
+        self.project_hash = projects.write(self.project_path, document, self.project_hash)
+        self.project, self.edits, self.history = document, {}, []
+        self._clear_drafts()
+        return dict(snapshot=self.snapshot(), message="Saved fighter project and pack details")
+
+    def _request_export_mod(self, action, args):
+        from .fighter_mod import export_mod
+
+        if self.project is None:
+            raise SaveError("Create or open a fighter project before exporting a mod")
+        report = export_mod(
+            self.project_document(),
+            args["path"],
+            self.need_runtime(args, "export"),
+            self.data,
+            self.workspace / "fighter-exports",
+            progress=self.progress,
+            asset_cache=self.cache,
+        )
+        self.last_export = Path(args["path"])
+        return dict(
+            message="Validated Custom Fighter Mod exported to " + args["path"],
+            report=report,
+            summary=self.export_summary(Path(args["path"]), report),
+        )
+
+    def _request_setup_scan(self, action, args):
+        folder = args.get("folder") or remembered.recall(self.workspace, "app") or runtimes.default_folder()
+        if not folder or not Path(folder).is_dir():
+            return dict(folder=None, candidates=[], data=None, current=None)
+        return runtimes.scan(folder, self.recipe_format())
+
+    def _request_setup_use(self, action, args):
+        runtime = Path(args["runtime"]).resolve()
+        row = runtimes.describe(runtime, self.recipe_format())
+        if not row["usable"]:
+            raise SaveError("That is not a game version: scripts/fighter-contract.py is missing")
+        self.runtime = runtime
+        remembered.remember(self.workspace, "runtime", runtime)
+        if args.get("folder"):
+            remembered.remember(self.workspace, "app", args["folder"])
+        data = args.get("data")
+        if (
+            data
+            and remembered.data_ok(data)
+            and (self.data is None or Path(data).resolve() != Path(self.data).resolve())
+        ):
+            remembered.remember(self.workspace, "data", data)
+            return self.open_data(data)
+        return self.snapshot()
+
+    def _request_open_data(self, action, args):
+        return self.open_data(args["path"])
+
+    def _request_snapshot(self, action, args):
+        return self.snapshot()
+
+    def _request_select_profile(self, action, args):
+        return self.select_profile(args["name"])
+
+    def _request_stage(self, action, args):
+        return self.stage(args["edits"])
+
+    def _request_appearance(self, action, args):
+        return self.stage_appearance(args["changes"])
+
+    def _request_options(self, action, args):
+        if self.appearance is None or args["slot"] not in self.appearance.options:
+            raise SaveError("No appearance choices for that category")
+        return [
+            {k: v for k, v in row.items() if k not in {"selection", "value", "color"}}
+            for row in self.appearance.options[args["slot"]]
+        ]
+
+    def _request_preview(self, action, args):
+        return self.preview(args.get("changes"), bool(args.get("hide_clothes", False)))
+
+    def _request_undo(self, action, args):
+        if self.history:
+            for key, value in self.history.pop().items():
+                setattr(self, key, value)
+        return self.snapshot()
+
+    def _request_reset(self, action, args):
+        self.edits, self.history = {}, []
+        self._clear_drafts()
+        if self.project and self.active_outfit not in {row["id"] for row in outfits.entries(self.project)}:
+            self.active_outfit = outfits.DEFAULT
+        return self.snapshot()
+
+    def _request_save(self, action, args):
+        if self.project is not None:
             document = self.project_document()
-            document["metadata"].update(args["metadata"])
-            if "identity" in args:
-                document["identity"] = args["identity"]
-            projects.validate(document)
             self.project_hash = projects.write(self.project_path, document, self.project_hash)
             self.project, self.edits, self.history = document, {}, []
-            self.outfit_draft = None
-            self.portrait_edit = self.metadata_edit = None
-            self.texture_edit = None
-            return dict(snapshot=self.snapshot(), message="Saved fighter project and pack details")
-        if action == "export_mod":
-            from .fighter_mod import export_mod
+            self._clear_drafts()
+            return dict(snapshot=self.snapshot(), message="Saved fighter project")
+        notice = self.retail_moveset_save()
+        if notice and args.get("acknowledge_retail_moveset") is not True:
+            raise SaveError(notice)
+        name = self.profile.name
+        backup = save_profile(self.profile, self.current(), self.workspace / "backups")
+        return dict(
+            snapshot=self.select_profile(name),
+            message="Saved profile. Backup: " + str(backup),
+            summary=dict(
+                title="Profile saved",
+                folder="backups",
+                lines=[
+                    "Saved " + name + ".",
+                    "Backup of the previous save: " + backup.name,
+                    "Restore it any time from Backups in the left column.",
+                ],
+            ),
+        )
 
-            if self.project is None:
-                raise SaveError("Create or open a fighter project before exporting a mod")
-            report = export_mod(
-                self.project_document(),
-                args["path"],
-                self.need_runtime(args, "export"),
-                self.data,
-                self.workspace / "fighter-exports",
-                progress=self.progress,
-                asset_cache=self.cache,
-            )
-            self.last_export = Path(args["path"])
-            return dict(
-                message="Validated Custom Fighter Mod exported to " + args["path"],
-                report=report,
-                summary=self.export_summary(Path(args["path"]), report),
-            )
-        if action == "setup_scan":
-            folder = args.get("folder") or remembered.recall(self.workspace, "app") or runtimes.default_folder()
-            if not folder or not Path(folder).is_dir():
-                return dict(folder=None, candidates=[], data=None, current=None)
-            return runtimes.scan(folder, self.recipe_format())
-        if action == "setup_use":
-            runtime = Path(args["runtime"]).resolve()
-            row = runtimes.describe(runtime, self.recipe_format())
-            if not row["usable"]:
-                raise SaveError("That is not a game version: scripts/fighter-contract.py is missing")
-            self.runtime = runtime
-            remembered.remember(self.workspace, "runtime", runtime)
-            if args.get("folder"):
-                remembered.remember(self.workspace, "app", args["folder"])
-            data = args.get("data")
-            if (
-                data
-                and remembered.data_ok(data)
-                and (self.data is None or Path(data).resolve() != Path(self.data).resolve())
-            ):
-                remembered.remember(self.workspace, "data", data)
-                return self.open_data(data)
-            return self.snapshot()
-        if action == "open_data":
-            return self.open_data(args["path"])
-        if action == "snapshot":
-            return self.snapshot()
-        if action == "select_profile":
-            return self.select_profile(args["name"])
-        if action == "stage":
-            return self.stage(args["edits"])
-        if action == "appearance":
-            return self.stage_appearance(args["changes"])
-        if action == "options":
-            if self.appearance is None or args["slot"] not in self.appearance.options:
-                raise SaveError("No appearance choices for that category")
-            return [
-                {k: v for k, v in row.items() if k not in {"selection", "value", "color"}}
-                for row in self.appearance.options[args["slot"]]
-            ]
-        if action == "preview":
-            return self.preview(args.get("changes"), bool(args.get("hide_clothes", False)))
-        if action == "undo":
-            if self.history:
-                for key, value in self.history.pop().items():
-                    setattr(self, key, value)
-            return self.snapshot()
-        if action == "reset":
-            self.edits, self.history = {}, []
-            self.portrait_edit = self.metadata_edit = None
-            self.texture_edit = None
-            self.outfit_draft = None
-            if self.project and self.active_outfit not in {row["id"] for row in outfits.entries(self.project)}:
-                self.active_outfit = outfits.DEFAULT
-            return self.snapshot()
-        if action == "save":
-            if self.project is not None:
-                document = self.project_document()
-                self.project_hash = projects.write(self.project_path, document, self.project_hash)
-                self.project, self.edits, self.history = document, {}, []
-                self.outfit_draft = None
-                self.portrait_edit = self.metadata_edit = None
-                self.texture_edit = None
-                return dict(snapshot=self.snapshot(), message="Saved fighter project")
-            notice = self.retail_moveset_save()
-            if notice and args.get("acknowledge_retail_moveset") is not True:
-                raise SaveError(notice)
-            name = self.profile.name
-            backup = save_profile(self.profile, self.current(), self.workspace / "backups")
-            return dict(
-                snapshot=self.select_profile(name),
-                message="Saved profile. Backup: " + str(backup),
-                summary=dict(
-                    title="Profile saved",
-                    folder="backups",
-                    lines=[
-                        "Saved " + name + ".",
-                        "Backup of the previous save: " + backup.name,
-                        "Restore it any time from Backups in the left column.",
-                    ],
-                ),
-            )
-        if action == "restore_backup":
-            if self.project is not None or self.profile is None:
-                raise SaveError("Choose a Story profile to restore a backup into")
-            name = self.profile.name
-            before = backups.restore(self.profile, self.workspace / "backups", args.get("id"))
-            return dict(
-                snapshot=self.select_profile(name),
-                message="Restored a backup of " + name,
-                summary=dict(
-                    title="Backup restored",
-                    folder="backups",
-                    lines=[
-                        "Restored " + name + " from " + args["id"] + ".",
-                        "The save it replaced was backed up first: " + before.name,
-                    ],
-                ),
-            )
-        if action == "export":
-            if self.project is not None:
-                self.project_hash = projects.write(args["path"], self.project_document())
-                self.project_path = Path(args["path"])
-                self.project, self.edits, self.history = self.project_document(), {}, []
-                self.outfit_draft = None
-                self.portrait_edit = self.metadata_edit = None
-                self.texture_edit = None
-                return dict(snapshot=self.snapshot(), message="Saved project copy")
-            export_profile(self.profile, self.current(), Path(args["path"]))
-            self.last_export = Path(args["path"])
-            return dict(
-                message="Exported complete profile to " + args["path"],
-                summary=dict(
-                    title="Profile exported",
-                    folder="export",
-                    lines=["Saved to " + args["path"], "Import it from the left column to install it as a profile."],
-                ),
-            )
-        if action == "duplicate":
-            if self.project is not None:
-                raise SaveError("Use Save project as to copy a standalone fighter")
-            path = duplicate(self.profile, self.current(), args["name"])
-            return dict(snapshot=self.select_profile(args["name"]), message="Created profile " + args["name"])
-        if action == "import":
-            name, _, files = read_archive(Path(args["path"]))
-            install_files(self.discovery.title_root, name, files)
-            return dict(snapshot=self.select_profile(name), message="Imported complete profile " + name)
-        raise SaveError("Unsupported editor action")
+    def _request_restore_backup(self, action, args):
+        if self.project is not None or self.profile is None:
+            raise SaveError("Choose a Story profile to restore a backup into")
+        name = self.profile.name
+        before = backups.restore(self.profile, self.workspace / "backups", args.get("id"))
+        return dict(
+            snapshot=self.select_profile(name),
+            message="Restored a backup of " + name,
+            summary=dict(
+                title="Backup restored",
+                folder="backups",
+                lines=[
+                    "Restored " + name + " from " + args["id"] + ".",
+                    "The save it replaced was backed up first: " + before.name,
+                ],
+            ),
+        )
+
+    def _request_export(self, action, args):
+        if self.project is not None:
+            self.project_hash = projects.write(args["path"], self.project_document())
+            self.project_path = Path(args["path"])
+            self.project, self.edits, self.history = self.project_document(), {}, []
+            self._clear_drafts()
+            return dict(snapshot=self.snapshot(), message="Saved project copy")
+        export_profile(self.profile, self.current(), Path(args["path"]))
+        self.last_export = Path(args["path"])
+        return dict(
+            message="Exported complete profile to " + args["path"],
+            summary=dict(
+                title="Profile exported",
+                folder="export",
+                lines=["Saved to " + args["path"], "Import it from the left column to install it as a profile."],
+            ),
+        )
+
+    def _request_duplicate(self, action, args):
+        if self.project is not None:
+            raise SaveError("Use Save project as to copy a standalone fighter")
+        duplicate(self.profile, self.current(), args["name"])
+        return dict(snapshot=self.select_profile(args["name"]), message="Created profile " + args["name"])
+
+    def _request_import(self, action, args):
+        name, _, files = read_archive(Path(args["path"]))
+        install_files(self.discovery.title_root, name, files)
+        return dict(snapshot=self.select_profile(name), message="Imported complete profile " + name)
+
+    ACTIONS = {
+        "performance_connect": _request_performance_connect,
+        "performance_audio": _request_performance_audio,
+        "performance_animation": _request_performance_audio,
+        "performance_set": _request_performance_set,
+        "performance_clip": _request_performance_set,
+        "performance_clear": _request_performance_set,
+        "fighting_style": _request_fighting_style,
+        "face_export": _request_face_export,
+        "face_import": _request_face_export,
+        "face_sliders": _request_face_export,
+        "face_clear": _request_face_export,
+        "retail_*": _request_retail_action,
+        "ui_preview": _request_ui_preview,
+        "ui_import": _request_ui_import,
+        "ui_clear": _request_ui_import,
+        "ui_clear_all": _request_ui_import,
+        "ui_settings": _request_ui_import,
+        "ui_retail": _request_ui_import,
+        "outfit_select": _request_outfit_select,
+        "outfit_add": _request_outfit_select,
+        "outfit_rename": _request_outfit_select,
+        "outfit_remove": _request_outfit_select,
+        "blazin": _request_blazin,
+        "blazin_inherit": _request_blazin_inherit,
+        "project_atlas": _request_project_atlas,
+        "project_atlas_clear": _request_project_atlas,
+        "project_portrait": _request_project_portrait,
+        "home": _request_home,
+        "close_project": _request_close_project,
+        "new_project": _request_new_project,
+        "open_project": _request_open_project,
+        "project_metadata_draft": _request_project_metadata_draft,
+        "project_metadata": _request_project_metadata,
+        "export_mod": _request_export_mod,
+        "setup_scan": _request_setup_scan,
+        "setup_use": _request_setup_use,
+        "open_data": _request_open_data,
+        "snapshot": _request_snapshot,
+        "select_profile": _request_select_profile,
+        "stage": _request_stage,
+        "appearance": _request_appearance,
+        "options": _request_options,
+        "preview": _request_preview,
+        "undo": _request_undo,
+        "reset": _request_reset,
+        "save": _request_save,
+        "restore_backup": _request_restore_backup,
+        "export": _request_export,
+        "duplicate": _request_duplicate,
+        "import": _request_import,
+    }

@@ -446,217 +446,259 @@ class Session:
     def request(self, action, args):
         workspace = self.owner.workspace / "retail"
         workspace.mkdir(parents=True, exist_ok=True)
-        if action == "snapshot":
-            # With a game version and data folder already chosen, the retail catalog loads without a second setup step.
-            if (
-                self.catalog is None
-                and self.shared_runtime() is not None
-                and (self.data or self.owner.data) is not None
-            ):
-                try:
-                    from . import runtimes
+        if action not in ["snapshot", "draft", "configure", "new", "open", "import", "close"]:
+            projects.require(self.document is not None, "Create or open a retail fighter project")
+        handler = self.ACTIONS.get(action)
+        if handler is None:
+            raise SaveError("Unsupported retail fighter action")
+        candidate = (
+            None
+            if action in ["snapshot", "draft", "configure", "new", "open", "import", "close", "undo", "reset", "save"]
+            else self.effective()
+        )
+        return handler(self, action, args, workspace, candidate)
 
-                    if runtimes.describe(self.shared_runtime(), self.owner.recipe_format())["features"]["retail"]:
-                        args = {"runtime": str(self.shared_runtime())}
-                        action = "configure"
-                except Exception:
-                    pass
-            if action == "snapshot":
-                return self.snapshot()
-        if action == "draft":
-            projects.require(
-                self.document is not None
-                and set(args) == {"metadata", "identity"}
-                and all(type(v) is dict for v in args.values()),
-                "Invalid project details draft",
-            )
-            projects.require(
-                set(args["metadata"]) <= set(self.document["metadata"])
-                and set(args["identity"]) == {"pack", "fighter"},
-                "Unknown project details draft fields",
-            )
-            self.draft = copy.deepcopy(args)
-            return {"draft": True, "dirty": self.effective() != self.saved}
-        if action == "configure":
-            runtime = Path(args["runtime"]).resolve()
-            old = self.runtime
-            self.runtime = runtime
+    def _request_snapshot(self, action, args, workspace, candidate=None):
+        if self.catalog is None and self.shared_runtime() is not None and (self.data or self.owner.data) is not None:
             try:
-                with tempfile.TemporaryDirectory(dir=workspace) as temporary:
-                    self.catalog = self.api(["catalog", "--game", str(self.game())], temporary)["baseline"]
+                from . import runtimes
+
+                if runtimes.describe(self.shared_runtime(), self.owner.recipe_format())["features"]["retail"]:
+                    args = {"runtime": str(self.shared_runtime())}
+                    action = "configure"
             except Exception:
-                self.runtime = old
-                raise
+                pass
+        if action == "snapshot":
             return self.snapshot()
-        if action in ("new", "open", "import"):
-            if action == "new":
-                document = new(args["donor"])
-            elif action == "open":
-                document, digest = projects.read(args["path"])
-                projects.require(document["schema"] in READABLE_SCHEMAS, "Open CAF projects in the CAF editor")
-            else:
-                document = import_pack(args["folder"], args["fighter"])
-            self.document = document
-            self.saved = copy.deepcopy(document) if action == "open" else None
-            self.path = Path(args["path"]) if action == "open" else None
-            self.digest = digest if action == "open" else None
-            self.history = []
+        return self._request_configure(action, args, workspace)
+
+    def _request_draft(self, action, args, workspace, candidate=None):
+        projects.require(
+            self.document is not None
+            and set(args) == {"metadata", "identity"}
+            and all(type(v) is dict for v in args.values()),
+            "Invalid project details draft",
+        )
+        projects.require(
+            set(args["metadata"]) <= set(self.document["metadata"]) and set(args["identity"]) == {"pack", "fighter"},
+            "Unknown project details draft fields",
+        )
+        self.draft = copy.deepcopy(args)
+        return {"draft": True, "dirty": self.effective() != self.saved}
+
+    def _request_configure(self, action, args, workspace, candidate=None):
+        runtime = Path(args["runtime"]).resolve()
+        old = self.runtime
+        self.runtime = runtime
+        try:
+            with tempfile.TemporaryDirectory(dir=workspace) as temporary:
+                self.catalog = self.api(["catalog", "--game", str(self.game())], temporary)["baseline"]
+        except Exception:
+            self.runtime = old
+            raise
+        return self.snapshot()
+
+    def _request_new(self, action, args, workspace, candidate=None):
+        if action == "new":
+            document = new(args["donor"])
+        elif action == "open":
+            document, digest = projects.read(args["path"])
+            projects.require(document["schema"] in READABLE_SCHEMAS, "Open CAF projects in the CAF editor")
+        else:
+            document = import_pack(args["folder"], args["fighter"])
+        self.document = document
+        self.saved = copy.deepcopy(document) if action == "open" else None
+        self.path = Path(args["path"]) if action == "open" else None
+        self.digest = digest if action == "open" else None
+        self.history = []
+        self.draft = None
+        if action == "new" and args.get("mode", "add") != "add":
+            self.document["deployment"] = dict(mode=args["mode"], target=args["donor"])
+            validate(self.document)
+        return self.snapshot()
+
+    def _request_close(self, action, args, workspace, candidate=None):
+        self.document = self.saved = self.path = self.digest = self.draft = None
+        self.history = []
+        return self.snapshot()
+
+    def _request_undo(self, action, args, workspace, candidate=None):
+        if self.draft is not None:
             self.draft = None
-            if action == "new" and args.get("mode", "add") != "add":
-                self.document["deployment"] = dict(mode=args["mode"], target=args["donor"])
-                validate(self.document)
-            return self.snapshot()
-        if action == "close":
-            self.document = self.saved = self.path = self.digest = self.draft = None
-            self.history = []
-            return self.snapshot()
-        projects.require(self.document is not None, "Create or open a retail fighter project")
-        if action == "undo":
-            if self.draft is not None:
-                self.draft = None
-            elif self.history:
-                self.document = self.history.pop()
-            return self.snapshot()
-        if action == "reset":
-            projects.require(self.saved is not None, "Save this new project before resetting it")
-            self.document = copy.deepcopy(self.saved)
-            self.history = []
-            self.draft = None
-            return self.snapshot()
-        if action == "save":
-            target = Path(args["path"]) if args.get("path") else self.path
-            projects.require(target is not None, "Choose a project destination")
-            expected = self.digest if self.path == target else None
-            document = validate(self.effective())
-            self.digest = projects.write(target, document, expected)
-            self.document = document
-            self.draft = None
-            self.path = target
-            self.saved = copy.deepcopy(document)
-            self.history = []
-            return self.snapshot()
-        candidate = self.effective()
-        if action == "deployment":
-            projects.require(
-                self.catalog and any("retail/" + r["id"] == args["target"] for r in self.catalog["fighters"]),
-                "Unknown retail target",
-            )
-            candidate["deployment"] = dict(mode=args["mode"], target=args["target"])
-            if args["mode"] != "add":
-                candidate["definition"]["inherits"] = args["target"]
-            return self.commit(candidate)
-        if action == "details":
-            candidate["metadata"].update(args["metadata"])
-            candidate["identity"].update(args["identity"])
-            return self.commit(candidate)
-        if action == "combat":
-            projects.require(
-                self.catalog and any("retail/" + r["id"] == args["donor"] for r in self.catalog["fighters"]),
-                "Unknown combat donor",
-            )
-            candidate["definition"]["inherits"] = args["donor"]
-            candidate["definition"]["components"].pop("moveset", None)
-            candidate["definition"]["components"].pop("stats", None)
-            return self.commit(candidate)
-        if action == "component":
-            key = args["component"]
-            projects.require(key in KINDS, "Unknown fighter component")
-            if args.get("resource"):
-                candidate["definition"]["components"][key] = args["resource"]
-            else:
-                candidate["definition"]["components"].pop(key, None)
-            return self.commit(candidate)
-        if action == "stats":
-            candidate["definition"]["components"]["stats"] = args["stats"]
-            return self.commit(candidate)
-        if action == "ui":
-            role = args["role"]
-            projects.require(role in ui_art.ROLES, "Unknown artwork role")
-            if args.get("png"):
-                projects.portrait_bytes(args["png"])
-                if role in ui_art.MASTERS:
-                    covered = {role} | ({"grid_normal", "grid_selected"} if role == "icon" else set())
-                    for key in list(candidate["ui_art"]["images"]):
-                        if ui_art.master(key) in covered:
-                            candidate["ui_art"]["images"].pop(key)
-                candidate["ui_art"]["images"][role] = args["png"]
-            else:
-                candidate["ui_art"]["images"].pop(role, None)
-            return self.commit(candidate)
-        if action == "ui_settings":
-            candidate["ui_art"].update(donor=args["donor"], hd_scale=args["hd_scale"])
-            return self.commit(candidate)
-        if action == "texture":
-            if args.get("png"):
-                candidate["textures"][args["shape"]] = args["png"]
-            else:
-                candidate["textures"].pop(args["shape"], None)
-            return self.commit(candidate)
-        if action in ("preview", "appearance", "export"):
-            with tempfile.TemporaryDirectory(prefix="retail-", dir=workspace) as temporary:
-                root = Path(temporary) / self.document["identity"]["pack"]
-                root.mkdir()
-                if action == "appearance":
-                    output = Path(temporary) / "appearance"
-                    report = self.api(
-                        [
-                            "export-retail-appearance",
-                            "--game",
-                            str(self.game()),
-                            "--donor",
-                            args["donor"],
-                            "--portrait-out",
-                            str(output),
-                        ],
-                        temporary,
-                    )
-                    resource = {
-                        "id": "retail-body",
-                        "kind": "appearance",
-                        "compatibility": {"skeleton": "retail/binding-" + args["donor"].split("/")[1]},
-                        "source": report["source"],
-                    }
-                    resource["source"].update(
-                        format="eagl-appearance-2",
-                        shape_names=texture_namespace(candidate["identity"]["pack"], "retail-body", report["shapes"]),
-                    )
-                    for spec in descriptors(resource):
-                        raw = (output / spec["path"]).read_bytes()
-                        spec["path"] = "retail-body/" + spec["path"]
-                        candidate["assets"][spec["path"]] = blob(raw)
-                    candidate["resources"] = [r for r in candidate["resources"] if r["id"] != "retail-body"] + [
-                        resource
-                    ]
-                    candidate["definition"]["components"]["appearance"] = candidate["identity"]["pack"] + "/retail-body"
-                    candidate["textures"] = {}
-                    return self.commit(candidate)
-                self.stage(root, temporary)
-                if action == "preview":
-                    report = self.api(["preview-fighter", "--game", str(self.game()), "--pack", str(root)], temporary)
-                    return report["preview"]
-                report = self.api(["validate", "--pack", str(root), "--game", str(self.game())], temporary)
-                projects.require(report.get("native_compilation") is True, "Runtime did not confirm native compilation")
-                destination = Path(args["path"])
-                projects.require(not destination.exists(), "ZIP destination already exists")
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                created = False
-                try:
-                    with destination.open("xb") as output:
-                        created = True
-                        with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-                            for path in sorted(root.rglob("*")):
-                                if path.is_file():
-                                    archive.write(path, root.name + "/" + path.relative_to(root).as_posix())
-                except Exception:
-                    if created:
-                        destination.unlink(missing_ok=True)
-                    raise
-                return {
-                    "snapshot": self.snapshot(),
-                    "message": "Validated retail fighter exported to " + str(destination),
-                    "report": report,
+        elif self.history:
+            self.document = self.history.pop()
+        return self.snapshot()
+
+    def _request_reset(self, action, args, workspace, candidate=None):
+        projects.require(self.saved is not None, "Save this new project before resetting it")
+        self.document = copy.deepcopy(self.saved)
+        self.history = []
+        self.draft = None
+        return self.snapshot()
+
+    def _request_save(self, action, args, workspace, candidate=None):
+        target = Path(args["path"]) if args.get("path") else self.path
+        projects.require(target is not None, "Choose a project destination")
+        expected = self.digest if self.path == target else None
+        document = validate(self.effective())
+        self.digest = projects.write(target, document, expected)
+        self.document = document
+        self.draft = None
+        self.path = target
+        self.saved = copy.deepcopy(document)
+        self.history = []
+        return self.snapshot()
+
+    def _request_deployment(self, action, args, workspace, candidate=None):
+        projects.require(
+            self.catalog and any("retail/" + r["id"] == args["target"] for r in self.catalog["fighters"]),
+            "Unknown retail target",
+        )
+        candidate["deployment"] = dict(mode=args["mode"], target=args["target"])
+        if args["mode"] != "add":
+            candidate["definition"]["inherits"] = args["target"]
+        return self.commit(candidate)
+
+    def _request_details(self, action, args, workspace, candidate=None):
+        candidate["metadata"].update(args["metadata"])
+        candidate["identity"].update(args["identity"])
+        return self.commit(candidate)
+
+    def _request_combat(self, action, args, workspace, candidate=None):
+        projects.require(
+            self.catalog and any("retail/" + r["id"] == args["donor"] for r in self.catalog["fighters"]),
+            "Unknown combat donor",
+        )
+        candidate["definition"]["inherits"] = args["donor"]
+        candidate["definition"]["components"].pop("moveset", None)
+        candidate["definition"]["components"].pop("stats", None)
+        return self.commit(candidate)
+
+    def _request_component(self, action, args, workspace, candidate=None):
+        key = args["component"]
+        projects.require(key in KINDS, "Unknown fighter component")
+        if args.get("resource"):
+            candidate["definition"]["components"][key] = args["resource"]
+        else:
+            candidate["definition"]["components"].pop(key, None)
+        return self.commit(candidate)
+
+    def _request_stats(self, action, args, workspace, candidate=None):
+        candidate["definition"]["components"]["stats"] = args["stats"]
+        return self.commit(candidate)
+
+    def _request_ui(self, action, args, workspace, candidate=None):
+        role = args["role"]
+        projects.require(role in ui_art.ROLES, "Unknown artwork role")
+        if args.get("png"):
+            projects.portrait_bytes(args["png"])
+            if role in ui_art.MASTERS:
+                covered = {role} | ({"grid_normal", "grid_selected"} if role == "icon" else set())
+                for key in list(candidate["ui_art"]["images"]):
+                    if ui_art.master(key) in covered:
+                        candidate["ui_art"]["images"].pop(key)
+            candidate["ui_art"]["images"][role] = args["png"]
+        else:
+            candidate["ui_art"]["images"].pop(role, None)
+        return self.commit(candidate)
+
+    def _request_ui_settings(self, action, args, workspace, candidate=None):
+        candidate["ui_art"].update(donor=args["donor"], hd_scale=args["hd_scale"])
+        return self.commit(candidate)
+
+    def _request_texture(self, action, args, workspace, candidate=None):
+        if args.get("png"):
+            candidate["textures"][args["shape"]] = args["png"]
+        else:
+            candidate["textures"].pop(args["shape"], None)
+        return self.commit(candidate)
+
+    def _request_preview(self, action, args, workspace, candidate=None):
+        with tempfile.TemporaryDirectory(prefix="retail-", dir=workspace) as temporary:
+            root = Path(temporary) / self.document["identity"]["pack"]
+            root.mkdir()
+            if action == "appearance":
+                output = Path(temporary) / "appearance"
+                report = self.api(
+                    [
+                        "export-retail-appearance",
+                        "--game",
+                        str(self.game()),
+                        "--donor",
+                        args["donor"],
+                        "--portrait-out",
+                        str(output),
+                    ],
+                    temporary,
+                )
+                resource = {
+                    "id": "retail-body",
+                    "kind": "appearance",
+                    "compatibility": {"skeleton": "retail/binding-" + args["donor"].split("/")[1]},
+                    "source": report["source"],
                 }
-        raise SaveError("Unsupported retail fighter action")
+                resource["source"].update(
+                    format="eagl-appearance-2",
+                    shape_names=texture_namespace(candidate["identity"]["pack"], "retail-body", report["shapes"]),
+                )
+                for spec in descriptors(resource):
+                    raw = (output / spec["path"]).read_bytes()
+                    spec["path"] = "retail-body/" + spec["path"]
+                    candidate["assets"][spec["path"]] = blob(raw)
+                candidate["resources"] = [r for r in candidate["resources"] if r["id"] != "retail-body"] + [resource]
+                candidate["definition"]["components"]["appearance"] = candidate["identity"]["pack"] + "/retail-body"
+                candidate["textures"] = {}
+                return self.commit(candidate)
+            self.stage(root, temporary)
+            if action == "preview":
+                report = self.api(["preview-fighter", "--game", str(self.game()), "--pack", str(root)], temporary)
+                return report["preview"]
+            report = self.api(["validate", "--pack", str(root), "--game", str(self.game())], temporary)
+            projects.require(report.get("native_compilation") is True, "Runtime did not confirm native compilation")
+            destination = Path(args["path"])
+            projects.require(not destination.exists(), "ZIP destination already exists")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            created = False
+            try:
+                with destination.open("xb") as output:
+                    created = True
+                    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                        for path in sorted(root.rglob("*")):
+                            if path.is_file():
+                                archive.write(path, root.name + "/" + path.relative_to(root).as_posix())
+            except Exception:
+                if created:
+                    destination.unlink(missing_ok=True)
+                raise
+            return {
+                "snapshot": self.snapshot(),
+                "message": "Validated retail fighter exported to " + str(destination),
+                "report": report,
+            }
+
+    ACTIONS = {
+        "snapshot": _request_snapshot,
+        "draft": _request_draft,
+        "configure": _request_configure,
+        "new": _request_new,
+        "open": _request_new,
+        "import": _request_new,
+        "close": _request_close,
+        "undo": _request_undo,
+        "reset": _request_reset,
+        "save": _request_save,
+        "deployment": _request_deployment,
+        "details": _request_details,
+        "combat": _request_combat,
+        "component": _request_component,
+        "stats": _request_stats,
+        "ui": _request_ui,
+        "ui_settings": _request_ui_settings,
+        "texture": _request_texture,
+        "preview": _request_preview,
+        "appearance": _request_preview,
+        "export": _request_preview,
+    }
 
     def stage(self, root, temporary):
         document = self.effective()

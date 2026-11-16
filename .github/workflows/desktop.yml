@@ -58,6 +58,10 @@ jobs:
           ruff check src tests scripts
       - name: Pose tests
         run: node --test tests/*.test.mjs
+      - name: First-party UI formatting
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run format:check
       - name: Build native package
         run: python scripts/package_desktop.py
       - name: Relocated frozen startup and authoring helper

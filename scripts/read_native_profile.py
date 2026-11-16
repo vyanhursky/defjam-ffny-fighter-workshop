@@ -68,7 +68,10 @@ def scan(pid, executable, log, name):
         # traced from the frontend cash reader. Prefer the live manager object
         # over copies of the serialized file in loading buffers.
         service = word(0x2FB1A8)
-        valid = lambda p: 0x10000 <= p < 0x4000000 or 0x80000000 <= p < 0x84000000
+
+        def valid(p):
+            return 0x10000 <= p < 0x4000000 or 0x80000000 <= p < 0x84000000
+
         manager = word(service + 4) if valid(service) else 0
         index = word(manager + 0x5AC7C) if valid(manager) else 0xFFFFFFFF
         if index < 16:

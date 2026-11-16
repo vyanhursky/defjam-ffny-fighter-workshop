@@ -1,7 +1,6 @@
 """Real Qt/WebChannel retail project workflow with isolated output copies."""
 
 import argparse
-import base64
 import json
 from pathlib import Path
 import sys
@@ -45,7 +44,10 @@ def main():
     window.bridge.editor.data = args.data.resolve()
     window.web.setUrl(QUrl.fromLocalFile(str(Path(desktop.__file__).parent / "resources/retail.html")))
     window.show()
-    setvalue = lambda key, value: "document.getElementById(" + json.dumps(key) + ").value=" + json.dumps(value)
+
+    def setvalue(key, value):
+        return "document.getElementById(" + json.dumps(key) + ").value=" + json.dumps(value)
+
     steps = [
         ("retail studio initializes", "window.__retailState?.retail && !window.__retailState.document", None),
         (

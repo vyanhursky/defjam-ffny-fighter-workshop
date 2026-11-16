@@ -34,7 +34,7 @@ def test_only_known_workflows_are_remembered_and_the_list_is_capped(tmp_path):
     work = tmp_path / "work"
     assert not remembered.add_recent(work, "story", project_file(tmp_path))
     for number in range(9):
-        remembered.add_recent(work, "retail-edit", project_file(tmp_path, "p%d.ffnyfighter" % number))
+        remembered.add_recent(work, "retail-edit", project_file(tmp_path, f"p{number}.ffnyfighter"))
     assert len(remembered.recents(work)) == remembered.RECENT_LIMIT
     assert json.loads((work / "remembered.json").read_text())["recent"][0]["name"] == "p8"
 

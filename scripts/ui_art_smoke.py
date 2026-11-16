@@ -10,7 +10,7 @@ import time
 from PIL import Image, ImageDraw
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QFileDialog
-from defjam_caf import desktop, projects, ui_art
+from defjam_caf import desktop, projects
 
 
 def main():
@@ -54,16 +54,21 @@ def main():
     window = desktop.Window(args.workspace, args.data)
     window.show()
     second, third = [row["id"] for row in original["outfits"]]
-    select = (
-        lambda identity: "let e=document.getElementById('outfit-select');e.value="
-        + json.dumps(identity)
-        + ";e.dispatchEvent(new Event('change'))"
-    )
-    role = (
-        lambda key: "let e=document.getElementById('ui-role');e.value="
-        + json.dumps(key)
-        + ";e.dispatchEvent(new Event('change'))"
-    )
+
+    def select(identity):
+        return (
+            "let e=document.getElementById('outfit-select');e.value="
+            + json.dumps(identity)
+            + ";e.dispatchEvent(new Event('change'))"
+        )
+
+    def role(key):
+        return (
+            "let e=document.getElementById('ui-role');e.value="
+            + json.dumps(key)
+            + ";e.dispatchEvent(new Event('change'))"
+        )
+
     settings = "document.getElementById('ui-donor').value='retail/pockets';document.getElementById('ui-scale').value='4';document.getElementById('ui-apply-settings').click()"
     imported = "window.__cafState.ui_art.imported===24"
     preview = "window.__cafUIArt?.ready && window.__cafUIArt.hasImage"

@@ -246,7 +246,8 @@ def test_hd_atlas_rejects_unsupported_dimensions(size):
 
 
 def test_hd_export_uses_the_one_recipe_format_and_preserves_pixels(tmp_path, monkeypatch):
-    import json, zipfile
+    import json
+    import zipfile
     from defjam_caf import fighter_mod
 
     runtime = tmp_path / "runtime"

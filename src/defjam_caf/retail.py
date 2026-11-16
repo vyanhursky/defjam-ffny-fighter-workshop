@@ -630,7 +630,7 @@ class Session:
                     candidate["definition"]["components"]["appearance"] = candidate["identity"]["pack"] + "/retail-body"
                     candidate["textures"] = {}
                     return self.commit(candidate)
-                native = self.stage(root, temporary)
+                self.stage(root, temporary)
                 if action == "preview":
                     report = self.api(["preview-fighter", "--game", str(self.game()), "--pack", str(root)], temporary)
                     return report["preview"]

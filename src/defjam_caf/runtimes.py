@@ -93,7 +93,7 @@ def inspect(path, recipe_format):
     declared = FORMAT.search(_read(path / "setup/fighter_caf.py"))
     caf_format = declared.group(1) if declared else None
     features, missing = {}, {}
-    for name, label, needs, needs_format, why in FEATURES:
+    for name, _label, needs, needs_format, why in FEATURES:
         lacks = [c for c in needs if c not in commands]
         if needs_format and caf_format != recipe_format:
             lacks.append(

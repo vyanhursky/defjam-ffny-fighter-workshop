@@ -54,9 +54,9 @@ def main():
             + ";e.dispatchEvent(new Event('change'))"
         )
 
-    active = (
-        lambda identity: "window.__cafState.active_outfit===" + json.dumps(identity) + " && window.__cafPreview?.ready"
-    )
+    def active(identity):
+        return "window.__cafState.active_outfit===" + json.dumps(identity) + " && window.__cafPreview?.ready"
+
     steps = [
         ("initial preview", "window.__cafState?.selected && window.__cafPreview?.ready", None),
         (

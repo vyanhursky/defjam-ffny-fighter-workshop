@@ -1,7 +1,6 @@
 """Invented EE memory and ZIP fixtures; no save/game bytes."""
 
 import binascii
-import copy
 import hashlib
 import io
 import struct
@@ -159,15 +158,16 @@ def test_zstd_zip_crc_and_size_validation():
     corrupt = bytearray(data)
     central = corrupt.find(b"PK\x01\x02")
     struct.pack_into("<I", corrupt, central + 16, 123)
-    with zipfile.ZipFile(io.BytesIO(corrupt)) as archive:
-        with pytest.raises(SaveError, match="CRC"):
-            pcsx2._member(archive, "memory", 1000)
+    with zipfile.ZipFile(io.BytesIO(corrupt)) as archive, pytest.raises(SaveError, match="CRC"):
+        pcsx2._member(archive, "memory", 1000)
 
 
 def test_small_zstd_output_cannot_request_an_oversized_decoder_window():
-    with zipfile.ZipFile(io.BytesIO(zstd_zip("memory", b"invented" * 100, True))) as archive:
-        with pytest.raises(SaveError, match="window exceeds"):
-            pcsx2._member(archive, "memory", 1000)
+    with (
+        zipfile.ZipFile(io.BytesIO(zstd_zip("memory", b"invented" * 100, True))) as archive,
+        pytest.raises(SaveError, match="window exceeds"),
+    ):
+        pcsx2._member(archive, "memory", 1000)
 
 
 def test_populated_finisher_references_resolve_by_sodb_identity():

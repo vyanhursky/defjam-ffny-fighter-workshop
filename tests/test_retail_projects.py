@@ -5,7 +5,6 @@ import copy
 import hashlib
 import io
 import json
-from pathlib import Path
 import pytest
 from PIL import Image
 from defjam_caf import projects, retail
@@ -186,7 +185,8 @@ def test_body_png_budget_is_independent_of_ui_art_budget():
     raw = stream.getvalue()
     # PNG ancillary padding is legal and models incompressible production atlases
     # without storing a multi-megabyte fixture in source.
-    import zlib, struct
+    import zlib
+    import struct
 
     padding = b"x" * (4 * 1024**2)
     chunk = b"tEXt" + padding

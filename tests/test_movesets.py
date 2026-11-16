@@ -1,13 +1,14 @@
 import copy
-import struct
 from types import SimpleNamespace
 import pytest
+
 from defjam_caf import projects, outfits, movesets
 from defjam_caf.container import SaveError
-from defjam_caf.fields import apply_fields, read_fields
+from defjam_caf.fields import apply_fields
 from defjam_caf.editor import Editor
 from test_projects import fields
-from test_editing import profile
+
+pytest_plugins = ["test_editing"]
 
 
 def test_original_catalog_deduplicates_costumes_and_preserves_stable_motion_identity():
@@ -81,7 +82,6 @@ def test_project_moveset_is_shared_and_history_save_reopen_preserve_caf_fallback
     e, path = editor(tmp_path)
     original = copy.deepcopy(e.project)
     e.request("outfit_add", {})
-    second = e.active_outfit
     e.request("fighting_style", dict(mode="retail", fighter="retail/d-mob"))
     doc = e.project_document()
     assert doc["schema"] == projects.SCHEMA

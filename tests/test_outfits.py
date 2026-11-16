@@ -1,5 +1,3 @@
-import copy
-
 import pytest
 
 from defjam_caf import projects, outfits
@@ -14,7 +12,10 @@ def source():
 
 
 def test_export_keeps_one_fighter_and_all_outfit_atlases_and_portrait_references(tmp_path, monkeypatch):
-    import base64, hashlib, json, zipfile
+    import base64
+    import hashlib
+    import json
+    import zipfile
     from pathlib import Path
     from defjam_caf import fighter_mod
 

@@ -4,9 +4,9 @@ import struct
 
 import pytest
 from defjam_caf import projects
-from defjam_caf.container import Container, SaveError
+from defjam_caf.container import SaveError
 from defjam_caf.fields import read_fields
-from defjam_caf.profiles import PROFILE_SIZE, discover, directory_name
+from defjam_caf.profiles import PROFILE_SIZE
 from defjam_caf.editor import Editor
 
 
@@ -102,7 +102,8 @@ def test_project_duplicate_json_keys_and_oversize_rejected(tmp_path):
 
 
 def test_project_portrait_is_validated_and_survives_save_reopen(tmp_path):
-    import base64, io
+    import base64
+    import io
     from PIL import Image
 
     stream = io.BytesIO()

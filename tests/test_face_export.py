@@ -38,7 +38,7 @@ def test_sculpt_export_declares_version_and_preserves_per_outfit_assets(tmp_path
         recipe = json.loads(archive.read(prefix + "fighter.json"))
         assert recipe.get("retail_moveset") == ("retail/blaze" if retail else None)
         nodes = [recipe, *recipe["outfits"]]
-        for view, node in zip([outfits.view(project), outfits.view(project, second)], nodes):
+        for view, node in zip([outfits.view(project), outfits.view(project, second)], nodes, strict=False):
             descriptor = node["face"]
             raw = archive.read(prefix + descriptor["path"])
             assert hashlib.sha256(raw).hexdigest() == descriptor["sha256"]

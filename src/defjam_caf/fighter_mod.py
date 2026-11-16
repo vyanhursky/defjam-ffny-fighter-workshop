@@ -31,12 +31,15 @@ def run_contract(runtime, output, arguments):
     sys.dont_write_bytecode = True
     sys.argv = [str(script), *arguments]
     sys.path.insert(0, str(runtime / "setup"))
-    with output.open("x", encoding="utf-8") as stream:
-        with contextlib.redirect_stdout(stream), contextlib.redirect_stderr(stream):
-            try:
-                runpy.run_path(str(script), run_name="__main__")
-            except SystemExit as exc:
-                return exc.code or 0
+    with (
+        output.open("x", encoding="utf-8") as stream,
+        contextlib.redirect_stdout(stream),
+        contextlib.redirect_stderr(stream),
+    ):
+        try:
+            runpy.run_path(str(script), run_name="__main__")
+        except SystemExit as exc:
+            return exc.code or 0
     return 0
 
 
@@ -112,7 +115,7 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
                 basis=reference["basis"],
                 meshes=[
                     dict(rm=m["rm"], positions=m["positions"], deltas=d["deltas"])
-                    for m, d in zip(reference["meshes"], sculpt["meshes"])
+                    for m, d in zip(reference["meshes"], sculpt["meshes"], strict=False)
                 ],
             )
             raw = (json.dumps(value, sort_keys=True) + "\n").encode()
@@ -266,7 +269,7 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
                     workspace,
                 )
                 source = portrait["source"]
-                for key, descriptor in source.items():
+                for _key, descriptor in source.items():
                     if isinstance(descriptor, dict):
                         descriptor["path"] = relative + "/" + descriptor["path"]
             portrait_id = (

@@ -25,11 +25,11 @@ NEW = OLD + (
 
 def source(path, commands, caf_format=None):
     (path / "scripts").mkdir(parents=True)
-    listing = ", ".join("'%s'" % name for name in commands)
-    (path / "scripts/fighter-contract.py").write_text("parser.add_argument('command', choices=(%s))\n" % listing)
+    listing = ", ".join(f"'{name}'" for name in commands)
+    (path / "scripts/fighter-contract.py").write_text(f"parser.add_argument('command', choices=({listing}))\n")
     if caf_format:
         (path / "setup").mkdir()
-        (path / "setup/fighter_caf.py").write_text("FORMAT = '%s'\n" % caf_format)
+        (path / "setup/fighter_caf.py").write_text(f"FORMAT = '{caf_format}'\n")
     return path
 
 

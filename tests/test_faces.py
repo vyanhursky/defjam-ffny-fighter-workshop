@@ -41,8 +41,11 @@ def test_changes_touch_only_explicit_facial_fields_and_preserve_unknown_values()
     choices = faces.catalog(cache())
     before = (original["caf_values"][:], original["caf_colors"][:])
     values, colors = faces.change(original, {"face": 8, "nose": 7, "brow_color": 35}, choices)
-    assert [(i, a, b) for i, (a, b) in enumerate(zip(before[0], values)) if a != b] == [(5, 1, 8), (9, 1, 7)]
-    assert [(i, a, b) for i, (a, b) in enumerate(zip(before[1], colors)) if a != b] == [(8, 0, 35)]
+    assert [(i, a, b) for i, (a, b) in enumerate(zip(before[0], values, strict=False)) if a != b] == [
+        (5, 1, 8),
+        (9, 1, 7),
+    ]
+    assert [(i, a, b) for i, (a, b) in enumerate(zip(before[1], colors, strict=False)) if a != b] == [(8, 0, 35)]
     assert values[6] == 900 and values[17] == 0xDEADBEEF and original["caf_values"] == before[0]
     assert faces.selected(original, choices)[1]["value"] == 900
 

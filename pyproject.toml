@@ -14,7 +14,7 @@ authors = [{name = "Vlad Yanhursky"}]
 dependencies = ["Pillow>=12.3,<13", "numpy>=1.26,<3"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<10"]
+dev = ["pytest>=8,<10", "ruff==0.14.0"]
 ps2 = ["zstandard>=0.23,<1"]
 desktop = ["PySide6==6.8.3"]
 build = ["PyInstaller>=6.12,<7"]
@@ -32,3 +32,13 @@ defjam_caf = ["resources/*", "resources/vendor/*", "resources/branding/*", "_ven
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = ["src/defjam_caf/_vendor", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "UP", "SIM"]
+# The formatter wraps code; some messages/fixture strings need to stay intact.
+ignore = ["E501"]

@@ -1,6 +1,5 @@
 """Verified payload fields; patch only explicitly edited bytes."""
 
-from dataclasses import dataclass, field
 import struct
 
 from .container import Container, SaveError
@@ -33,7 +32,7 @@ def read_fields(payload):
     return {
         "cash": struct.unpack_from("<I", payload, 0x14)[0],
         "development": struct.unpack_from("<I", payload, 0x1C)[0],
-        "stats": dict(zip(STAT_KEYS, struct.unpack_from("<5I", payload, 0xF0))),
+        "stats": dict(zip(STAT_KEYS, struct.unpack_from("<5I", payload, 0xF0), strict=False)),
         "styles": styles,
         "combined_style": payload[0x137],
         "blazin_values": list(struct.unpack_from("<4I", payload, 0x120)),

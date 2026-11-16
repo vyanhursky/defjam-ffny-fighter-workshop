@@ -6,7 +6,14 @@ metadata; this script verifies its source binding, packages and uploaded hashes.
 
 import argparse
 from pathlib import Path, PurePosixPath
-import hashlib, json, os, re, stat, tarfile, tomllib, zipfile
+import hashlib
+import json
+import os
+import re
+import stat
+import tarfile
+import tomllib
+import zipfile
 
 TARGETS = {"windows-x64": "zip", "macos-arm64": "zip", "macos-x64": "zip", "linux-x64": "tar.gz"}
 
@@ -24,7 +31,7 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
     assert RUN_ID > 0
     VERSION = tomllib.loads((REPO / "pyproject.toml").read_text())["project"]["version"]
     match = re.fullmatch(r"(\d+\.\d+\.\d+)b(\d+)", VERSION)
-    assert match and TAG == f"v{match[1]}-beta.{match[2]}", "Tag must match the beta package version"
+    assert match and f"v{match[1]}-beta.{match[2]}" == TAG, "Tag must match the beta package version"
     run = json.loads((ROOT / "ci-run.json").read_text())
     jobs = json.loads((ROOT / "ci-jobs.json").read_text())["jobs"]
     artifacts = json.loads((ROOT / "ci-artifacts.json").read_text())["artifacts"]
@@ -72,7 +79,7 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
             else f"{app}/{app}"
         )
 
-        def check_name(entry):
+        def check_name(entry, names=names):
             nonlocal notices_seen
             path = PurePosixPath(entry)
             assert not path.is_absolute() and ".." not in path.parts and "\\" not in entry, entry

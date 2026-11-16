@@ -1,7 +1,5 @@
-import io
 import copy
 import json
-from pathlib import Path
 import struct
 import zipfile
 
@@ -42,7 +40,7 @@ def test_exact_scalar_field_changes_preserve_unknown_story_and_bonus_bytes(profi
     assert struct.unpack_from("<I", after.payload, 0x1C)[0] == 1234
     assert struct.unpack_from("<I", after.payload, 0x100)[0] == 50
     allowed = set(range(0x14, 0x18)) | set(range(0x1C, 0x20)) | set(range(0x100, 0x104))
-    assert all(a == b for i, (a, b) in enumerate(zip(before.payload, after.payload)) if i not in allowed)
+    assert all(a == b for i, (a, b) in enumerate(zip(before.payload, after.payload, strict=False)) if i not in allowed)
     assert Container.read(after.encode()) == after
 
 
@@ -130,10 +128,8 @@ def test_import_rejects_traversal_and_corrupted_archive(profile, tmp_path):
 
 
 def test_writer_lock_is_exclusive_and_released_after_exception(profile):
-    with writer_lock(profile.path.parent):
-        with pytest.raises(SaveError):
-            with writer_lock(profile.path.parent):
-                pass
+    with writer_lock(profile.path.parent), pytest.raises(SaveError), writer_lock(profile.path.parent):
+        pass
     with writer_lock(profile.path.parent):
         pass
 

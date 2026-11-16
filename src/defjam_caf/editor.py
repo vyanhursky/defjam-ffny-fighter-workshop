@@ -262,13 +262,13 @@ class Editor:
         count = len(outfits.entries(document))
         lines = [
             "Saved to " + str(path),
-            "%.1f MiB · SHA-256 %s…" % (path.stat().st_size / 1048576, digest.hexdigest()[:16]),
+            f"{path.stat().st_size / 1048576:.1f} MiB · SHA-256 {digest.hexdigest()[:16]}…",
             (
                 "Checked against your game files: the whole pack compiled natively."
                 if report.get("native_compilation")
                 else "The runtime did not report a native compile."
             ),
-            "%d outfit%s in this fighter." % (count, "" if count == 1 else "s"),
+            f"{count} outfit{'' if count == 1 else 's'} in this fighter.",
             "Needs a game build that supports " + RECIPE_FORMAT + ".",
             "To play it: in the launcher, open Mods > Fighters, add this ZIP and enable the pack.",
         ]
@@ -315,9 +315,10 @@ class Editor:
         return RETAIL_MOVESET_NOTICE
 
     def stage(self, changes):
-        if "moveset_core" in changes:
-            if self.project is not None or not self.movesets or changes["moveset_core"] not in self.movesets.by_core:
-                raise SaveError("Choose a retail moveset through the loaded catalog")
+        if "moveset_core" in changes and (
+            self.project is not None or not self.movesets or changes["moveset_core"] not in self.movesets.by_core
+        ):
+            raise SaveError("Choose a retail moveset through the loaded catalog")
         if self.project is not None and set(changes) & {"cash", "development"}:
             raise SaveError("Fighter projects have no Story currency")
         if not read_fields(self.current().payload)["has_fighter"]:
@@ -394,11 +395,11 @@ class Editor:
                 result.append(
                     "This save will need a game build with retail-moveset support (see the warning before saving)"
                 )
-        for slot, (old, new) in enumerate(zip(before_moves, self.blazin_keys())):
+        for slot, (old, new) in enumerate(zip(before_moves, self.blazin_keys(), strict=False)):
             if old != new:
                 result.append(f"Blazin' slot {slot + 1}: " + (self.blazin.label(new) if self.blazin else str(new)))
         for slot, (old, new, oc, nc) in enumerate(
-            zip(before["caf_values"], after["caf_values"], before["caf_colors"], after["caf_colors"])
+            zip(before["caf_values"], after["caf_values"], before["caf_colors"], after["caf_colors"], strict=False)
         ):
             if old != new or oc != nc:
                 label = {0: "Body build", 1: "Skin tone"}.get(slot)
@@ -619,7 +620,8 @@ class Editor:
             )
         textures = self.texture_edit if self.texture_edit is not None else (self.active_view() or {}).get("textures")
         if textures and textures["atlases"]:
-            import base64, io
+            import base64
+            import io
             from PIL import Image
             from .assets import image_uri
 
@@ -800,7 +802,8 @@ class Editor:
                 raise SaveError("Create or open a fighter project first")
             candidate = self.project_document(validate=False)
             if action == "ui_retail":
-                import base64, tempfile
+                import base64
+                import tempfile
                 from .fighter_mod import contract
 
                 if self.data is None or not (Path(self.data) / "extracted").is_dir():

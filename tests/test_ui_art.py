@@ -1,5 +1,4 @@
 import base64
-import copy
 import pytest
 from defjam_caf import projects, outfits, ui_art
 from defjam_caf.container import SaveError
@@ -118,7 +117,9 @@ def test_failed_ui_import_keeps_saved_file_and_staged_state(tmp_path):
 
 
 def test_export_embeds_exact_role_pngs_and_all_outfit_references(tmp_path, monkeypatch):
-    import hashlib, json, zipfile
+    import hashlib
+    import json
+    import zipfile
     from defjam_caf import fighter_mod
 
     runtime = tmp_path / "runtime"

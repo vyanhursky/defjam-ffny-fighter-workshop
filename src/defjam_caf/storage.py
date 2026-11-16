@@ -1,20 +1,19 @@
 """Atomic persistence, stale-source detection and bounded full-profile archives."""
 
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
-import shutil
 import tempfile
 import uuid
 import zipfile
 
 from .container import Container, MAX_SAVE_SIZE, SaveError
 from .fields import renamed
-from .profiles import Profile, directory_name, metadata_name, read_bounded, TITLE_ID, PROFILE_SIZE
+from .profiles import directory_name, metadata_name, read_bounded, TITLE_ID, PROFILE_SIZE
 
 
 def sha(raw):
@@ -209,7 +208,7 @@ def save_profile(profile, save, backup_root):
         original = current_bytes(profile)
         backup_root = Path(backup_root)
         backup_root.mkdir(parents=True, exist_ok=True)
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
         backup = backup_root / f"{stamp}-{profile.name}-{uuid.uuid4().hex[:8]}.djprofile"
         export_profile(profile, Container.read(original), backup)
         # Recheck immediately before replacing, after the backup is durable.

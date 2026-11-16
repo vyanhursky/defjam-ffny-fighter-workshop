@@ -189,7 +189,11 @@ def recover(mem, name):
             # nonempty direct teeth setting. Preserve them in inspection and
             # let the native recipe validator decide export support.
             fields = dict(
-                stats=dict(zip(STAT_KEYS, stats)), styles=styles, caf_values=q, caf_colors=c, has_fighter=True
+                stats=dict(zip(STAT_KEYS, stats, strict=False)),
+                styles=styles,
+                caf_values=q,
+                caf_colors=c,
+                has_fighter=True,
             )
             saved_finishers = struct.unpack_from("<4I", mem, base + 0x120)
             if saved_finishers != (0xFFFFFFFF,) * 4:

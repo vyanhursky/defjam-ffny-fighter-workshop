@@ -146,9 +146,9 @@ def obj(reference, sculpt=None):
         "# ffny-face-template " + reference["sha256"],
         "# Native bind units: X right, Y up, Z forward. Preserve order, UVs and triangles.",
     ]
-    for mesh, delta in zip(reference["meshes"], sculpt["meshes"]):
-        for p, d in zip(mesh["positions"], delta["deltas"]):
-            lines.append("v " + " ".join(format(a + b, ".9g") for a, b in zip(p, d)))
+    for mesh, delta in zip(reference["meshes"], sculpt["meshes"], strict=False):
+        for p, d in zip(mesh["positions"], delta["deltas"], strict=False):
+            lines.append("v " + " ".join(format(a + b, ".9g") for a, b in zip(p, d, strict=False)))
     for mesh in reference["meshes"]:
         for uv in mesh["uvs"]:
             lines.append("vt " + " ".join(format(v, ".9g") for v in uv))
@@ -198,14 +198,16 @@ def import_obj(raw, reference):
             "OBJ topology/order differs from the exported head template",
         )
         require(
-            all(abs(a - b) <= 1e-6 for p, q in zip(uvs, expected_uvs) for a, b in zip(p, q)),
+            all(
+                abs(a - b) <= 1e-6 for p, q in zip(uvs, expected_uvs, strict=False) for a, b in zip(p, q, strict=False)
+            ),
             "OBJ changed the original UVs",
         )
         result, offset = empty(reference), 0
-        for m, r in zip(reference["meshes"], result["meshes"]):
+        for m, r in zip(reference["meshes"], result["meshes"], strict=False):
             r["deltas"] = [
-                [a - b for a, b in zip(p, base)]
-                for p, base in zip(points[offset : offset + len(m["positions"])], m["positions"])
+                [a - b for a, b in zip(p, base, strict=False)]
+                for p, base in zip(points[offset : offset + len(m["positions"])], m["positions"], strict=False)
             ]
             offset += len(m["positions"])
         return validate(result, reference=reference)
@@ -221,14 +223,14 @@ def sliders(reference, values):
     points = [p for m in reference["meshes"] for p in m["positions"]]
     lo = [min(p[i] for p in points) for i in range(3)]
     hi = [max(p[i] for p in points) for i in range(3)]
-    mid = [(a + b) / 2 for a, b in zip(lo, hi)]
-    span = [b - a for a, b in zip(lo, hi)]
+    mid = [(a + b) / 2 for a, b in zip(lo, hi, strict=False)]
+    span = [b - a for a, b in zip(lo, hi, strict=False)]
     locked = frozen(reference)
 
     def gaussian(x, y, z, cx, cy, cz, sx, sy, sz):
         return math.exp(-(((x - cx) / sx) ** 2) - ((y - cy) / sy) ** 2 - ((z - cz) / sz) ** 2)
 
-    for mesh, row in zip(reference["meshes"], result["meshes"]):
+    for mesh, row in zip(reference["meshes"], result["meshes"], strict=False):
         for i, (px, py, pz) in enumerate(mesh["positions"]):
             if (mesh["rm"], i) in locked:
                 continue
@@ -238,7 +240,10 @@ def sliders(reference, values):
             brow = gaussian(abs(x), y, z, 0.25, 0.85, 0.7, 0.22, 0.08, 0.3)
             jaw = gaussian(x, y, z, 0, 0.22, 0.65, 0.6, 0.2, 0.6)
             ear = gaussian(abs(x), y, z, 0.47, 0.63, 0.25, 0.1, 0.25, 0.35)
-            v = lambda key: values.get(key, 0)
+
+            def v(key):
+                return values.get(key, 0)
+
             dx = px * 0.12 * v("face_width") + px * 0.18 * jaw * v("jaw_width")
             dx += px * 0.3 * nose * v("nose_width") + (1 if x >= 0 else -1) * 0.12 * eye * v("eye_spacing")
             dx += (abs(px) - span[0] * 0.25) * (1 if x >= 0 else -1) * 0.2 * eye * v("eye_size") + px * 0.15 * ear * v(
@@ -261,7 +266,10 @@ def apply(model, value):
     rows = {r["rm"]: r["deltas"] for r in value["meshes"]}
     for mesh in result["meshes"]:
         if mesh["rm"] in rows:
-            mesh["positions"] = [[a + b for a, b in zip(p, d)] for p, d in zip(mesh["positions"], rows[mesh["rm"]])]
+            mesh["positions"] = [
+                [a + b for a, b in zip(p, d, strict=False)]
+                for p, d in zip(mesh["positions"], rows[mesh["rm"]], strict=False)
+            ]
     return result
 
 

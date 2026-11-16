@@ -46,10 +46,13 @@ def main():
     window = desktop.Window(args.workspace, args.data)
     window.show()
     initial = "window.__cafState.blazin.selected"
-    equals = lambda value: "JSON.stringify(" + initial + ")===" + json.dumps(value)
-    choose = (
-        lambda value: "let keys=" + value + ";keys.forEach((key,i)=>document.getElementById('blazin-'+i).value=key);"
-    )
+
+    def equals(value):
+        return "JSON.stringify(" + initial + ")===" + json.dumps(value)
+
+    def choose(value):
+        return "let keys=" + value + ";keys.forEach((key,i)=>document.getElementById('blazin-'+i).value=key);"
+
     apply = "document.getElementById('apply-blazin').click()"
     steps = [
         (

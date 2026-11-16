@@ -20,7 +20,7 @@ from .storage import atomic_bytes, sha, writer_lock
 # settings. Projects saved by earlier builds under the numbers below hold a subset of these sections, so they open
 # unchanged and are stamped with the current schema the next time they are validated.
 SCHEMA = "ffny-fighter-project-7"
-EARLIER_SCHEMAS = tuple("ffny-fighter-project-%d" % n for n in range(1, 7))
+EARLIER_SCHEMAS = tuple(f"ffny-fighter-project-{n}" for n in range(1, 7))
 READABLE_SCHEMAS = EARLIER_SCHEMAS + (SCHEMA,)
 MAX_PROJECT = 384 * 1024 * 1024  # HD atlases of up to 2048px
 MAX_ATLAS_BYTES = 16 * 1024**2

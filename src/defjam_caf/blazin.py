@@ -4,6 +4,7 @@ UI keys identify a provider and a stable record, never a menu ordinal. Future
 providers can supply options to the same menu; unsupported provider keys fail
 closed until their project/runtime capability exists.
 """
+
 import re
 import struct
 
@@ -31,8 +32,16 @@ class Catalog:
                 raise SaveError("Unsupported or ambiguous retail Blazin' move")
             choices.add(choice)
             record = f"{identity:08x}"
-            rows.append(dict(key=PREFIX + record, label=label, source="Original game", record=record,
-                             value=database.value_for(TABLE, identity), choice=choice))
+            rows.append(
+                dict(
+                    key=PREFIX + record,
+                    label=label,
+                    source="Original game",
+                    record=record,
+                    value=database.value_for(TABLE, identity),
+                    choice=choice,
+                )
+            )
         if not rows:
             raise SaveError("No verified Blazin' moves in the original game database")
         self.options = sorted(rows, key=lambda row: (row["label"].casefold(), row["key"]))
@@ -45,20 +54,38 @@ class Catalog:
         return [self.by_key[key] for key in keys]
 
     def profile_keys(self, payload):
-        return [self.by_value[value]["key"] if value in self.by_value else
-                None if value == 0xFFFFFFFF else f"unavailable/{value:08x}"
-                for value in struct.unpack_from("<4I", payload, 0x120)]
+        return [
+            self.by_value[value]["key"]
+            if value in self.by_value
+            else None
+            if value == 0xFFFFFFFF
+            else f"unavailable/{value:08x}"
+            for value in struct.unpack_from("<4I", payload, 0x120)
+        ]
 
     def validate_values(self, values):
-        if type(values) is not list or len(values) != 4 or any(type(v) is not int or v not in self.by_value for v in values):
+        if (
+            type(values) is not list
+            or len(values) != 4
+            or any(type(v) is not int or v not in self.by_value for v in values)
+        ):
             raise SaveError("Unsupported saved Blazin' move reference")
 
     def label(self, key):
-        return self.by_key[key]["label"] if key in self.by_key else "Inherited / unassigned" if key is None else "Unavailable move"
+        return (
+            self.by_key[key]["label"]
+            if key in self.by_key
+            else "Inherited / unassigned"
+            if key is None
+            else "Unavailable move"
+        )
 
 
 def project_keys(identities):
-    if identities is not None and (type(identities) is not list or len(identities) != 4 or
-            any(type(v) is not str or re.fullmatch('[0-9a-f]{8}', v) is None for v in identities)):
+    if identities is not None and (
+        type(identities) is not list
+        or len(identities) != 4
+        or any(type(v) is not str or re.fullmatch("[0-9a-f]{8}", v) is None for v in identities)
+    ):
         raise SaveError("Choose four retail Blazin' record identities")
     return [PREFIX + identity for identity in identities] if identities is not None else [None] * 4

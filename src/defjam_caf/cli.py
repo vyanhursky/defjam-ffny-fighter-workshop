@@ -1,4 +1,5 @@
 """Local read-only profile inspector."""
+
 import argparse
 import json
 from pathlib import Path
@@ -40,15 +41,27 @@ def main(argv=None):
         if args.command == "import-atlas":
             from .projects import MAX_ATLAS_BYTES, read, write, with_atlas
             from .profiles import read_bounded
+
             document = with_atlas(read(args.project)[0], args.slot, read_bounded(args.png, MAX_ATLAS_BYTES))
             write(args.out, document)
-            print(json.dumps({"project": str(args.out), "atlas": args.slot, "material_alpha": "native-original", "native_playtest": False}))
+            print(
+                json.dumps(
+                    {
+                        "project": str(args.out),
+                        "atlas": args.slot,
+                        "material_alpha": "native-original",
+                        "native_playtest": False,
+                    }
+                )
+            )
             return 0
         if args.command in ("inspect-ps2-caf", "import-ps2-caf"):
             from . import pcsx2
+
             report = pcsx2.inspect(args.source, args.name, args.data)
             if args.command == "import-ps2-caf":
                 from .projects import write
+
                 write(args.out, pcsx2.project(report, args.donor))
                 report["project"] = str(args.out)
             print(json.dumps(report, indent=2))
@@ -56,6 +69,7 @@ def main(argv=None):
         if args.command == "project":
             from .projects import from_profile, write
             from .assets import Database
+
             selected = next((p for p in discover(args.data).profiles if p.name == args.profile), None)
             if selected is None:
                 raise SaveError("Requested profile is unavailable")
@@ -66,16 +80,36 @@ def main(argv=None):
         if args.command == "export-mod":
             from .projects import read
             from .fighter_mod import export_mod
-            print(json.dumps(export_mod(read(args.project)[0], args.out, args.runtime, args.data, args.workspace), indent=2))
+
+            print(
+                json.dumps(
+                    export_mod(read(args.project)[0], args.out, args.runtime, args.data, args.workspace), indent=2
+                )
+            )
             return 0
         result = discover(args.data)
     except (SaveError, OSError) as exc:
         parser.exit(2, f"{exc}\n")
-    print(json.dumps({"title_root": str(result.title_root), "profiles": [
-        {"name": p.name, "path": str(p.path), "directory_kind": p.directory_kind,
-         "sha256": p.sha256, "extra_files": p.extra_files,
-         "unchanged_roundtrip": p.container.encode() == p.path.read_bytes()}
-        for p in result.profiles], "issues": result.issues}, indent=2))
+    print(
+        json.dumps(
+            {
+                "title_root": str(result.title_root),
+                "profiles": [
+                    {
+                        "name": p.name,
+                        "path": str(p.path),
+                        "directory_kind": p.directory_kind,
+                        "sha256": p.sha256,
+                        "extra_files": p.extra_files,
+                        "unchanged_roundtrip": p.container.encode() == p.path.read_bytes(),
+                    }
+                    for p in result.profiles
+                ],
+                "issues": result.issues,
+            },
+            indent=2,
+        )
+    )
     return 1 if result.issues else 0
 
 

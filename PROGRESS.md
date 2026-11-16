@@ -1,5 +1,16 @@
 # Progress and handoff
 
+## November 15 review — Python formatting and lint
+
+B5: Ruff 0.14.0 formats first-party Python at 120 columns and checks E/F/B/UP/SIM
+in CI. Vendored attributed decoders are excluded. The first commit is formatting
+only; a separate commit applies reviewed lint fixes and the CI/config gate.
+Zip calls explicitly preserve their existing non-strict behavior, native staging
+calls retain side effects, and imported pytest fixtures remain registered.
+Validation after formatting and after lint fixes: 239 Python tests passed,
+5 skipped; 8 Node tests passed. Ruff format/check and diff check pass. This is
+source maintenance, with no new native-game acceptance claim.
+
 ## November 15 review — release hygiene
 
 Owner authorized independently assessing Parts A–C, source pushes and PRs,

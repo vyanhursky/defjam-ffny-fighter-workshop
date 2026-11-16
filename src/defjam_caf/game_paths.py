@@ -1,4 +1,5 @@
 """Read Xbox asset paths on case-sensitive hosts without changing the dump."""
+
 from pathlib import Path, PurePosixPath
 
 

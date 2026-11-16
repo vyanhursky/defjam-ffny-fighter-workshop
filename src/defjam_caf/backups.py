@@ -3,8 +3,9 @@
 A backup is an ordinary exported profile archive in the Workshop's own workspace. Restoring one replaces the profile's
 save file with the archived one, after first making a backup of the save it replaces, so a restore can be undone the
 same way."""
+
 import re
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 
 from .container import SaveError
@@ -25,7 +26,7 @@ def entries(root, profile_name):
         if not match or match.group(2) != profile_name or path.is_symlink() or not path.is_file():
             continue
         try:
-            when = datetime.strptime(match.group(1), "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+            when = datetime.strptime(match.group(1), "%Y%m%dT%H%M%S").replace(tzinfo=UTC)
         except ValueError:
             continue
         rows.append(dict(id=path.name, when=when.isoformat(), size=path.stat().st_size))

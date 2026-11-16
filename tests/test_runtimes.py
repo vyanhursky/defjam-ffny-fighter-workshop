@@ -1,4 +1,5 @@
 """Choosing a game version once, and saying plainly what each version can do."""
+
 import json
 
 import pytest
@@ -9,17 +10,26 @@ from defjam_caf.editor import Editor
 
 FORMAT = "caf-fighter-1"
 OLD = ("catalog", "tag-catalog", "voice-catalog", "validate-voice", "export-pair", "export-cinematic", "validate")
-NEW = OLD + ("export-caf-portrait", "export-ui-reference", "export-retail-appearance", "preview-fighter",
-             "workshop-catalog", "workshop-check", "workshop-audio", "workshop-animation", "workshop-export")
+NEW = OLD + (
+    "export-caf-portrait",
+    "export-ui-reference",
+    "export-retail-appearance",
+    "preview-fighter",
+    "workshop-catalog",
+    "workshop-check",
+    "workshop-audio",
+    "workshop-animation",
+    "workshop-export",
+)
 
 
 def source(path, commands, caf_format=None):
     (path / "scripts").mkdir(parents=True)
-    listing = ", ".join("'%s'" % name for name in commands)
-    (path / "scripts/fighter-contract.py").write_text("parser.add_argument('command', choices=(%s))\n" % listing)
+    listing = ", ".join(f"'{name}'" for name in commands)
+    (path / "scripts/fighter-contract.py").write_text(f"parser.add_argument('command', choices=({listing}))\n")
     if caf_format:
         (path / "setup").mkdir()
-        (path / "setup/fighter_caf.py").write_text("FORMAT = '%s'\n" % caf_format)
+        (path / "setup/fighter_caf.py").write_text(f"FORMAT = '{caf_format}'\n")
     return path
 
 
@@ -77,7 +87,10 @@ def test_require_explains_what_is_missing_and_what_to_do(tmp_path):
 def test_default_folder_is_only_offered_where_the_app_installs(tmp_path):
     local = tmp_path / "AppData/Local"
     (local / "DefJamRecompiled").mkdir(parents=True)
-    assert runtimes.default_folder(platform="win32", home=tmp_path, environ={"LOCALAPPDATA": str(local)}) == local / "DefJamRecompiled"
+    assert (
+        runtimes.default_folder(platform="win32", home=tmp_path, environ={"LOCALAPPDATA": str(local)})
+        == local / "DefJamRecompiled"
+    )
     assert runtimes.default_folder(platform="win32", home=tmp_path / "other", environ={}) is None
     assert runtimes.default_folder(platform="linux", home=tmp_path, environ={}) is None
 

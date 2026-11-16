@@ -3,6 +3,7 @@
 Stored in the Workshop's own workspace, never next to a save. A remembered folder is only offered again while it still
 passes its check (the data folder still holds extracted game files, the runtime still has its tools), so a moved or
 deleted folder simply falls back to asking."""
+
 import json
 from pathlib import Path
 
@@ -61,7 +62,9 @@ def recents(workspace):
         if isinstance(row, dict) and row.get("mode") in RECENT_MODES and isinstance(row.get("path"), str):
             try:
                 if Path(row["path"]).is_file():
-                    out.append(dict(mode=row["mode"], path=row["path"], name=str(row.get("name") or Path(row["path"]).stem)))
+                    out.append(
+                        dict(mode=row["mode"], path=row["path"], name=str(row.get("name") or Path(row["path"]).stem))
+                    )
             except OSError:
                 pass
     return out[:RECENT_LIMIT]
@@ -75,7 +78,7 @@ def add_recent(workspace, mode, path, name=None):
     try:
         value = _read(workspace)
         rows = [r for r in recents(workspace) if r["path"] != path]
-        value["recent"] = [dict(mode=mode, path=path, name=name or Path(path).stem)] + rows[:RECENT_LIMIT - 1]
+        value["recent"] = [dict(mode=mode, path=path, name=name or Path(path).stem)] + rows[: RECENT_LIMIT - 1]
         Path(workspace).mkdir(parents=True, exist_ok=True)
         atomic_bytes(Path(workspace) / FILE, (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8"))
     except OSError:

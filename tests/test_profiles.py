@@ -13,7 +13,7 @@ def invented_profile(root: Path, name="TEST", *, legacy=False, opaque_word=4):
     folder.mkdir(parents=True)
     (folder / "SaveMeta.xbx").write_bytes(("Name=" + name + "\r\n").encode("utf-16"))
     payload = bytearray(PROFILE_SIZE)
-    payload[:len(name)] = name.encode("ascii")
+    payload[: len(name)] = name.encode("ascii")
     struct.pack_into("<I", payload, 16, opaque_word)
     # Deliberately preserve nonzero unknown fields and padding.
     payload[1234:1240] = b"opaque"
@@ -44,7 +44,7 @@ def test_signature_uses_standard_hmac_not_an_invented_cryptographic_primitive():
     # Independent standard-library construction of HMAC, not digest() itself.
     data = b"synthetic test vector"
     inner = hashlib.sha1(bytes([0x36]) * 64 + data).digest()
-    expected = hashlib.sha1(bytes([0x5c]) * 64 + inner).digest()
+    expected = hashlib.sha1(bytes([0x5C]) * 64 + inner).digest()
     assert digest(data) == expected
 
 
@@ -113,8 +113,9 @@ def test_unverified_payload_words_remain_opaque_instead_of_becoming_format_versi
     assert result.profiles[0].container.encode() == raw
 
 
-@pytest.mark.parametrize("raw", [b"", b"Name=TEST", "Name=../BAD".encode("utf-16"),
-                                  "Name=A\nName=B".encode("utf-16"), b"\xff\xfe\x01"])
+@pytest.mark.parametrize(
+    "raw", [b"", b"Name=TEST", "Name=../BAD".encode("utf-16"), "Name=A\nName=B".encode("utf-16"), b"\xff\xfe\x01"]
+)
 def test_metadata_rejects_traversal_ambiguity_and_bad_encoding(raw):
     with pytest.raises(SaveError):
         metadata_name(raw)

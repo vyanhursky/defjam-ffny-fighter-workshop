@@ -1,4 +1,5 @@
 """Read-only discovery by exact metadata and signed profile identity."""
+
 from dataclasses import dataclass, field
 import hashlib
 from pathlib import Path
@@ -14,7 +15,7 @@ def directory_name(name: str, *, legacy: bool = False) -> str:
     value = 0
     units = name.encode("utf-16-le", errors="strict")
     for i in range(0, len(units), 2):
-        value = (value * 65536 + int.from_bytes(units[i:i + 2], "little")) % (2**48 - 59)
+        value = (value * 65536 + int.from_bytes(units[i : i + 2], "little")) % (2**48 - 59)
     result = f"{value:012X}"
     if legacy:
         result = result[:-1] + f"{(value | (value >> 32)) & 15:X}"
@@ -62,8 +63,7 @@ class Discovery:
 
 def title_root(data: Path) -> Path:
     data = Path(data).expanduser().resolve()
-    candidates = (data / "save" / "UserData" / TITLE_ID, data / "UserData" / TITLE_ID,
-                  data / TITLE_ID, data)
+    candidates = (data / "save" / "UserData" / TITLE_ID, data / "UserData" / TITLE_ID, data / TITLE_ID, data)
     for path in candidates:
         if path.is_dir() and path.name.upper() == TITLE_ID:
             # Reject linked children rather than following them into another save root.
@@ -111,10 +111,14 @@ def discover(data: Path) -> Discovery:
                 raise SaveError("Unsupported character profile name encoding") from exc
             if actual_name != name or b"\0" not in save.payload[:16]:
                 raise SaveError("Profile payload name disagrees with its metadata")
-            extras = tuple(sorted(p.name for p in folder.iterdir()
-                                  if p.name not in {name, "SaveMeta.xbx", "saveimage.xbx", ".caf-editor.lock"}))
-            result.profiles.append(Profile(name, folder / name, kind,
-                                           hashlib.sha256(raw).hexdigest(), save, extras))
+            extras = tuple(
+                sorted(
+                    p.name
+                    for p in folder.iterdir()
+                    if p.name not in {name, "SaveMeta.xbx", "saveimage.xbx", ".caf-editor.lock"}
+                )
+            )
+            result.profiles.append(Profile(name, folder / name, kind, hashlib.sha256(raw).hexdigest(), save, extras))
         except (SaveError, OSError, UnicodeError) as exc:
             result.issues.append({"directory": folder.name, "error": str(exc)})
     return result

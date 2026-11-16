@@ -1,12 +1,15 @@
 """Folders chosen once are remembered, and only while they still qualify."""
+
 import json
 
 from defjam_caf import remembered
 
 
 def runtime(path):
-    (path / "setup").mkdir(parents=True); (path / "scripts").mkdir()
-    (path / "setup/fighter_caf.py").write_text("x"); (path / "scripts/fighter-contract.py").write_text("x")
+    (path / "setup").mkdir(parents=True)
+    (path / "scripts").mkdir()
+    (path / "setup/fighter_caf.py").write_text("x")
+    (path / "scripts/fighter-contract.py").write_text("x")
     return path
 
 
@@ -28,7 +31,8 @@ def test_a_folder_that_fails_its_check_is_not_remembered_or_offered(tmp_path):
 
 
 def test_a_remembered_folder_that_was_moved_falls_back_to_asking(tmp_path):
-    data = tmp_path / "data"; (data / "extracted").mkdir(parents=True)
+    data = tmp_path / "data"
+    (data / "extracted").mkdir(parents=True)
     remembered.remember(tmp_path / "work", "data", data)
     assert remembered.recall(tmp_path / "work", "data") == data.resolve()
     (data / "extracted").rmdir()
@@ -36,11 +40,16 @@ def test_a_remembered_folder_that_was_moved_falls_back_to_asking(tmp_path):
 
 
 def test_the_two_folders_are_independent_and_a_corrupt_file_is_ignored(tmp_path):
-    data = tmp_path / "data"; (data / "extracted").mkdir(parents=True)
+    data = tmp_path / "data"
+    (data / "extracted").mkdir(parents=True)
     checkout = runtime(tmp_path / "runtime")
-    remembered.remember(tmp_path / "work", "data", data); remembered.remember(tmp_path / "work", "runtime", checkout)
+    remembered.remember(tmp_path / "work", "data", data)
+    remembered.remember(tmp_path / "work", "runtime", checkout)
     stored = json.loads((tmp_path / "work/remembered.json").read_text())
     assert set(stored) == {"data", "runtime"}
     (tmp_path / "work/remembered.json").write_text("{not json")
     assert remembered.recall(tmp_path / "work", "data") is None
-    assert remembered.remember(tmp_path / "work", "data", data) and remembered.recall(tmp_path / "work", "data") == data.resolve()
+    assert (
+        remembered.remember(tmp_path / "work", "data", data)
+        and remembered.recall(tmp_path / "work", "data") == data.resolve()
+    )

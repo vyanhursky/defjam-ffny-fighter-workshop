@@ -58,6 +58,8 @@ jobs:
         run: |
           ruff format --check src tests scripts
           ruff check src tests scripts
+      - name: Checked project, outfit and snapshot contracts
+        run: python -m mypy
       - name: Pose tests
         run: node --test tests/*.test.mjs
       - name: First-party UI formatting

@@ -14,7 +14,7 @@ authors = [{name = "Vlad Yanhursky"}]
 dependencies = ["Pillow>=12.3,<13", "numpy>=1.26,<3"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<10", "ruff==0.14.0"]
+dev = ["pytest>=8,<10", "ruff==0.14.0", "mypy==1.18.2"]
 ps2 = ["zstandard>=0.23,<1"]
 desktop = ["PySide6==6.8.3"]
 build = ["PyInstaller>=6.12,<7"]
@@ -42,3 +42,23 @@ extend-exclude = ["src/defjam_caf/_vendor", "build", "dist"]
 select = ["E", "F", "B", "UP", "SIM"]
 # The formatter wraps code; some messages/fixture strings need to stay intact.
 ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src/defjam_caf/contracts.py", "src/defjam_caf/outfits.py", "src/defjam_caf/projects.py", "src/defjam_caf/editor.py"]
+strict = true
+# Follow this explicit adoption set; imported legacy decoders stay outside it.
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["defjam_caf.editor"]
+# Only annotated boundaries are checked here. Project/outfit functions are typed.
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+check_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["defjam_caf.projects"]
+# Existing codec/catalog helpers imported from outside the adoption set.
+disallow_untyped_calls = false

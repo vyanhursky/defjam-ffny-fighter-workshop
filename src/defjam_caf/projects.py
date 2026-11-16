@@ -8,12 +8,14 @@ import re
 import uuid
 import hashlib
 import struct
+from typing import Any, Literal, cast, overload
 
 from .container import Container, SaveError
 from .fields import STAT_KEYS, apply_fields, combine_styles, read_fields
 from .profiles import PROFILE_SIZE
 from .storage import atomic_bytes, sha, writer_lock
 from .pngs import MAX_ATLAS_BYTES as MAX_ATLAS_BYTES, inspect_png
+from .contracts import AppearanceFields, AppearanceKey, FighterProject, FighterSource, Metadata, RetailProject
 
 # One project schema. Everything past identity, metadata and the four fighter fields is an optional section:
 # finishers, a retail moveset, textures, a portrait, an outfit collection, UI artwork, a face sculpt and performance
@@ -24,29 +26,46 @@ EARLIER_SCHEMAS = tuple(f"ffny-fighter-project-{n}" for n in range(1, 7))
 READABLE_SCHEMAS = EARLIER_SCHEMAS + (SCHEMA,)
 MAX_PROJECT = 384 * 1024 * 1024  # HD atlases of up to 2048px
 ATLAS_SLOTS = ("a", "b", "c", "d", "d1", "d2")
-FIGHTER_FIELDS = ("stats", "styles", "caf_values", "caf_colors")
+FIGHTER_FIELDS: tuple[Literal["stats", "styles", "caf_values", "caf_colors"], ...] = (
+    "stats",
+    "styles",
+    "caf_values",
+    "caf_colors",
+)
 SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
 
 
-def require(ok, message):
+def require(ok: object, message: str) -> None:
     if not ok:
         raise SaveError(message)
 
 
-def unique(pairs):
-    result = {}
+def unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
     for key, value in pairs:
         require(key not in result, "Duplicate project field: " + key)
         result[key] = value
     return result
 
 
-def validate(document):
+@overload
+def validate(document: FighterProject) -> FighterProject: ...
+
+
+@overload
+def validate(document: RetailProject) -> RetailProject: ...
+
+
+@overload
+def validate(document: Any) -> FighterProject | RetailProject: ...
+
+
+def validate(document: Any) -> FighterProject | RetailProject:
     from .retail import READABLE_SCHEMAS as RETAIL_SCHEMAS, validate as retail_validate
 
     if type(document) is dict and document.get("schema") in RETAIL_SCHEMAS:
-        return retail_validate(document)
+        return cast(RetailProject, retail_validate(document))
     require(
         type(document) is dict
         and {"schema", "identity", "metadata", "fighter"} <= set(document)
@@ -170,7 +189,7 @@ def validate(document):
             "A fighter supports one to three outfits",
         )
 
-        def name_valid(value):
+        def name_valid(value: Any) -> bool:
             return (
                 type(value) is str
                 and bool(value.strip())
@@ -199,21 +218,22 @@ def validate(document):
 
     ui_art.check_budget(document)
     document["schema"] = SCHEMA
-    return document
+    return cast(FighterProject, document)
 
 
-def appearance_hash(fields):
+def appearance_hash(fields: AppearanceFields) -> str:
+    keys: tuple[AppearanceKey, ...] = ("caf_values", "caf_colors")
     return hashlib.sha256(
-        json.dumps({k: fields[k] for k in ("caf_values", "caf_colors")}, sort_keys=True, separators=(",", ":")).encode()
+        json.dumps({k: fields[k] for k in keys}, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
 
 
-def atlas_bytes(value):
+def atlas_bytes(value: str) -> bytes:
     inspect_png(value, "atlas")
     return base64.b64decode(value, validate=True)
 
 
-def with_atlas(document, slot, raw):
+def with_atlas(document: FighterProject, slot: str, raw: bytes) -> FighterProject:
     require(slot in ATLAS_SLOTS, "Choose atlas a, b, c, d, d1 or d2")
     result = copy.deepcopy(validate(document))
     value = base64.b64encode(raw).decode("ascii")
@@ -223,12 +243,12 @@ def with_atlas(document, slot, raw):
     return validate(result)
 
 
-def portrait_bytes(value):
+def portrait_bytes(value: str) -> bytes:
     inspect_png(value, "portrait")
     return base64.b64decode(value, validate=True)
 
 
-def empty_container():
+def empty_container() -> Container:
     payload = bytearray(PROFILE_SIZE)
     payload[0x120:0x130] = b"\xff" * 16
     payload[0x134:0x137] = b"\xff" * 3
@@ -236,10 +256,12 @@ def empty_container():
     return Container(bytes(64), bytes(payload))
 
 
-def from_fields(fields, name, metadata=None, moveset_key=None):
+def from_fields(
+    fields: FighterSource, name: str, metadata: Metadata | None = None, moveset_key: str | None = None
+) -> FighterProject:
     require(fields.get("has_fighter"), "Create a Story fighter in the game before making a project")
     token = uuid.uuid4().hex[:12]
-    document = {
+    document: FighterProject = {
         "schema": SCHEMA,
         "identity": {"pack": "fighter-" + token, "fighter": "fighter"},
         "metadata": {
@@ -250,17 +272,23 @@ def from_fields(fields, name, metadata=None, moveset_key=None):
             "license": "",
             "donor": "retail/blaze",
         },
-        "fighter": {k: copy.deepcopy(fields[k]) for k in ("stats", "styles", "caf_values", "caf_colors")},
+        "fighter": {
+            "stats": copy.deepcopy(fields["stats"]),
+            "styles": fields["styles"][:],
+            "caf_values": fields["caf_values"][:],
+            "caf_colors": fields["caf_colors"][:],
+        },
     }
     if metadata:
         document["metadata"].update(metadata)
     if 1 <= fields.get("combined_style", 0) <= 86:
-        require(moveset_key is not None, "Load original fighter assets to preserve this retail moveset")
+        if moveset_key is None:
+            raise SaveError("Load original fighter assets to preserve this retail moveset")
         document["fighter"]["retail_moveset"] = moveset_key
     return validate(document)
 
 
-def from_profile(payload, name, database=None):
+def from_profile(payload: bytes, name: str, database: Any = None) -> FighterProject:
     """Convert fighter fields while resolving saved retail finisher identities."""
     fields = read_fields(payload)
     key = None
@@ -294,12 +322,12 @@ def from_profile(payload, name, database=None):
     return validate(document)
 
 
-def container(document):
+def container(document: FighterProject) -> Container:
     fighter = validate(document)["fighter"]
     return apply_fields(empty_container(), {k: fighter[k] for k in FIGHTER_FIELDS})
 
 
-def encoded(document):
+def encoded(document: FighterProject | RetailProject) -> bytes:
     raw = (json.dumps(validate(document), ensure_ascii=True, indent=2, sort_keys=True, allow_nan=False) + "\n").encode(
         "utf-8"
     )
@@ -307,7 +335,7 @@ def encoded(document):
     return raw
 
 
-def read(path):
+def read(path: str | Path) -> tuple[FighterProject | RetailProject, str]:
     path = Path(path)
     require(not path.is_symlink(), "Project must be a regular file")
     with path.open("rb") as stream:
@@ -317,7 +345,7 @@ def read(path):
         document = json.loads(
             raw, object_pairs_hook=unique, parse_constant=lambda _: require(False, "Non-finite project number")
         )
-        validate(document)
+        document = validate(document)
     except (ValueError, TypeError, KeyError) as exc:
         raise SaveError(
             "This fighter project could not be opened. Check the file or choose another project.",
@@ -326,7 +354,7 @@ def read(path):
     return document, sha(raw)
 
 
-def write(path, document, expected=None):
+def write(path: str | Path, document: FighterProject | RetailProject, expected: str | None = None) -> str:
     path, raw = Path(path), encoded(document)
     path.parent.mkdir(parents=True, exist_ok=True)
     with writer_lock(path.parent):
@@ -339,4 +367,4 @@ def write(path, document, expected=None):
         else:
             require(path.is_file() and read(path)[1] == expected, "Project changed on disk; reopen it before saving")
             atomic_bytes(path, raw)
-    return sha(raw)
+    return hashlib.sha256(raw).hexdigest()

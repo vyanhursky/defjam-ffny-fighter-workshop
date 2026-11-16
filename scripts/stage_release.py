@@ -53,6 +53,12 @@ def environment_record(raw, expected_platform):
     return record
 
 
+def environment_copy(raw, expected_platform, previous):
+    record = environment_record(raw, expected_platform)
+    assert previous is None or record == previous, "Conflicting build environment records"
+    return record
+
+
 def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
     assert re.fullmatch(r"[0-9a-f]{40}", EXPECTED_SHA)
     assert RUN_ID > 0
@@ -126,8 +132,8 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
                     if member.is_dir() or stat.S_ISLNK(member.external_attr >> 16):
                         continue
                     if member.filename.endswith("/documentation/build-environment.json"):
-                        assert build_environment is None and member.file_size <= 64 * 1024
-                        build_environment = environment_record(bundle.read(member), expected_platform)
+                        assert member.file_size <= 64 * 1024
+                        build_environment = environment_copy(bundle.read(member), expected_platform, build_environment)
                     if member.filename == entrypoint:
                         with bundle.open(member) as stream:
                             header = stream.read(4)
@@ -150,8 +156,10 @@ def prepare(REPO, ROOT, EXPECTED_SHA, RUN_ID, TAG):
                     if not member.isfile():
                         continue
                     if member.name.endswith("/documentation/build-environment.json"):
-                        assert build_environment is None and member.size <= 64 * 1024
-                        build_environment = environment_record(bundle.extractfile(member).read(), expected_platform)
+                        assert member.size <= 64 * 1024
+                        build_environment = environment_copy(
+                            bundle.extractfile(member).read(), expected_platform, build_environment
+                        )
                     if member.name == entrypoint:
                         assert bundle.extractfile(member).read(4) == b"\x7fELF" and member.mode & stat.S_IXUSR
                         entrypoint_seen = True

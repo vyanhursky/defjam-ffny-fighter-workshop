@@ -18,7 +18,7 @@ def test_legacy_conversion_and_final_override_are_distinct():
 
 
 @pytest.mark.parametrize(
-    "bad", [None, {}, dict(ATTRIBUTES, charisma=True), dict(ATTRIBUTES, charisma=101), dict(ATTRIBUTES, health=-1)]
+    "bad", [None, {}, dict(ATTRIBUTES, charisma=True), dict(ATTRIBUTES, charisma=51), dict(ATTRIBUTES, health=-1)]
 )
 def test_invalid_final_stats_rejected_without_staging(tmp_path, bad):
     path = tmp_path / "fighter.ffnyfighter"
@@ -59,7 +59,7 @@ def test_shared_stats_undo_reset_outfit_switch_save_and_reopen(tmp_path):
     state = editor.request("final_stats", {"values": None})
     assert state["final_stats"] is None and state["dirty"]
     assert editor.request("undo", {})["final_stats"] == ATTRIBUTES
-    editor.request("final_stats", {"values": dict(ATTRIBUTES, charisma=80)})
+    editor.request("final_stats", {"values": dict(ATTRIBUTES, charisma=40)})
     assert editor.request("reset", {})["final_stats"] == ATTRIBUTES
     loaded.pop("outfits")
     loaded.pop("outfit_name")

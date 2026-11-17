@@ -1,7 +1,7 @@
 ## November 17 — standalone final attributes and Charisma
 
 Standalone CAF projects can choose final battle attributes in Stats: Upper,
-Lower, Speed, Toughness, Health and Charisma (six integers, 0–100). This optional
+Lower, Speed, Toughness, Health and Charisma (six integers, 0–50). This optional
 shared section survives outfit navigation/copy, Undo/Reset and project save/copy;
 normal five-field Story training stays unchanged. The original training formula
 is shown through the default values, avoiding a false retail-stat copy.

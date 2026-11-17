@@ -132,7 +132,7 @@ Keep source art, projects, saves and captures private unless you can publish the
 ## Final battle attributes and Charisma
 
 In a standalone CAF project, open **Stats → Attribute mode → Final battle
-attributes (0–100)**. Edit Upper power, Lower power, Speed, Toughness, Health and
+attributes (0–50)**. Edit Upper power, Lower power, Speed, Toughness, Health and
 Charisma directly. These are shared by every outfit and survive Undo, Reset,
 project save/copy and mod export. Returning to CAF training removes the override
 and restores the preserved five training inputs and their style bonuses.

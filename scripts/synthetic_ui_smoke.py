@@ -299,7 +299,7 @@ def main(argv=None):
         ),
         (
             "Final attribute mode through WebChannel",
-            "window.__cafState?.final_stats?.charisma===0 && document.getElementById('stat-charisma').max==='100'",
+            "window.__cafState?.final_stats?.charisma===0 && document.getElementById('stat-charisma').max==='50'",
             "document.querySelector('[data-tab=stats]').click();let e=document.getElementById('stats-mode');e.value='final';e.dispatchEvent(new Event('change'))",
         ),
         (

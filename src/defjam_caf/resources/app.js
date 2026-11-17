@@ -293,7 +293,7 @@ function renderState(state, forcePreview = false) {
   $("stats-mode").onchange = () =>
     act("final_stats", { values: $("stats-mode").value === "final" ? state.effective_stats : null });
   $("stats-help").textContent = finalStats
-    ? "Set final menu and battle attributes directly (0–100)."
+    ? "Set final menu and battle attributes directly (0–50)."
     : "Training stats use the game's normal 0–50 range.";
   $("stats-final-note").hidden = !finalStats;
   $("stats").replaceChildren();
@@ -312,7 +312,7 @@ function renderState(state, forcePreview = false) {
     const span = document.createElement("span");
     span.textContent = label;
     const number = document.createElement("input");
-    const max = finalStats ? 100 : 50;
+    const max = 50;
     Object.assign(number, {
       type: "number",
       min: "0",

@@ -9,11 +9,9 @@ BONUSES = ((2, 0, 0, 1, 0, 0), (0, 2, 1, 0, 0, 0), (0, 1, 0, 0, 2, 0), (1, 0, 0,
 
 def validate(value):
     if not (
-        type(value) is dict
-        and set(value) == set(KEYS)
-        and all(type(n) is int and 0 <= n <= 100 for n in value.values())
+        type(value) is dict and set(value) == set(KEYS) and all(type(n) is int and 0 <= n <= 50 for n in value.values())
     ):
-        raise SaveError("Final battle attributes need all six integer values in 0–100.")
+        raise SaveError("Final battle attributes need all six integer values in 0–50.")
     return value
 
 

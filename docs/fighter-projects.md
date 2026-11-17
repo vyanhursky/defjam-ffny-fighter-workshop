@@ -142,6 +142,9 @@ in five-point steps and adds style bonuses. Copying a retail fighter's menu
 numbers into training does not reproduce that fighter. Final mode bypasses that
 conversion; it does not add those bonuses a second time. Native combat retains
 its integer battle-scale quantization while the menu displays the chosen values.
+Switching modes can change combat strength even when menu numbers match, because
+the original CAF and retail scales differ. The initial final values copy the
+current menu numbers; review them for your intended retail target.
 Story-save training remains 0–50; no Charisma or unknown save bytes are written.
 
 Exports with final attributes require a runtime advertising `caf-final-stats-1`.

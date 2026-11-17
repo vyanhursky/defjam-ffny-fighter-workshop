@@ -128,3 +128,23 @@ Experimental [PS2 snapshot recovery](ps2-caf-recovery.md) creates a project from
 verified fighter fields; it does not convert Story saves. Arbitrary clothing/mesh
 import, individual move authoring and custom animation authoring remain deferred.
 Keep source art, projects, saves and captures private unless you can publish them.
+
+## Final battle attributes and Charisma
+
+In a standalone CAF project, open **Stats → Attribute mode → Final battle
+attributes (0–100)**. Edit Upper power, Lower power, Speed, Toughness, Health and
+Charisma directly. These are shared by every outfit and survive Undo, Reset,
+project save/copy and mod export. Returning to CAF training removes the override
+and restores the preserved five training inputs and their style bonuses.
+
+Training values are not retail attributes: the original game converts training
+in five-point steps and adds style bonuses. Copying a retail fighter's menu
+numbers into training does not reproduce that fighter. Final mode bypasses that
+conversion; it does not add those bonuses a second time. Native combat retains
+its integer battle-scale quantization while the menu displays the chosen values.
+Story-save training remains 0–50; no Charisma or unknown save bytes are written.
+
+Exports with final attributes require a runtime advertising `caf-final-stats-1`.
+The readiness checklist and export both refuse an older runtime. Projects without
+this optional section retain their previous behavior; older Workshop builds
+refuse this new field rather than silently discarding it.

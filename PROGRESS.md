@@ -1,3 +1,20 @@
+## November 17 — standalone final attributes and Charisma
+
+Standalone CAF projects can choose final battle attributes in Stats: Upper,
+Lower, Speed, Toughness, Health and Charisma (six integers, 0–100). This optional
+shared section survives outfit navigation/copy, Undo/Reset and project save/copy;
+normal five-field Story training stays unchanged. The original training formula
+is shown through the default values, avoiding a false retail-stat copy.
+Export/readiness require the companion caf-final-stats-1 runtime extension;
+older compilers/projects without it retain their existing behavior.
+
+Python 316 passed/7 skipped; Node24 passed; Ruff/mypy/Prettier pass. Real native
+macOS Qt/WebChannel/WebGL synthetic tours pass57checks each at1440×940 and
+1100×760, including mode selection, Charisma edit, shared outfits and save.
+Original game resources/pickers are adapters in that tour. Runtime/native and
+private real-project qualification are recorded separately in the companion PR.
+No game assets, projects, captures, packaged release or merge are published.
+
 # Progress and handoff
 
 ## November 16 — owner-authorized Workshop 0.2.0 release

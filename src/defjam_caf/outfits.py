@@ -46,6 +46,9 @@ def replace_view(document: FighterProject, identity: str, selected: FighterProje
     result["fighter"].pop("retail_moveset", None)
     if "retail_moveset" in selected["fighter"]:
         result["fighter"]["retail_moveset"] = selected["fighter"]["retail_moveset"]
+    result["fighter"].pop("final_stats", None)
+    if "final_stats" in selected["fighter"]:
+        result["fighter"]["final_stats"] = copy.deepcopy(selected["fighter"]["final_stats"])
     if identity == DEFAULT:
         for key in APPEARANCE:
             result["fighter"][key] = selected["fighter"][key][:]

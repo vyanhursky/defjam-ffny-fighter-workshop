@@ -398,6 +398,10 @@ class Editor:
             return self.outfit_changes()
         before, after = read_fields(self.base().payload), read_fields(self.current().payload)
         result = []
+        if self.project is not None and self.project["fighter"].get("final_stats") != self.project_document(
+            validate=False
+        )["fighter"].get("final_stats"):
+            result.append("Final battle attributes changed")
         if self.metadata_edit is not None:
             result.append("Project details changed")
         if self.portrait_edit is not None:
@@ -449,6 +453,7 @@ class Editor:
             result.append("Project details changed")
         for key, label in (
             ("stats", "Training stats"),
+            ("final_stats", "Final battle attributes"),
             ("styles", "Fighting styles"),
             ("finishers", "Blazin' assignments"),
             ("retail_moveset", "Moveset selection"),
@@ -489,6 +494,8 @@ class Editor:
             profiles=[],
             selected=None,
             fields=None,
+            final_stats=None,
+            effective_stats=None,
             changes=[],
             dirty=False,
             undo=False,
@@ -571,6 +578,12 @@ class Editor:
         if self.profile or self.project:
             result["selected"] = self.project["metadata"]["name"] if self.project else self.profile.name
             result["fields"] = read_fields(self.current().payload)
+            if self.project is not None:
+                from .battle_stats import effective
+
+                fighter = self.project_document(validate=False)["fighter"]
+                result["final_stats"] = copy.deepcopy(fighter.get("final_stats"))
+                result["effective_stats"] = effective(fighter)
             result["changes"] = self.changes()
             result["dirty"] = (
                 self.project_document(validate=False) != self.project
@@ -682,6 +695,24 @@ class Editor:
     def _clear_drafts(self):
         self.outfit_draft = self.portrait_edit = self.metadata_edit = self.texture_edit = None
 
+    def _request_final_stats(self, action, args):
+        if self.project is None:
+            raise SaveError("Final battle attributes are available for standalone fighter projects only")
+        from .battle_stats import validate
+
+        document = self.project_document(validate=False)
+        value = args["values"]
+        if value is None:
+            document["fighter"].pop("final_stats", None)
+        else:
+            document["fighter"]["final_stats"] = copy.deepcopy(validate(value))
+        candidate = projects.validate(document)
+        if candidate != self.project_document(validate=False):
+            self.remember()
+            self.outfit_draft, self.edits = candidate, {}
+            self.portrait_edit = self.texture_edit = self.metadata_edit = None
+        return self.snapshot()
+
     def _request_cache_clear(self, action, args):
         from . import cache_maintenance
 
@@ -726,6 +757,18 @@ class Editor:
         )
         version_ok = bool(projects.VERSION.fullmatch(metadata.get("version", "")))
         add("version", "Pack version is set." if version_ok else "Set a version such as 1.0.0.", version_ok, "project")
+        if document and "final_stats" in document["fighter"]:
+            from .battle_stats import CAPABILITY
+
+            supported = bool(setup["runtime"] and CAPABILITY in setup["runtime"].get("extensions", []))
+            add(
+                "final_stats",
+                "Selected game version supports final battle attributes."
+                if supported
+                else "Choose a game version with final battle attributes support (caf-final-stats-1).",
+                supported,
+                "setup",
+            )
         if document:
             view = self.active_view() or {}
             portrait = self.portrait_edit is not None or bool(view.get("portrait"))
@@ -1296,6 +1339,7 @@ class Editor:
         "snapshot": _request_snapshot,
         "select_profile": _request_select_profile,
         "stage": _request_stage,
+        "final_stats": _request_final_stats,
         "appearance": _request_appearance,
         "options": _request_options,
         "preview": _request_preview,

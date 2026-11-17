@@ -414,9 +414,20 @@
           <section id="tab-stats" class="tab-content" hidden="" role="tabpanel" aria-labelledby="section-stats">
             <div class="panel-title">
               <h3>Build your edge.</h3>
-              <p>Training stats use the game's normal 0–50 range.</p>
+              <p id="stats-help">Training stats use the game's normal 0–50 range.</p>
             </div>
+            <label id="stats-mode-row" hidden
+              >Attribute mode
+              <select id="stats-mode">
+                <option value="training">CAF training (0–50)</option>
+                <option value="final">Final battle attributes (0–100)</option>
+              </select>
+            </label>
             <div id="stats"></div>
+            <p id="stats-final-note" class="hint" hidden>
+              Final attributes include Charisma and apply to all outfits. Training and style bonuses are not added
+              again. Export requires a compatible game version.
+            </p>
             <div class="rule"></div>
             <label>Cash<input id="cash" type="number" min="0" max="10000000" step="1" /></label
             ><label>Development points<input id="development" type="number" min="0" max="100000" step="1" /></label>

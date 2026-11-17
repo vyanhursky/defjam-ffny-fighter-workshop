@@ -80,6 +80,14 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         (runtime / "setup/fighter_caf.py").is_file() and (runtime / "scripts/fighter-contract.py").is_file(),
         "This runtime has no CAF recipe support. Select the compatible Custom Fighter development checkout",
     )
+    if "final_stats" in project["fighter"]:
+        from .battle_stats import CAPABILITY
+        from .runtimes import inspect
+
+        require(
+            CAPABILITY in inspect(runtime, RECIPE_FORMAT).get("extensions", []),
+            "This fighter needs a game version with final battle attributes support (caf-final-stats-1)",
+        )
     game = (Path(data) / "extracted").resolve()
     require(game.is_dir(), "Choose the data directory containing extracted game assets")
     workspace.mkdir(parents=True, exist_ok=True)

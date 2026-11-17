@@ -16,13 +16,21 @@ passes (102255413-byte ZIP). Original source file stays byte-identical. Python
 fixtures reject malformed/duplicate/unbound normal data. Runtime is extending
 FCAF with an optional version-2 normal section; version-1 containers are unchanged.
 
-The initial native selector probe confirmed head/HD outfit construction but
-retained original normals because its prototype looked in morph channels.
-The corrected adapter resolves the native draw-stream parameters instead,
-using participant-owned RM/normal copies and an original-normal fallback.
-Decisive game validation of this path is pending while another checkout has
-an active game session. Both PRs remain drafts until required checks finish;
-private art, project files, exported packages and captures are not published.
+Windows native qualification: the original selector loads the default 2Pac look;
+all30 corrections are applied across five neck/top render meshes using2832bytes
+of private draw/normal data. Read-only live-memory verification proves the active
+render parameters reference the corrected copies, every original packed word is
+unchanged, and non-target vertices retain their original values. The220second
+run passes all five combat assertions with zero crashes/watchdogs/debug-layer
+faults/truncated batches/unresolved calls; frame samples min99/median120/max120
+presents per two seconds. The complete disposable save root restores identically.
+The other two looks are qualified for preview, save/reopen and compilation;
+this does not claim native gameplay coverage for every outfit/platform.
+
+Workshop PR35 and companion runtime PR274 remain unmerged; runtime targets
+v1.2.0 and is stacked on270. Stock regression and final CI evidence are maintained
+in their PR descriptions. No game assets, project files, exports, captures or
+native memory payloads are published. No tag or release is authorized.
 
 ## November 16 — owner-authorized Workshop 0.2.0 release
 

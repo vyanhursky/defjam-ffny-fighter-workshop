@@ -12,6 +12,9 @@ import math
 from .container import SaveError
 
 SCHEMA = "ffny-face-sculpt-1"
+NORMAL_SCHEMA = "ffny-face-sculpt-2"
+NORMAL_EXTENSION = "caf-sculpt-normals-1"
+MAX_NORMALS = 128
 MAX_OBJ = 2 * 1024 * 1024
 MAX_DELTA = 0.6
 BASIS_SLOTS = (0, 5, 6, 9, 10, 11)
@@ -60,11 +63,15 @@ def frozen(reference):
 
 
 def validate(value, fields=None, reference=None):
+    keys = {"schema", "template_sha256", "basis", "meshes", "sliders"}
     require(
-        type(value) is dict and set(value) == {"schema", "template_sha256", "basis", "meshes", "sliders"},
+        type(value) is dict
+        and set(value) == keys | ({"neck_normals"} if value.get("schema") == NORMAL_SCHEMA else set()),
         "Invalid face sculpt fields",
     )
-    require(value["schema"] == SCHEMA, "Unsupported face sculpt version")
+    require(value["schema"] in (SCHEMA, NORMAL_SCHEMA), "Unsupported face sculpt version")
+    if value["schema"] == NORMAL_SCHEMA:
+        validate_normals(value["neck_normals"])
     import re
 
     require(
@@ -128,6 +135,70 @@ def validate(value, fields=None, reference=None):
             "Face sculpt moves the protected neck seam",
         )
     return value
+
+
+def validate_normals(rows):
+    from ._vendor.defjam_model import normal_111110
+
+    require(type(rows) is list and 0 < len(rows) <= MAX_NORMALS, "Invalid neck normal correction count")
+    seen = set()
+    for row in rows:
+        require(
+            type(row) is dict and set(row) == {"slot", "rm", "vertex", "position", "original", "replacement"},
+            "Invalid neck normal correction fields",
+        )
+        require(
+            type(row["slot"]) is int
+            and row["slot"] in (3, 12)
+            and type(row["rm"]) is int
+            and 0 <= row["rm"] < 16
+            and type(row["vertex"]) is int
+            and 0 <= row["vertex"] < 65535,
+            "Invalid neck normal target",
+        )
+        target = (row["slot"], row["rm"], row["vertex"])
+        require(target not in seen, "Duplicate neck normal target")
+        seen.add(target)
+        p = row["position"]
+        require(
+            type(p) is list
+            and len(p) == 3
+            and all(type(v) in (int, float) and math.isfinite(v) and abs(v) <= 100 for v in p)
+            and 10 < p[1] < 30,
+            "Invalid neck normal reference position",
+        )
+        for key in ("original", "replacement"):
+            require(type(row[key]) is int and 0 <= row[key] <= 0xFFFFFFFF, "Invalid packed neck normal")
+            try:
+                normal_111110(row[key])
+            except ValueError as exc:
+                raise SaveError("Invalid packed neck normal") from exc
+    return rows
+
+
+def apply_normals(model, value):
+    """Apply only hash-preserved, position/normal-bound corrections to a private preview."""
+    if value.get("schema") != NORMAL_SCHEMA:
+        return model
+    from ._vendor.defjam_model import normal_111110
+
+    result = copy.deepcopy(model)
+    meshes = {(str(m["slot"]), m["rm"]): m for m in result["meshes"]}
+    for row in validate_normals(value["neck_normals"]):
+        mesh = meshes.get((str(row["slot"]), row["rm"]))
+        i = row["vertex"]
+        require(mesh is not None and i < len(mesh["positions"]), "Neck normal target differs from this outfit")
+        require(
+            all(abs(a - b) <= 0.0002 for a, b in zip(mesh["positions"][i], row["position"], strict=True)),
+            "Neck normal position differs from this outfit",
+        )
+        original = normal_111110(row["original"])
+        require(
+            all(abs(a - b) <= 0.00002 for a, b in zip(mesh["normals"][i], original, strict=True)),
+            "Neck normal source differs from this outfit",
+        )
+        mesh["normals"][i] = normal_111110(row["replacement"])
+    return result
 
 
 def empty(reference):

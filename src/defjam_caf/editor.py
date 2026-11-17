@@ -654,8 +654,9 @@ class Editor:
             head = face_geometry.apply(dict(meshes=[m for m in result["meshes"] if m["slot"] == "2"]), sculpt)
             heads = {m["rm"]: m for m in head["meshes"]}
             result["meshes"] = [heads[m["rm"]] if m["slot"] == "2" else m for m in result["meshes"]]
+            result = face_geometry.apply_normals(result, sculpt)
             result["notices"].append(
-                "Experimental template sculpt. Original rig, UVs and normals retained; extreme edits may affect shading, eyelids, hair and accessories."
+                "Experimental template sculpt. Original rig and UVs retained; versioned neck normal corrections are applied when present. Extreme edits may affect shading, eyelids, hair and accessories."
             )
         textures = self.texture_edit if self.texture_edit is not None else (self.active_view() or {}).get("textures")
         if textures and textures["atlases"]:
@@ -724,6 +725,22 @@ class Editor:
             bool(metadata.get("name", "").strip()),
             "project",
         )
+        if document:
+            from . import face_geometry
+
+            if any(
+                outfits.view(document, row["id"]).get("face_sculpt", {}).get("schema") == face_geometry.NORMAL_SCHEMA
+                for row in outfits.entries(document)
+            ):
+                supported = face_geometry.NORMAL_EXTENSION in (setup.get("runtime") or {}).get("extensions", [])
+                add(
+                    "sculpt_normals",
+                    "Selected runtime supports neck normal corrections."
+                    if supported
+                    else "Update the selected runtime to export this project's neck normal corrections.",
+                    supported,
+                    "setup",
+                )
         version_ok = bool(projects.VERSION.fullmatch(metadata.get("version", "")))
         add("version", "Pack version is set." if version_ok else "Set a version such as 1.0.0.", version_ok, "project")
         if document:
@@ -872,7 +889,13 @@ class Editor:
         else:
             with Path(args["path"]).open("rb") as stream:
                 raw = stream.read(face_geometry.MAX_OBJ + 1)
-            view["face_sculpt"] = face_geometry.import_obj(raw, reference)
+            imported = face_geometry.import_obj(raw, reference)
+            previous = view.get("face_sculpt", {})
+            if previous.get("schema") == face_geometry.NORMAL_SCHEMA:
+                imported.update(
+                    schema=face_geometry.NORMAL_SCHEMA, neck_normals=copy.deepcopy(previous["neck_normals"])
+                )
+            view["face_sculpt"] = imported
         candidate = projects.validate(outfits.replace_view(document, self.active_outfit, view))
         self.remember()
         self.outfit_draft, self.edits = candidate, {}

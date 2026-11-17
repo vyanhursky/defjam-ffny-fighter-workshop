@@ -1,5 +1,29 @@
 # Progress and handoff
 
+## November 16 — sculpt-v2 compatibility (source PRs only)
+
+Owner authorized support for previously experimental ffny-face-sculpt-2 projects,
+with a companion runtime PR targeting v1.2.0. No merge or release is authorized.
+Workshop preserves versioned neck normals across mixed-version outfits, saving,
+copying, undo and head OBJ reimport. Preview binds edits to original positions
+and normals in a private copy. Old runtimes explicitly block export; updated
+tools advertise caf-sculpt-normals-1 and export caf-face-coordinates-2.
+
+Provided private three-outfit project: all30 normal corrections admitted; each
+look previews (44/44/43meshes); save/reopen remains equal; native compiler export
+passes (102255413-byte ZIP). Original source file stays byte-identical. Python
+371passed/3platform skips, Node24passed, Ruff and mypy pass. Source and native
+fixtures reject malformed/duplicate/unbound normal data. Runtime is extending
+FCAF with an optional version-2 normal section; version-1 containers are unchanged.
+
+The initial native selector probe confirmed head/HD outfit construction but
+retained original normals because its prototype looked in morph channels.
+The corrected adapter resolves the native draw-stream parameters instead,
+using participant-owned RM/normal copies and an original-normal fallback.
+Decisive game validation of this path is pending while another checkout has
+an active game session. Both PRs remain drafts until required checks finish;
+private art, project files, exported packages and captures are not published.
+
 ## November 16 — owner-authorized Workshop 0.2.0 release
 
 All four native package/startup jobs passed on source58a0fa1; annotated v0.2.0

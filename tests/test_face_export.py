@@ -9,7 +9,8 @@ from test_projects import fields
 
 
 @pytest.mark.parametrize("retail", [False, True])
-def test_sculpt_export_declares_version_and_preserves_per_outfit_assets(tmp_path, monkeypatch, retail):
+@pytest.mark.parametrize("normal_support", [False, True])
+def test_sculpt_export_declares_version_and_preserves_per_outfit_assets(tmp_path, monkeypatch, retail, normal_support):
     runtime = tmp_path / "runtime"
     (runtime / "setup").mkdir(parents=True)
     (runtime / "scripts").mkdir()
@@ -20,6 +21,12 @@ def test_sculpt_export_declares_version_and_preserves_per_outfit_assets(tmp_path
     project = projects.from_fields(fields()[0], "Example")
     ref = reference()
     project.update(face_sculpt=fg.sliders(ref, {"face_width": 0.5}))
+    if normal_support:
+        from test_sculpt_normals import sculpt
+        from defjam_caf import runtimes
+
+        project["face_sculpt"] = sculpt()
+        monkeypatch.setattr(runtimes, "inspect", lambda *a: dict(extensions=[fg.NORMAL_EXTENSION]))
     project, second = outfits.add(project)
     project["outfits"][0]["face_sculpt"] = fg.empty(ref)
     if retail:
@@ -43,6 +50,12 @@ def test_sculpt_export_declares_version_and_preserves_per_outfit_assets(tmp_path
             raw = archive.read(prefix + descriptor["path"])
             assert hashlib.sha256(raw).hexdigest() == descriptor["sha256"]
             value = json.loads(raw)
-            assert value["schema"] == "caf-face-coordinates-1"
+            assert value["schema"] == (
+                "caf-face-coordinates-2"
+                if view["face_sculpt"]["schema"] == fg.NORMAL_SCHEMA
+                else "caf-face-coordinates-1"
+            )
+            if value["schema"] == "caf-face-coordinates-2":
+                assert value["neck_normals"] == view["face_sculpt"]["neck_normals"]
             assert value["meshes"][0]["positions"] == ref["meshes"][0]["positions"]
             assert value["meshes"][0]["deltas"] == view["face_sculpt"]["meshes"][0]["deltas"]

@@ -43,11 +43,11 @@ def test_stage_is_complete_cached_and_invalidates_changed_sources(tmp_path, sour
     references = artwork_references.References()
     args = (runtime, game, "retail/blaze", tmp_path / "work", "caf-fighter-1")
     first = references.stage(*args)
-    assert len(first["images"]) == 24 and set(first["images"]) == set(ui_art.PARTS)
+    assert len(first["images"]) == len(ui_art.PARTS) and set(first["images"]) == set(ui_art.PARTS)
     assert first["layouts"]["selector_2p"] == [24, 24]  # Original references may be smaller than import limits.
     assert base64.b64decode(first["images"]["selector_2p"].split(",")[1]).startswith(b"\x89PNG")
     first["images"].clear()
-    assert len(references.stage(*args)["images"]) == 24 and len(calls) == 1
+    assert len(references.stage(*args)["images"]) == len(ui_art.PARTS) and len(calls) == 1
     (game / "screens/screens.viv").write_bytes(b"changed invented source")
     references.stage(*args)
     assert len(calls) == 2
@@ -94,3 +94,17 @@ def test_retail_staging_preserves_project_and_tracks_selected_outfit_donor(tmp_p
     assert editor.request("retail_artwork_stage", {})["donor"] == "retail/other"
     editor.request("retail_outfit_select", dict(id="default"))
     assert editor.request("retail_artwork_stage", {})["donor"] == "retail/blaze" and len(calls) == 2
+
+
+def test_legacy_runtime_references_remain_available_without_team_roles(tmp_path, source, monkeypatch):
+    runtime, game, _, original = source
+
+    def legacy(*args):
+        report = original(*args)
+        for role in ui_art.TEAM_ROLES:
+            report["source"]["images"].pop(role)
+        return report
+
+    monkeypatch.setattr("defjam_caf.fighter_mod.contract", legacy)
+    result = artwork_references.References().stage(runtime, game, "retail/blaze", tmp_path / "work", "caf-fighter-1")
+    assert set(result["images"]) == set(ui_art.PARTS) - set(ui_art.TEAM_ROLES)

@@ -19,7 +19,7 @@ def test_old_projects_remain_unchanged_until_explicit_ui_edit():
     for original in (source(), outfits.upgrade(source())):
         before = projects.encoded(original)
         status = ui_art.status(original, "default")
-        assert len(status["roles"]) == 30 and status["imported"] == 0
+        assert len(status["roles"]) == 33 and status["imported"] == 0
         assert projects.encoded(original) == before
         changed = ui_art.edit(original, "default", role="selector", png=encoded())
         assert changed["schema"] == projects.SCHEMA and projects.validate(changed) is changed
@@ -165,3 +165,40 @@ def test_export_embeds_exact_role_pngs_and_all_outfit_references(tmp_path, monke
             resources[1]["source"]["images"]["loading_3p"]["sha256"]
             == hashlib.sha256(base64.b64decode(override)).hexdigest()
         )
+
+
+def test_team_portrait_and_both_icon_states_roundtrip_and_outfit_inheritance(tmp_path):
+    original = source()
+    project, second = outfits.add(original)
+    for role in ui_art.TEAM_ROLES:
+        project = ui_art.edit(project, "default", role=role, png=encoded())
+    alternate = encoded((40, 80, 120, 255))
+    project = ui_art.edit(project, second, role="team_portrait", png=alternate)
+    assert ui_art.resolved(project, second)["images"]["team_icon"] == encoded()
+    assert ui_art.resolved(project, second)["images"]["team_portrait"] == alternate
+    assert ui_art.resolved(project, "default")["images"]["team_portrait"] == encoded()
+    rows = ui_art.status(project, second)["roles"]
+    assert {r["id"] for r in rows if r["group"] == "Team selection"} == set(ui_art.TEAM_ROLES)
+    path = tmp_path / "team.ffnyfighter"
+    projects.write(path, project)
+    assert projects.read(path)[0] == project
+    cleared = ui_art.edit(project, second, role="team_portrait")
+    assert ui_art.resolved(cleared, second)["images"]["team_portrait"] == encoded()
+    assert "ui_art" not in original
+
+
+def test_team_export_requires_advertised_runtime_capability(tmp_path, monkeypatch):
+    from defjam_caf.fighter_mod import export_mod
+
+    project = ui_art.edit(source(), "default", role="team_portrait", png=encoded())
+    runtime = tmp_path / "runtime"
+    for name in ("setup/fighter_caf.py", "scripts/fighter-contract.py"):
+        path = runtime / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# invented fixture")
+    monkeypatch.setattr("defjam_caf.runtimes.inspect", lambda *args: {"extensions": []})
+    with pytest.raises(SaveError, match="fighter-ui-team-art-1"):
+        export_mod(project, tmp_path / "out.zip", runtime, tmp_path / "data", tmp_path / "work")
+    monkeypatch.setattr("defjam_caf.runtimes.inspect", lambda *args: {"extensions": [ui_art.TEAM_CAPABILITY]})
+    with pytest.raises(SaveError, match="extracted game assets"):
+        export_mod(project, tmp_path / "out.zip", runtime, tmp_path / "data", tmp_path / "work")

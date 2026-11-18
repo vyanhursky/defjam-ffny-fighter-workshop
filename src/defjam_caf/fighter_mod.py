@@ -80,6 +80,16 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         (runtime / "setup/fighter_caf.py").is_file() and (runtime / "scripts/fighter-contract.py").is_file(),
         "This runtime has no CAF recipe support. Select the compatible Custom Fighter development checkout",
     )
+    from . import ui_art, runtimes
+
+    if any(
+        set(node.get("ui_art", {}).get("images", {})) & set(ui_art.TEAM_ROLES)
+        for node in [project, *project.get("outfits", [])]
+    ):
+        require(
+            ui_art.TEAM_CAPABILITY in runtimes.inspect(runtime, RECIPE_FORMAT).get("extensions", []),
+            "Team artwork needs a game version with fighter-ui-team-art-1 support. Update the selected runtime before exporting.",
+        )
     game = (Path(data) / "extracted").resolve()
     require(game.is_dir(), "Choose the data directory containing extracted game assets")
     workspace.mkdir(parents=True, exist_ok=True)

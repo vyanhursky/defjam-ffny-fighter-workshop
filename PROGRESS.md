@@ -1,5 +1,37 @@
 # Progress and handoff
 
+## November 16 — sculpt-v2 compatibility (source PRs only)
+
+Owner authorized support for previously experimental ffny-face-sculpt-2 projects,
+with a companion runtime PR targeting v1.2.0. No merge or release is authorized.
+Workshop preserves versioned neck normals across mixed-version outfits, saving,
+copying, undo and head OBJ reimport. Preview binds edits to original positions
+and normals in a private copy. Old runtimes explicitly block export; updated
+tools advertise caf-sculpt-normals-1 and export caf-face-coordinates-2.
+
+Provided private three-outfit project: all30 normal corrections admitted; each
+look previews (44/44/43meshes); save/reopen remains equal; native compiler export
+passes (102255413-byte ZIP). Original source file stays byte-identical. Python
+371passed/3platform skips, Node24passed, Ruff and mypy pass. Source and native
+fixtures reject malformed/duplicate/unbound normal data. Runtime is extending
+FCAF with an optional version-2 normal section; version-1 containers are unchanged.
+
+Windows native qualification: the original selector loads the default 2Pac look;
+all30 corrections are applied across five neck/top render meshes using2832bytes
+of private draw/normal data. Read-only live-memory verification proves the active
+render parameters reference the corrected copies, every original packed word is
+unchanged, and non-target vertices retain their original values. The220second
+run passes all five combat assertions with zero crashes/watchdogs/debug-layer
+faults/truncated batches/unresolved calls; frame samples min99/median120/max120
+presents per two seconds. The complete disposable save root restores identically.
+The other two looks are qualified for preview, save/reopen and compilation;
+this does not claim native gameplay coverage for every outfit/platform.
+
+Workshop PR35 and companion runtime PR274 remain unmerged; runtime targets
+v1.2.0 and is stacked on270. Stock regression and final CI evidence are maintained
+in their PR descriptions. No game assets, project files, exports, captures or
+native memory payloads are published. No tag or release is authorized.
+
 ## November 16 — owner-authorized Workshop 0.2.0 release
 
 All four native package/startup jobs passed on source58a0fa1; annotated v0.2.0

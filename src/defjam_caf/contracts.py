@@ -78,6 +78,7 @@ class FaceSculpt(TypedDict):
     basis: list[int]
     meshes: list[FaceMesh]
     sliders: dict[str, float]
+    neck_normals: NotRequired[list[dict[str, JSON]]]
 
 
 class AppearanceAssets(TypedDict, total=False):

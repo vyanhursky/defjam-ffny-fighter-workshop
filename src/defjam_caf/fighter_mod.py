@@ -80,6 +80,16 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         (runtime / "setup/fighter_caf.py").is_file() and (runtime / "scripts/fighter-contract.py").is_file(),
         "This runtime has no CAF recipe support. Select the compatible Custom Fighter development checkout",
     )
+    from . import face_geometry, outfits, runtimes
+
+    if any(
+        outfits.view(project, row["id"]).get("face_sculpt", {}).get("schema") == face_geometry.NORMAL_SCHEMA
+        for row in outfits.entries(project)
+    ):
+        require(
+            face_geometry.NORMAL_EXTENSION in runtimes.inspect(runtime, RECIPE_FORMAT).get("extensions", []),
+            "This project needs a runtime with CAF sculpt normal corrections. Update the selected runtime before exporting; opening and saving the project remain available.",
+        )
     game = (Path(data) / "extracted").resolve()
     require(game.is_dir(), "Choose the data directory containing extracted game assets")
     workspace.mkdir(parents=True, exist_ok=True)
@@ -113,7 +123,9 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
             reference = face_geometry.template(face_cache, face_appearance, view["fighter"])
             sculpt = face_geometry.validate(view["face_sculpt"], view["fighter"], reference)
             value = dict(
-                schema="caf-face-coordinates-1",
+                schema="caf-face-coordinates-2"
+                if sculpt["schema"] == face_geometry.NORMAL_SCHEMA
+                else "caf-face-coordinates-1",
                 template_sha256=reference["sha256"],
                 basis=reference["basis"],
                 meshes=[
@@ -121,6 +133,8 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
                     for m, d in zip(reference["meshes"], sculpt["meshes"], strict=False)
                 ],
             )
+            if sculpt["schema"] == face_geometry.NORMAL_SCHEMA:
+                value["neck_normals"] = sculpt["neck_normals"]
             raw = (json.dumps(value, sort_keys=True) + "\n").encode()
             target = root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -291,7 +305,7 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         if len(views) > 1:
             extras_note += "One roster entry exposes up to three outfits through the native clothing selector.\nCombat settings are shared; appearance, atlases and portraits are outfit-specific.\n"
         if face_cache is not None:
-            extras_note += "Experimental template sculpt: bounded head positions only; original rig, UVs and normals retained. Native startup verifies the assembled head before applying it.\n"
+            extras_note += "Experimental template sculpt: bounded head positions and optional versioned neck normals; original rig and UVs retained. The matching runtime verifies source references before applying corrections.\n"
         if "retail_moveset" in fighter:
             extras_note += (
                 "Retail moveset: "

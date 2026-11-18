@@ -1,5 +1,10 @@
 # defjam-ffny-fighter-workshop
 
+- Owner authorized Workshop/runtime sculpt-v2 normal support and testing with the
+  supplied private three-outfit project on 2026-11-16. Open companion PRs; runtime
+  targets v1.2.0. Do not merge, tag or release this work. Preserve source files and
+  corrections; keep all project assets and native evidence private.
+
 - Owner approved merging all open Workshop PRs and publishing/tagging stable
   `v0.2.0` on 2026-11-16 after Windows playtesting. Runtime PRs must remain
   untouched. This supersedes earlier release/merge limits for this release only.

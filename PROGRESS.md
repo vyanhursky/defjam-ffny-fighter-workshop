@@ -49,6 +49,21 @@ v1.2.0 and is stacked on270. Stock regression and final CI evidence are maintain
 in their PR descriptions. No game assets, project files, exports, captures or
 native memory payloads are published. No tag or release is authorized.
 
+## November18 — editable Team portraits
+
+Added per-outfit tall Team portraits and separate available/picked icon roles.
+Existing image validation, inheritance, import/clear, history and save/reopen
+apply; export checks `fighter-ui-team-art-1`. Original donor preview accepts both
+legacy24-role and complete27-role reference sets. Older projects stay unchanged
+until edited. Source-only PR; no release, merge, artwork or game data publication.
+
+Validation: Python310passed/7platform skips, Ruff check/format and strict mypy
+pass. Private real Qt verification imports/clears all three roles across three
+outfits and saves/reopens with every other authored field exact. Native Team
+artwork checks and matching runtime PR are tracked in the PR description; a
+Workshop screenshot alone does not prove native acceptance.
+
+
 ## November 16 — owner-authorized Workshop 0.2.0 release
 
 All four native package/startup jobs passed on source58a0fa1; annotated v0.2.0

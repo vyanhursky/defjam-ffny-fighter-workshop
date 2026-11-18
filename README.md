@@ -3,29 +3,28 @@
 A standalone, offline desktop Create-a-Fighter and save editor for **Def Jam:
 Fight for NY Recomp**, targeting Windows, macOS and Linux.
 
-**0.2.0** — [Download the release](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/tag/v0.2.0).
+**0.3.0** — [Download the release](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/tag/v0.3.0).
 Standalone packages include Python and Qt; no Python installation is required.
 
 | Platform | Download |
 | --- | --- |
-| Windows x64 | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.2.0/defjam-ffny-fighter-workshop-0.2.0-windows-x64.zip) |
-| macOS Apple Silicon | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.2.0/defjam-ffny-fighter-workshop-0.2.0-macos-arm64.zip) |
-| macOS Intel | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.2.0/defjam-ffny-fighter-workshop-0.2.0-macos-x64.zip) |
-| Linux x64 | [tar.gz](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.2.0/defjam-ffny-fighter-workshop-0.2.0-linux-x64.tar.gz) |
+| Windows x64 | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.3.0/defjam-ffny-fighter-workshop-0.3.0-windows-x64.zip) |
+| macOS Apple Silicon | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.3.0/defjam-ffny-fighter-workshop-0.3.0-macos-arm64.zip) |
+| macOS Intel | [ZIP](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.3.0/defjam-ffny-fighter-workshop-0.3.0-macos-x64.zip) |
+| Linux x64 | [tar.gz](https://github.com/vyanhursky/defjam-ffny-fighter-workshop/releases/download/v0.3.0/defjam-ffny-fighter-workshop-0.3.0-linux-x64.tar.gz) |
 
-Checksums and build provenance accompany each package. Windows owner playtesting
-covers the updated editor; native package/startup CI covers all four targets.
-The 0.2.0 macOS/Linux packages have not received manual game acceptance.
+Checksums and build provenance accompany each package. Native package/startup CI
+covers all four targets; owner playtesting of 0.3.0 is recorded in its release PR.
+The 0.3.0 macOS/Linux packages have not received manual game acceptance.
 
-Workshop 0.2.0 opens on four workflows: **Story character editor**,
+Workshop 0.3.0 opens on four workflows: **Story character editor**,
 **Fighter from a Create-a-Fighter**, **Fighter from a retail fighter**, and
 **Retail fighter editor**. **Game setup** remembers the game/data folders and
-shows which installed build supports each feature. Project exports pair with
-**Recomp 1.2.0 beta 2** or a compatible source checkout. Game setup reports
-optional capabilities: retail source-animation preview and standalone retail
-outfit collections need newer companion tools/runtime support. These runtime
-PRs remain separate and unmerged; the main menu, voice and artwork improvements
-do not require them. See the [0.2.0 release notes](docs/releases/v0.2.0.md).
+shows which installed build supports each feature. 0.3.0 adds final battle
+attributes with Charisma, Team portraits and icons, and sculpt neck-normal
+corrections; exporting them needs **Def Jam Recompiled 1.2.0** (Game setup
+explains when the selected runtime is older). See the
+[0.3.0 release notes](docs/releases/v0.3.0.md).
 
 ## Terminology
 

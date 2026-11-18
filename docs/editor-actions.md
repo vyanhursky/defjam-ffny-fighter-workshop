@@ -21,6 +21,7 @@ Requests carry `id`, `action`, and an `args` object. Native file pickers use
 | `face_import` | `Editor._request_face_export` |
 | `face_sliders` | `Editor._request_face_export` |
 | `fighting_style` | `Editor._request_fighting_style` |
+| `final_stats` | `Editor._request_final_stats` |
 | `home` | `Editor._request_home` |
 | `import` | `Editor._request_import` |
 | `new_project` | `Editor._request_new_project` |

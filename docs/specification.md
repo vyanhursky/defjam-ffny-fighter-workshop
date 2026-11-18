@@ -206,3 +206,14 @@ older runtimes receive an actionable export error while project editing remains
 available. Original-artwork staging accepts the legacy24-role set or the new
 complete27-role set, preserving compatibility with installed runtimes. Packages
 contain PNG sources, never arbitrary Team movie or ActionScript replacements.
+
+
+## Authored cinematic integration
+
+Standalone CAF projects may store validated authored entrance/victory documents
+alongside original retail performance choices. Preserve shared final attributes
+and versioned sculpt normals while editing or exporting these performances.
+Native compilation requires the paired CAF authoring runtime; Blender voice and
+mouth controls and half-speed audio/animation preview are supplied by its bridge.
+Preview speed does not alter exported source ticks. Publication contains source
+and invented fixtures only; recorded performances and projects remain private.

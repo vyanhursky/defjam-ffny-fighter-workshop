@@ -106,3 +106,23 @@ owner playtesting. No packaged release is implied.
   test display name exceeded the existing native title line budget and was
   correctly refused; a shorter name passed.
 - Private art, geometry, projects, captures and original saves are not published.
+
+## Versioned neck normal corrections
+
+`ffny-face-sculpt-2` preserves an optional author-supplied collection of packed
+11:11:10 neck normals alongside the existing head geometry. Older version-1
+sculpts remain unchanged. This supports previously experimental project files;
+it does not add a general normal-painting control.
+
+Opening, saving and previewing these projects is available independently of the
+selected runtime. Export requires the explicit `caf-sculpt-normals-1` capability.
+Older tools show an export-readiness failure and do not silently drop corrections.
+The matching runtime compiler and game executable are needed to play the exported
+normal corrections. This feature is queued for runtime v1.2.0, not yet released.
+
+Each correction binds a neck/top slot, render mesh and vertex to its original
+position and packed normal. The editor validates bounded, unique records and
+checks these references against the preview. Only the preview copy changes;
+original assets and caches remain untouched. The runtime verifies the references
+again and isolates participant writes. A mismatching live outfit retains its
+original normals and logs why the optional correction was not applied.

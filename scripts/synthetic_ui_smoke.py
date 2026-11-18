@@ -59,7 +59,7 @@ def fixtures(output):
                 api=1,
                 commands=commands,
                 recipe_format="caf-fighter-1",
-                extensions=["retail-animation-preview-1", "standalone-retail-outfits-1"],
+                extensions=["retail-animation-preview-1", "standalone-retail-outfits-1", "caf-final-stats-1"],
             )
         )
     )
@@ -297,7 +297,22 @@ def main(argv=None):
             "document.querySelector('header').getBoundingClientRect().height<=64 && document.documentElement.scrollWidth<=innerWidth && new Set([...document.querySelectorAll('#editor-tabs [role=tab]')].map(e=>Math.round(e.getBoundingClientRect().x))).size===1",
             None,
         ),
+        (
+            "Final attribute mode through WebChannel",
+            "window.__cafState?.final_stats?.charisma===0 && document.getElementById('stat-charisma').max==='50'",
+            "document.querySelector('[data-tab=stats]').click();let e=document.getElementById('stats-mode');e.value='final';e.dispatchEvent(new Event('change'))",
+        ),
+        (
+            "Charisma editing through WebChannel",
+            "window.__cafState?.final_stats?.charisma===30 && window.__cafState.dirty",
+            "let e=document.getElementById('stat-charisma');e.value=30;e.dispatchEvent(new Event('change'))",
+        ),
         ("Copy outfit", "window.__cafState?.outfits.length===2", "document.getElementById('add-outfit').click()"),
+        (
+            "Final attributes shared by copied outfit",
+            "window.__cafState?.final_stats?.charisma===30",
+            None,
+        ),
         (
             "Rename outfit",
             "window.__cafState?.outfits.some(o=>o.name==='Alt look') && document.getElementById('outfit-select').value===window.__cafState.active_outfit",

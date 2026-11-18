@@ -81,14 +81,23 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
         "This runtime has no CAF recipe support. Select the compatible Custom Fighter development checkout",
     )
     from . import face_geometry, outfits, runtimes
+    from .battle_stats import CAPABILITY as FINAL_STATS_EXTENSION
+
+    def extensions():
+        return runtimes.inspect(runtime, RECIPE_FORMAT).get("extensions", [])
 
     if any(
         outfits.view(project, row["id"]).get("face_sculpt", {}).get("schema") == face_geometry.NORMAL_SCHEMA
         for row in outfits.entries(project)
     ):
         require(
-            face_geometry.NORMAL_EXTENSION in runtimes.inspect(runtime, RECIPE_FORMAT).get("extensions", []),
+            face_geometry.NORMAL_EXTENSION in extensions(),
             "This project needs a runtime with CAF sculpt normal corrections. Update the selected runtime before exporting; opening and saving the project remain available.",
+        )
+    if "final_stats" in project["fighter"]:
+        require(
+            FINAL_STATS_EXTENSION in extensions(),
+            "This fighter needs a game version with final battle attributes support (caf-final-stats-1)",
         )
     game = (Path(data) / "extracted").resolve()
     require(game.is_dir(), "Choose the data directory containing extracted game assets")

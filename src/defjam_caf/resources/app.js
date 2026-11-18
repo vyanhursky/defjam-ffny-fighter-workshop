@@ -287,6 +287,15 @@ function renderState(state, forcePreview = false) {
     $("category").append(group);
   }
   $("category").value = state.groups.some((g) => g.id === category) ? category : "12";
+  const finalStats = state.project && state.final_stats !== null && state.final_stats !== undefined;
+  $("stats-mode-row").hidden = !state.project;
+  $("stats-mode").value = finalStats ? "final" : "training";
+  $("stats-mode").onchange = () =>
+    act("final_stats", { values: $("stats-mode").value === "final" ? state.effective_stats : null });
+  $("stats-help").textContent = finalStats
+    ? "Set final menu and battle attributes directly (0–50)."
+    : "Training stats use the game's normal 0–50 range.";
+  $("stats-final-note").hidden = !finalStats;
   $("stats").replaceChildren();
   for (const [key, label] of [
     ["upper", "Upper power"],
@@ -294,6 +303,7 @@ function renderState(state, forcePreview = false) {
     ["speed", "Speed"],
     ["toughness", "Toughness"],
     ["health", "Health"],
+    ...(finalStats ? [["charisma", "Charisma"]] : []),
   ]) {
     const row = document.createElement("div");
     row.className = "stat-row";
@@ -302,21 +312,28 @@ function renderState(state, forcePreview = false) {
     const span = document.createElement("span");
     span.textContent = label;
     const number = document.createElement("input");
-    Object.assign(number, { type: "number", min: "0", max: "50", value: String(f?.stats[key] || 0) });
+    const max = 50;
+    Object.assign(number, {
+      type: "number",
+      min: "0",
+      max: String(max),
+      value: String((finalStats ? state.final_stats[key] : f?.stats[key]) || 0),
+    });
     number.id = `stat-${key}`;
     number.setAttribute("aria-label", label);
     const slider = document.createElement("input");
-    Object.assign(slider, { type: "range", min: "0", max: "50", value: number.value });
+    Object.assign(slider, { type: "range", min: "0", max: String(max), value: number.value });
     slider.setAttribute("aria-label", label + " slider");
     slider.oninput = () => (number.value = slider.value);
     number.oninput = () => (slider.value = number.value);
     const change = () => {
       const value = Number(number.value);
-      if (!Number.isInteger(value) || value < 0 || value > 50) {
-        fail(new Error("Training stats must be 0–50."));
+      if (!Number.isInteger(value) || value < 0 || value > max) {
+        fail(new Error(`Attributes must be whole numbers in 0–${max}.`));
         return;
       }
-      act("stage", { edits: { stats: { [key]: value } } });
+      if (finalStats) act("final_stats", { values: { ...state.final_stats, [key]: value } });
+      else act("stage", { edits: { stats: { [key]: value } } });
     };
     number.onchange = change;
     slider.onchange = change;

@@ -127,9 +127,13 @@ def validate(document: Any) -> FighterProject | RetailProject:
     require(
         type(fighter) is dict
         and set(FIGHTER_FIELDS) <= set(fighter)
-        and set(fighter) <= set(FIGHTER_FIELDS) | {"finishers", "retail_moveset"},
+        and set(fighter) <= set(FIGHTER_FIELDS) | {"finishers", "retail_moveset", "final_stats"},
         "Projects contain fighter fields only",
     )
+    if "final_stats" in fighter:
+        from .battle_stats import validate as validate_stats
+
+        validate_stats(fighter["final_stats"])
     if "retail_moveset" in fighter:
         require(
             type(fighter["retail_moveset"]) is str

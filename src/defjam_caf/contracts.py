@@ -31,6 +31,10 @@ class TrainingStats(TypedDict):
     health: int
 
 
+class BattleStats(TrainingStats):
+    charisma: int
+
+
 class AppearanceFields(TypedDict):
     caf_values: list[int]
     caf_colors: list[int]
@@ -38,6 +42,7 @@ class AppearanceFields(TypedDict):
 
 class FighterFields(AppearanceFields):
     stats: TrainingStats
+    final_stats: NotRequired[BattleStats]
     styles: list[int]
     finishers: NotRequired[list[str]]
     retail_moveset: NotRequired[str]
@@ -194,6 +199,8 @@ class Snapshot(TypedDict, total=False):
     performance: dict[str, JSON]
     appearance_selected: dict[str, JSON]
     face_presets: list[dict[str, JSON]]
+    final_stats: BattleStats | None
+    effective_stats: BattleStats | None
     appearance_key: str
 
 

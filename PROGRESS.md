@@ -60,6 +60,21 @@ v1.2.0 and is stacked on270. Stock regression and final CI evidence are maintain
 in their PR descriptions. No game assets, project files, exports, captures or
 native memory payloads are published. No tag or release is authorized.
 
+## November18 — publish authored cinematic integration
+
+Publish the previously private authored entrance/victory document path and the
+combined final-attribute/sculpt-normal project support used by the approved
+CAF workflow. This branch stacks on Team artwork and carries existing PR35/36
+contracts as dependencies, preserving those project fields during performance
+export. Matching runtime companion publishes the native mouth/voice bridge,
+Blender controls, 50% sound/animation preview and bounded lossless HD storage.
+
+Historical combined native/Workshop qualification is documented in the PR.
+Owner explicitly stopped further local tests and will run consolidated PR
+regression later. No new tests/builds/game runs were performed for publication.
+Assets, projects, audio, scenes, captures, saves and executables remain private.
+
+
 ## November18 — editable Team portraits
 
 Added per-outfit tall Team portraits and separate available/picked icon roles.

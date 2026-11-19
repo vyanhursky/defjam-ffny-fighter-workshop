@@ -114,6 +114,7 @@ class Performance(TypedDict, total=False):
     intro: str
     victory: str
     ai: AI
+    cinematics: dict[str, JSON]
 
 
 class FighterProject(AppearanceAssets):

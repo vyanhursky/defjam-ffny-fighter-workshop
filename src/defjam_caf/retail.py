@@ -143,6 +143,10 @@ def validate(document):
 
         performance.validate(document["performance"])
         projects.require(
+            not document["performance"].get("cinematics"),
+            "Authored native mouth performances currently require a CAF project",
+        )
+        projects.require(
             not document["performance"] or document.get("deployment", {}).get("mode", "add") == "add",
             "Retail appearance workflows retain their parent's performance",
         )

@@ -444,6 +444,7 @@ class Editor:
         for key, label in (
             ("voice", "Voice"),
             ("intro", "Entrance sequence"),
+            ("cinematics", "Authored facial animation"),
             ("victory", "Victory sequence"),
             ("ai", "AI personality"),
         ):

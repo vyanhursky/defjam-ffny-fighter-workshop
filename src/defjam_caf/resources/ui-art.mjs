@@ -97,7 +97,7 @@ export function createUIArt({ $, call, fail, state }) {
       : "UI artwork belongs to standalone fighter projects.";
     const variants = (ui?.roles || []).filter((r) => r.group !== "All layouts");
     $("ui-coverage").textContent = ui
-      ? `${variants.filter((r) => r.available).length}/24 roles use project images. Remaining roles inherit the UI donor. ${ui.hd_scale === 1 ? "Native output." : ui.hd_scale + "× HD tiles accompany the native fallback."}`
+      ? `${variants.filter((r) => r.available).length}/${variants.length} roles use project images. Remaining roles inherit the UI donor. ${ui.hd_scale === 1 ? "Native output." : ui.hd_scale + "× HD tiles accompany the native fallback."}`
       : "";
     previewUIArt();
   }

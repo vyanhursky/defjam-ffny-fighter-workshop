@@ -191,3 +191,29 @@ The owner requested a private Pockets red-pants override and extra-outfit test
 through ordinary ZIP installation, fighter selection and battle. See
 [Retail appearance deployment](retail-overrides-outfits.md) for the contract and
 current scope. Native evidence remains separate from project/compiler checks.
+
+
+## Team-selection artwork
+
+Menu artwork exposes three per-outfit roles: Team portrait (tall card), Team icon
+(available), and Team icon (picked). Import PNG, Clear, Undo, Save and project
+reopen use the same validated image operations as other menu artwork. The default
+outfit supplies inherited art unless another outfit overrides that role. These
+fields do not alter appearance, voice or combat settings.
+
+Team export requires `fighter-ui-team-art-1` in the selected runtime manifest;
+older runtimes receive an actionable export error while project editing remains
+available. Original-artwork staging accepts the legacy24-role set or the new
+complete27-role set, preserving compatibility with installed runtimes. Packages
+contain PNG sources, never arbitrary Team movie or ActionScript replacements.
+
+
+## Authored cinematic integration
+
+Standalone CAF projects may store validated authored entrance/victory documents
+alongside original retail performance choices. Preserve shared final attributes
+and versioned sculpt normals while editing or exporting these performances.
+Native compilation requires the paired CAF authoring runtime; Blender voice and
+mouth controls and half-speed audio/animation preview are supplied by its bridge.
+Preview speed does not alter exported source ticks. Publication contains source
+and invented fixtures only; recorded performances and projects remain private.

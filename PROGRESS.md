@@ -1,4 +1,95 @@
+## November 18 — Workshop 0.3.0 release candidate
+
+Release branch `release/0.3.0` from develop/0.1 merges Workshop PRs #35 (sculpt
+neck-normal corrections), #36 (final attributes and Charisma), #37 (Team
+portraits and icons) and #39 (authored CAF entrance cinematics, added by the
+owner on 2026-11-18; companion of runtime #282) for the Def Jam Recompiled 1.2.0 release. Two merge
+conflicts were in the export gate (`fighter_mod.py`): the candidate keeps all three
+runtime-capability checks and inspects the runtime only when a project needs one.
+pyproject 0.3.0, README and `docs/releases/v0.3.0.md` updated. Merged candidate:
+390 Python passed/5 skipped, 24 Node passed, Ruff and mypy pass. Not merged,
+tagged or packaged; publication follows the owner's play-test.
+
+## November 17 — standalone final attributes and Charisma
+
+Standalone CAF projects can choose final battle attributes in Stats: Upper,
+Lower, Speed, Toughness, Health and Charisma (six integers, 0–50). This optional
+shared section survives outfit navigation/copy, Undo/Reset and project save/copy;
+normal five-field Story training stays unchanged. The original training formula
+is shown through the default values, avoiding a false retail-stat copy.
+Export/readiness require the companion caf-final-stats-1 runtime extension;
+older compilers/projects without it retain their existing behavior.
+
+Python 316 passed/7 skipped; Node24 passed; Ruff/mypy/Prettier pass. Real native
+macOS Qt/WebChannel/WebGL synthetic tours pass57checks each at1440×940 and
+1100×760, including mode selection, Charisma edit, shared outfits and save.
+Original game resources/pickers are adapters in that tour. Runtime/native and
+private real-project qualification are recorded separately in the companion PR.
+No game assets, projects, captures, packaged release or merge are published.
+
 # Progress and handoff
+
+## November 16 — sculpt-v2 compatibility (source PRs only)
+
+Owner authorized support for previously experimental ffny-face-sculpt-2 projects,
+with a companion runtime PR targeting v1.2.0. No merge or release is authorized.
+Workshop preserves versioned neck normals across mixed-version outfits, saving,
+copying, undo and head OBJ reimport. Preview binds edits to original positions
+and normals in a private copy. Old runtimes explicitly block export; updated
+tools advertise caf-sculpt-normals-1 and export caf-face-coordinates-2.
+
+Provided private three-outfit project: all30 normal corrections admitted; each
+look previews (44/44/43meshes); save/reopen remains equal; native compiler export
+passes (102255413-byte ZIP). Original source file stays byte-identical. Python
+371passed/3platform skips, Node24passed, Ruff and mypy pass. Source and native
+fixtures reject malformed/duplicate/unbound normal data. Runtime is extending
+FCAF with an optional version-2 normal section; version-1 containers are unchanged.
+
+Windows native qualification: the original selector loads the default 2Pac look;
+all30 corrections are applied across five neck/top render meshes using2832bytes
+of private draw/normal data. Read-only live-memory verification proves the active
+render parameters reference the corrected copies, every original packed word is
+unchanged, and non-target vertices retain their original values. The220second
+run passes all five combat assertions with zero crashes/watchdogs/debug-layer
+faults/truncated batches/unresolved calls; frame samples min99/median120/max120
+presents per two seconds. The complete disposable save root restores identically.
+The other two looks are qualified for preview, save/reopen and compilation;
+this does not claim native gameplay coverage for every outfit/platform.
+
+Workshop PR35 and companion runtime PR274 remain unmerged; runtime targets
+v1.2.0 and is stacked on270. Stock regression and final CI evidence are maintained
+in their PR descriptions. No game assets, project files, exports, captures or
+native memory payloads are published. No tag or release is authorized.
+
+## November18 — publish authored cinematic integration
+
+Publish the previously private authored entrance/victory document path and the
+combined final-attribute/sculpt-normal project support used by the approved
+CAF workflow. This branch stacks on Team artwork and carries existing PR35/36
+contracts as dependencies, preserving those project fields during performance
+export. Matching runtime companion publishes the native mouth/voice bridge,
+Blender controls, 50% sound/animation preview and bounded lossless HD storage.
+
+Historical combined native/Workshop qualification is documented in the PR.
+Owner explicitly stopped further local tests and will run consolidated PR
+regression later. No new tests/builds/game runs were performed for publication.
+Assets, projects, audio, scenes, captures, saves and executables remain private.
+
+
+## November18 — editable Team portraits
+
+Added per-outfit tall Team portraits and separate available/picked icon roles.
+Existing image validation, inheritance, import/clear, history and save/reopen
+apply; export checks `fighter-ui-team-art-1`. Original donor preview accepts both
+legacy24-role and complete27-role reference sets. Older projects stay unchanged
+until edited. Source-only PR; no release, merge, artwork or game data publication.
+
+Validation: Python310passed/7platform skips, Ruff check/format and strict mypy
+pass. Private real Qt verification imports/clears all three roles across three
+outfits and saves/reopens with every other authored field exact. Native Team
+artwork checks and matching runtime PR are tracked in the PR description; a
+Workshop screenshot alone does not prove native acceptance.
+
 
 ## November 16 — owner-authorized Workshop 0.2.0 release
 

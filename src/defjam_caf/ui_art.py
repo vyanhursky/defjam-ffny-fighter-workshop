@@ -7,6 +7,9 @@ import re
 from . import projects
 from .pngs import inspect_png
 
+TEAM_ROLES = ("team_portrait", "team_icon", "team_icon_selected")
+TEAM_CAPABILITY = "fighter-ui-team-art-1"
+
 MASTERS = {
     "selector": "Selector portrait · all layouts",
     "loading": "Loading portrait · all layouts",
@@ -14,6 +17,9 @@ MASTERS = {
     "titlecard": "Titlecard · all screens",
     "grid_normal": "Grid icon · normal",
     "grid_selected": "Grid icon · selected",
+    "team_portrait": "Team portrait · tall card",
+    "team_icon": "Team icon · available",
+    "team_icon_selected": "Team icon · picked",
 }
 PARTS = tuple(
     f"{role}_{count}p"
@@ -29,7 +35,8 @@ PARTS = tuple(
     )
     for count in (2, 3, 4)
 )
-ROLES = tuple(MASTERS) + PARTS
+PARTS += TEAM_ROLES
+ROLES = tuple(dict.fromkeys((*MASTERS, *PARTS)))
 MAX_TOTAL = 48 * 1024**2
 
 
@@ -173,7 +180,11 @@ def status(document, identity):
             dict(
                 id=role,
                 label=MASTERS.get(role, role.replace("_", " ")),
-                group="All layouts" if role in MASTERS else role.rsplit("_", 1)[1].upper(),
+                group="Team selection"
+                if role in TEAM_ROLES
+                else "All layouts"
+                if role in MASTERS
+                else role.rsplit("_", 1)[1].upper(),
                 own=role in local,
                 available=role in effective["images"],
                 origin=effective["origins"].get(role, {"source": "Retail UI donor"}),

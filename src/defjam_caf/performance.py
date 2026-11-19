@@ -83,7 +83,10 @@ def audio_bytes(value):
 
 
 def validate(value):
-    require(type(value) is dict and set(value) <= {"voice", "intro", "victory", "ai"}, "Unknown performance setting")
+    require(
+        type(value) is dict and set(value) <= {"voice", "intro", "victory", "ai", "cinematics"},
+        "Unknown performance setting",
+    )
     for role, prefix in (("intro", "CI_"), ("victory", "CE_")):
         if role in value:
             require(
@@ -122,6 +125,10 @@ def validate(value):
             for edits in slots:
                 require(type(edits) is dict and set(edits) <= {key for key, _ in AI_FIELDS}, "Unknown AI tendency")
                 require(all(type(n) is int and 1 <= n <= 5 for n in edits.values()), "AI tendency values must be 1–5")
+    if "cinematics" in value:
+        from .cinematics import validate as validate_cinematics
+
+        validate_cinematics(value)
     return value
 
 

@@ -47,7 +47,8 @@ class References:
             )
             source = report["source"]
             projects.require(
-                source.get("donor") == donor and set(source["images"]) == set(ui_art.PARTS),
+                source.get("donor") == donor
+                and set(source["images"]) in (set(ui_art.PARTS), set(ui_art.PARTS) - set(ui_art.TEAM_ROLES)),
                 "Runtime did not return the complete donor artwork set",
             )
             result = dict(donor=donor, images={}, layouts={})

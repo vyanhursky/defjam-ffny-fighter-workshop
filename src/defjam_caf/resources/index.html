@@ -275,8 +275,8 @@
             <div class="panel-title">
               <h3>Menu artwork.</h3>
               <p>
-                Import portraits, titlecards and icons for the selector, loading and result screens. Keep transparent
-                PNGs at their original resolution.
+                Import portraits, titlecards and icons for the selector, Team, loading and result screens. Keep
+                transparent PNGs at their original resolution.
               </p>
             </div>
             <p id="ui-outfit" class="hint"></p>
@@ -295,7 +295,7 @@
             ><button id="ui-retail">Import complete retail UI set…</button>
             <p class="hint">
               The UI donor supplies original layouts and missing artwork. It does not change your fighter's voice or
-              moves. Retail import stages 24 PNGs from your own game files.
+              moves. Retail import stages portraits, icons and Team cards from your own game files.
             </p>
             <div class="rule"></div>
             <label>Artwork role<select id="ui-role"></select></label>
@@ -414,9 +414,21 @@
           <section id="tab-stats" class="tab-content" hidden="" role="tabpanel" aria-labelledby="section-stats">
             <div class="panel-title">
               <h3>Build your edge.</h3>
-              <p>Training stats use the game's normal 0–50 range.</p>
+              <p id="stats-help">Training stats use the game's normal 0–50 range.</p>
             </div>
+            <label id="stats-mode-row" hidden
+              >Attribute mode
+              <select id="stats-mode">
+                <option value="training">CAF training (0–50)</option>
+                <option value="final">Final battle attributes (0–50)</option>
+              </select>
+            </label>
             <div id="stats"></div>
+            <p id="stats-final-note" class="hint" hidden>
+              Final attributes use retail scaling and apply to all outfits, including Charisma. Switching modes can
+              change combat strength even when menu numbers match. Training and style bonuses are not added again.
+              Export requires a compatible game version.
+            </p>
             <div class="rule"></div>
             <label>Cash<input id="cash" type="number" min="0" max="10000000" step="1" /></label
             ><label>Development points<input id="development" type="number" min="0" max="100000" step="1" /></label>

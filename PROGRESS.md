@@ -1,12 +1,13 @@
 ## November 18 — Workshop 0.3.0 release candidate
 
 Release branch `release/0.3.0` from develop/0.1 merges Workshop PRs #35 (sculpt
-neck-normal corrections), #36 (final attributes and Charisma) and #37 (Team
-portraits and icons) for the Def Jam Recompiled 1.2.0 release. Two merge
+neck-normal corrections), #36 (final attributes and Charisma), #37 (Team
+portraits and icons) and #39 (authored CAF entrance cinematics, added by the
+owner on 2026-11-18; companion of runtime #282) for the Def Jam Recompiled 1.2.0 release. Two merge
 conflicts were in the export gate (`fighter_mod.py`): the candidate keeps all three
 runtime-capability checks and inspects the runtime only when a project needs one.
 pyproject 0.3.0, README and `docs/releases/v0.3.0.md` updated. Merged candidate:
-381 Python passed/5 skipped, 24 Node passed, Ruff and mypy pass. Not merged,
+390 Python passed/5 skipped, 24 Node passed, Ruff and mypy pass. Not merged,
 tagged or packaged; publication follows the owner's play-test.
 
 ## November 17 — standalone final attributes and Charisma

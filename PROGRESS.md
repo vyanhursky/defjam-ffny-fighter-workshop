@@ -1,3 +1,20 @@
+## November20 — game1.2.1 compatibility PR preparation
+
+Owner approved the completed private victory/held-finger performance and
+requested source PRs for game1.2.1. The complete source stack adds reviewed
+CE_113A victory lip sync and explicit left-finger timed/full-clip profiles.
+Existing game1.2.0HD/entrance/combat-voice support is unchanged. Export gates
+each new feature by the paired compiler capability; no guard is removed.
+
+Workshop356Python passed/7skipped; Ruff check/format and the4configured typed
+source files pass. Reuse focused native macOS/default-CAF/Terrordome evidence:
+latest full-voice project reached results with exact original/guarded saves;
+204entrance/201victory face/finger poses matched expected values within1.2e-7.
+All81combat voice streams PCM-verified; individual native variants, other
+outfits/platforms and skip/rematch remain unqualified. No game regression is
+repeated for source publication. Companion source PRs are being opened; no
+merge, game/Workshop release or private asset upload is authorized by this step.
+
 ## November20 — explicit full-victory finger hold
 
 Add the closed caf-left-fingers-hold-1 variant, exactly [[0,1],[106,1]],

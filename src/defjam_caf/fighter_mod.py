@@ -107,6 +107,11 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
             ui_art.TEAM_CAPABILITY in extensions(),
             "Team artwork needs a game version with fighter-ui-team-art-1 support. Update the selected runtime before exporting.",
         )
+    if "victory" in project.get("performance", {}).get("cinematics", {}):
+        require(
+            "caf-victory-mouth-1" in extensions(),
+            "Authored victory lip sync needs a runtime with caf-victory-mouth-1 support. Update the selected runtime before exporting.",
+        )
     game = (Path(data) / "extracted").resolve()
     require(game.is_dir(), "Choose the data directory containing extracted game assets")
     workspace.mkdir(parents=True, exist_ok=True)

@@ -90,3 +90,19 @@ identity and participant. Two CAFs sharing a retail motion core can therefore
 have different voices, AI and sequences. Old project/runtime formats retain their
 existing meaning. The feature requires the matching runtime; full in-game and
 cross-platform qualification is pending the owner's joint test session.
+
+
+## Authored CAF victory lip sync
+
+A paired Blender bridge can retain bounded Blaze `CE_113A` facial mouth tracks
+in `performance.cinematics.victory`. Victory uses the imported **extro** WAV;
+entrance keeps its separate **intro** WAV and authored tracks. Save/reopen and
+export preserve both. Changing a donor or voice without matching mouth timing
+is refused. Export requires the runtime extension `caf-victory-mouth-1`.
+
+Edit Jaw Open and Lip Shape in the prepared Blender scene, use its voice
+waveform/word markers and 50% sound-plus-animation preview, then export a new
+performance document and matching WAV. The paired converter validates these
+closed controls and merges only victory settings into a new project/package.
+The regular Workshop source-animation preview still omits facial evaluation.
+An exported document or Blender playback does not establish native acceptance.

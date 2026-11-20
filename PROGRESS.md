@@ -1,3 +1,22 @@
+## November20 — bounded authored CAF victory
+
+A new source-only branch from default013c76d admits reviewed Blaze CE_113A
+victory mouth documents alongside the existing authored entrances. Victory
+binds only its extro WAV/hash; entrance keeps its independent intro document.
+Export checks the explicit caf-victory-mouth-1 compiler capability. Native
+preload checks retain153600 entrance/512000 victory bytes and all previous
+rig/channel/timing/numeric restrictions. No arbitrary donor profiles admitted.
+
+Workshop345Python passed/7skipped; focused source/codec fixtures and Ruff pass.
+The paired runtime/Blender adds preview-only sound calibration with invariant
+native export timing. Private three-outfit project preserves all appearance,
+final attributes, identity, Team art and the approved entrance. New victory
+was tested natively on macOS/default CAF outfit/Terrordome through results,
+with restored copied saves; broader outfits/platforms/skip/rematch unqualified.
+User review of the performance remains pending. Supplied voices, projects,
+scenes, packages, captures, game code/builds and saves remain private/untracked.
+No release, merge or installed-mod update performed.
+
 ## November 18 — Workshop 0.3.0 release candidate
 
 Release branch `release/0.3.0` from develop/0.1 merges Workshop PRs #35 (sculpt

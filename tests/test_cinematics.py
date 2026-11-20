@@ -66,3 +66,47 @@ def test_authored_entrance_and_final_attributes_survive_together(tmp_path):
     assert projects.read(target)[0] == before
     assert "victory" not in before["performance"]
     assert set(before["performance"]["voice"]["clips"]) == {"intro"}
+
+
+def test_victory_and_approved_entrance_survive_together(tmp_path):
+    value = settings()
+    entrance = copy.deepcopy(value["cinematics"]["intro"])
+    value["victory"] = "CE_113A"
+    value["voice"]["clips"]["extro"] = value["voice"]["clips"]["intro"]
+    value["cinematics"]["victory"] = copy.deepcopy(entrance)
+    value["cinematics"]["victory"]["source"]["template"] = "CE_113A"
+    performance.validate(value)
+    project = projects.from_fields(fields()[0], "Both performances")
+    project["performance"] = value
+    path = tmp_path / "both.ffnyfighter"
+    projects.write(path, project)
+    assert projects.read(path)[0]["performance"] == value
+    assert value["cinematics"]["intro"] == entrance
+    bad = copy.deepcopy(value)
+    bad["voice"]["clips"].pop("extro")
+    with pytest.raises(SaveError):
+        performance.validate(bad)
+    bad = copy.deepcopy(value)
+    bad["cinematics"]["victory"]["source"]["template"] = "CI_113A"
+    with pytest.raises(SaveError):
+        performance.validate(bad)
+
+
+def test_export_refuses_entrance_only_runtime_for_victory(tmp_path, monkeypatch):
+    from defjam_caf import fighter_mod, runtimes
+
+    runtime = tmp_path / "runtime"
+    for name in ("setup/fighter_caf.py", "scripts/fighter-contract.py"):
+        f = runtime / name
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text("# invented fixture")
+    value = settings()
+    value["victory"] = "CE_113A"
+    value["voice"]["clips"]["extro"] = value["voice"]["clips"]["intro"]
+    value["cinematics"]["victory"] = copy.deepcopy(value["cinematics"]["intro"])
+    value["cinematics"]["victory"]["source"]["template"] = "CE_113A"
+    project = projects.from_fields(fields()[0], "Victory")
+    project["performance"] = value
+    monkeypatch.setattr(runtimes, "inspect", lambda *a, **k: dict(extensions=[]))
+    with pytest.raises(SaveError, match="caf-victory-mouth-1"):
+        fighter_mod.export_mod(project, tmp_path / "candidate.zip", runtime, tmp_path / "data", tmp_path / "work")

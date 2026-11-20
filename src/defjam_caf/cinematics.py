@@ -22,7 +22,11 @@ def validate(settings):
         source = envelope["source"]
         require(
             type(source) is dict
-            and set(source) == {"format", "template", "edits", "mouth", "speech_tick"}
+            and set(source)
+            in (
+                {"format", "template", "edits", "mouth", "speech_tick"},
+                {"format", "template", "edits", "mouth", "speech_tick", "left_hand"},
+            )
             and source["format"] == "fighter-cinematic-caf-performance-2"
             and type(source["template"]) is str
             and source["template"] in DURATIONS
@@ -30,6 +34,10 @@ def validate(settings):
             and source["template"].startswith("CI_" if role == "intro" else "CE_"),
             "Authored cinematic requires its original donor; change the donor in Blender",
         )
+        if "left_hand" in source:
+            from .hand_performance import validate_hand
+
+            validate_hand(source["left_hand"], source["template"])
         duration = DURATIONS[source["template"]]
         edits = source["edits"]
         require(type(edits) is list and len(edits) <= 16, "Too many expression edits")

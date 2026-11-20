@@ -1,3 +1,26 @@
+## November20 — bounded native left-finger authoring
+
+Source branch from the latest default013c76d plus the authored-victory stack.
+Portable performance documents may retain a closed left-hand pose/envelope only
+for reviewed CE_113A. Exactly15 finite unit native finger quaternions and bounded
+increasing source-tick weights; arbitrary destinations/pointers/rig programs
+remain refused. Export requires the paired caf-left-fingers-1 compiler extension,
+separately from caf-victory-mouth-1. Existing entrance/audio hash bindings remain.
+
+Workshop354 Python passed/7skipped; focused runtime62 passed, source hygiene,
+Ruff and an actual Blender4.5.9 export/project reconstruction pass. The native
+compiler preserves body/root/cameras/face/right-hand data while generating only
+the participant-owned left-finger track. Whole-tick resampling is explicitly
+approximate outside the gesture; the measured donor limit is0.8562degrees.
+Focused macOS proof reached results:199 entrance/202 victory poses matched
+expected face/finger channels within1.2e-7, with both processed clips identified
+in native mixed audio and copied/original saves exact. One skipped cold-start
+callback repeats a pre-hand baseline signature; this is not a clean regression.
+The owner requested unchanged arm movement/camera and approved the prior lip
+sync; the new finger/level revision still needs visual/listening review.
+Private art, voice WAVs, scenes, projects, builds and captures remain untracked.
+No release, merge, push or installed-mod update is part of this iteration.
+
 ## November20 — bounded authored CAF victory
 
 A new source-only branch from default013c76d admits reviewed Blaze CE_113A

@@ -112,6 +112,13 @@ def export_mod(project, destination, runtime, data, workspace, progress=lambda _
             "caf-victory-mouth-1" in extensions(),
             "Authored victory lip sync needs a runtime with caf-victory-mouth-1 support. Update the selected runtime before exporting.",
         )
+    if any(
+        "left_hand" in row.get("source", {}) for row in project.get("performance", {}).get("cinematics", {}).values()
+    ):
+        require(
+            "caf-left-fingers-1" in extensions(),
+            "Authored left fingers need a runtime with caf-left-fingers-1 support. Update the selected runtime before exporting.",
+        )
     game = (Path(data) / "extracted").resolve()
     require(game.is_dir(), "Choose the data directory containing extracted game assets")
     workspace.mkdir(parents=True, exist_ok=True)

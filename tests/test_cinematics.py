@@ -171,3 +171,37 @@ def test_left_fingers_refuse_runtime_with_only_victory_mouth(tmp_path, monkeypat
     monkeypatch.setattr(runtimes, "inspect", lambda *a, **k: dict(extensions=["caf-victory-mouth-1"]))
     with pytest.raises(SaveError, match="caf-left-fingers-1"):
         fighter_mod.export_mod(project, tmp_path / "candidate.zip", runtime, tmp_path / "data", tmp_path / "work")
+
+
+def test_constant_full_victory_hand_pose_survives_project(tmp_path):
+    value = hand_settings()
+    value["cinematics"]["victory"]["source"]["left_hand"]["envelope"] = [[0, 1], [106, 1]]
+    performance.validate(value)
+    project = projects.from_fields(fields()[0], "Whole victory pose")
+    project["performance"] = value
+    target = tmp_path / "held.ffnyfighter"
+    projects.write(target, project)
+    assert projects.read(target)[0]["performance"] == value
+    for rows in ([[0, 1], [106, 0]], [[0, 0.5], [106, 0.5]], [[0, 1], [50, 1], [106, 1]]):
+        bad = copy.deepcopy(value)
+        bad["cinematics"]["victory"]["source"]["left_hand"]["envelope"] = rows
+        with pytest.raises(SaveError):
+            performance.validate(bad)
+
+
+def test_export_requires_explicit_full_clip_hand_capability(tmp_path, monkeypatch):
+    from defjam_caf import fighter_mod, runtimes
+
+    runtime = tmp_path / "runtime"
+    for name in ("setup/fighter_caf.py", "scripts/fighter-contract.py"):
+        f = runtime / name
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text("# invented fixture")
+    project = projects.from_fields(fields()[0], "Whole victory pose")
+    project["performance"] = hand_settings()
+    project["performance"]["cinematics"]["victory"]["source"]["left_hand"]["envelope"] = [[0, 1], [106, 1]]
+    monkeypatch.setattr(
+        runtimes, "inspect", lambda *a, **k: dict(extensions=["caf-victory-mouth-1", "caf-left-fingers-1"])
+    )
+    with pytest.raises(SaveError, match="caf-left-fingers-hold-1"):
+        fighter_mod.export_mod(project, tmp_path / "candidate.zip", runtime, tmp_path / "data", tmp_path / "work")

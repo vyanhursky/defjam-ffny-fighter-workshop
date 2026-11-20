@@ -1,3 +1,22 @@
+## November20 — explicit full-victory finger hold
+
+Add the closed caf-left-fingers-hold-1 variant, exactly [[0,1],[106,1]],
+with a distinct compiler capability gate. Previous timed envelopes still return
+to the donor at both ends; partial nonneutral or arbitrary constant profiles
+remain refused. The paired Blender panel exposes Hold throughout victory.
+No new native state or global hand-palette replacement is introduced.
+
+Focused Workshop cinematic tests22 passed and paired runtime53 passed.
+The full-hold candidate was checked over849 sub-tick samples and exported
+through Blender4.5.9 with the approved voice bytes preserved. A focused macOS
+CAF100/default-outfit/Terrordome run reached results;198 victory samples matched
+the expected left-finger rotations within6.1e-8, mouth within1.2e-7, and body/hand
+clocks exactly. Original and guarded saves were unchanged, with no classified
+run faults. This is a bounded full-hold proof, not skip/rematch/outfit/platform
+qualification. Subsequent thumb-only asset revisions retain separate receipts.
+Projects, voices, scenes, captures, game builds and saves remain private.
+No installed-mod replacement, publication, merge or release performed.
+
 ## November20 — bounded native left-finger authoring
 
 Source branch from the latest default013c76d plus the authored-victory stack.

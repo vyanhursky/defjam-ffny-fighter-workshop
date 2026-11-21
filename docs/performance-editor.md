@@ -90,3 +90,40 @@ identity and participant. Two CAFs sharing a retail motion core can therefore
 have different voices, AI and sequences. Old project/runtime formats retain their
 existing meaning. The feature requires the matching runtime; full in-game and
 cross-platform qualification is pending the owner's joint test session.
+
+
+## Authored CAF victory lip sync
+
+A paired Blender bridge can retain bounded Blaze `CE_113A` facial mouth tracks
+in `performance.cinematics.victory`. Victory uses the imported **extro** WAV;
+entrance keeps its separate **intro** WAV and authored tracks. Save/reopen and
+export preserve both. Changing a donor or voice without matching mouth timing
+is refused. Export requires the runtime extension `caf-victory-mouth-1`.
+
+Edit Jaw Open and Lip Shape in the prepared Blender scene, use its voice
+waveform/word markers and 50% sound-plus-animation preview, then export a new
+performance document and matching WAV. The paired converter validates these
+closed controls and merges only victory settings into a new project/package.
+The regular Workshop source-animation preview still omits facial evaluation.
+An exported document or Blender playback does not establish native acceptance.
+
+## Authored left-hand poses
+
+For the reviewed Blaze `CE_113A` victory, a performance can also retain a
+`fighter-native-left-hand-1` pose: exactly fifteen finite unit quaternions for
+the native left fingers, plus a bounded source-tick envelope. The donor wrist,
+arm, right hand, body and camera remain separate. This is a fixed native
+channel profile; arbitrary rigs, destinations, pointers and track programs are
+not accepted. Workshop preserves the document and exports it with
+`caf-left-fingers-1` support in the selected compiler.
+
+The Blender Left Hand Pose panel can select **Hold throughout victory**. That
+uses the explicit full-clip `[[0,1],[106,1]]` envelope and additionally requires
+`caf-left-fingers-hold-1`. Timed poses still require neutral endpoints. The
+prepared pose is a preset, rather than a general finger IK editor; the regular
+Workshop animation preview does not evaluate these facial/finger tracks.
+
+Public game 1.2.0 / Workshop 0.3.0 retain their existing entrance and audio
+support. The new authored victory and left-finger profiles are a companion
+compatibility change for game 1.2.1; they must not be silently dropped when a
+project is opened or exported with an older compiler.

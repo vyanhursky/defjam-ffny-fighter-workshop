@@ -1,3 +1,81 @@
+## November20 — game1.2.1 compatibility PR preparation
+
+Owner approved the completed private victory/held-finger performance and
+requested source PRs for game1.2.1. The complete source stack adds reviewed
+CE_113A victory lip sync and explicit left-finger timed/full-clip profiles.
+Existing game1.2.0HD/entrance/combat-voice support is unchanged. Export gates
+each new feature by the paired compiler capability; no guard is removed.
+
+Workshop356Python passed/7skipped; Ruff check/format and the4configured typed
+source files pass. Reuse focused native macOS/default-CAF/Terrordome evidence:
+latest full-voice project reached results with exact original/guarded saves;
+204entrance/201victory face/finger poses matched expected values within1.2e-7.
+All81combat voice streams PCM-verified; individual native variants, other
+outfits/platforms and skip/rematch remain unqualified. No game regression is
+repeated for source publication. Companion source PRs are being opened; no
+merge, game/Workshop release or private asset upload is authorized by this step.
+
+## November20 — explicit full-victory finger hold
+
+Add the closed caf-left-fingers-hold-1 variant, exactly [[0,1],[106,1]],
+with a distinct compiler capability gate. Previous timed envelopes still return
+to the donor at both ends; partial nonneutral or arbitrary constant profiles
+remain refused. The paired Blender panel exposes Hold throughout victory.
+No new native state or global hand-palette replacement is introduced.
+
+Focused Workshop cinematic tests22 passed and paired runtime53 passed.
+The full-hold candidate was checked over849 sub-tick samples and exported
+through Blender4.5.9 with the approved voice bytes preserved. A focused macOS
+CAF100/default-outfit/Terrordome run reached results;198 victory samples matched
+the expected left-finger rotations within6.1e-8, mouth within1.2e-7, and body/hand
+clocks exactly. Original and guarded saves were unchanged, with no classified
+run faults. This is a bounded full-hold proof, not skip/rematch/outfit/platform
+qualification. Subsequent thumb-only asset revisions retain separate receipts.
+Projects, voices, scenes, captures, game builds and saves remain private.
+No installed-mod replacement, publication, merge or release performed.
+
+## November20 — bounded native left-finger authoring
+
+Source branch from the latest default013c76d plus the authored-victory stack.
+Portable performance documents may retain a closed left-hand pose/envelope only
+for reviewed CE_113A. Exactly15 finite unit native finger quaternions and bounded
+increasing source-tick weights; arbitrary destinations/pointers/rig programs
+remain refused. Export requires the paired caf-left-fingers-1 compiler extension,
+separately from caf-victory-mouth-1. Existing entrance/audio hash bindings remain.
+
+Workshop354 Python passed/7skipped; focused runtime62 passed, source hygiene,
+Ruff and an actual Blender4.5.9 export/project reconstruction pass. The native
+compiler preserves body/root/cameras/face/right-hand data while generating only
+the participant-owned left-finger track. Whole-tick resampling is explicitly
+approximate outside the gesture; the measured donor limit is0.8562degrees.
+Focused macOS proof reached results:199 entrance/202 victory poses matched
+expected face/finger channels within1.2e-7, with both processed clips identified
+in native mixed audio and copied/original saves exact. One skipped cold-start
+callback repeats a pre-hand baseline signature; this is not a clean regression.
+The owner requested unchanged arm movement/camera and approved the prior lip
+sync; the new finger/level revision still needs visual/listening review.
+Private art, voice WAVs, scenes, projects, builds and captures remain untracked.
+No release, merge, push or installed-mod update is part of this iteration.
+
+## November20 — bounded authored CAF victory
+
+A new source-only branch from default013c76d admits reviewed Blaze CE_113A
+victory mouth documents alongside the existing authored entrances. Victory
+binds only its extro WAV/hash; entrance keeps its independent intro document.
+Export checks the explicit caf-victory-mouth-1 compiler capability. Native
+preload checks retain153600 entrance/512000 victory bytes and all previous
+rig/channel/timing/numeric restrictions. No arbitrary donor profiles admitted.
+
+Workshop345Python passed/7skipped; focused source/codec fixtures and Ruff pass.
+The paired runtime/Blender adds preview-only sound calibration with invariant
+native export timing. Private three-outfit project preserves all appearance,
+final attributes, identity, Team art and the approved entrance. New victory
+was tested natively on macOS/default CAF outfit/Terrordome through results,
+with restored copied saves; broader outfits/platforms/skip/rematch unqualified.
+User review of the performance remains pending. Supplied voices, projects,
+scenes, packages, captures, game code/builds and saves remain private/untracked.
+No release, merge or installed-mod update performed.
+
 ## November 18 — Workshop 0.3.0 release candidate
 
 Release branch `release/0.3.0` from develop/0.1 merges Workshop PRs #35 (sculpt

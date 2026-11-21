@@ -1,3 +1,26 @@
+## November 20 — Workshop 0.3.1 published
+
+Owner-authorized stable/Latest v0.3.1 is public, paired with game 1.2.1.
+PR #41 merged companion #40 at 2f0a31719577c0d913cf535734d4f3d490eb6400;
+the annotated tag is immutable. Exact default-branch push run 44847341419
+passed all four native package jobs. Stage release run 44848092031 verified
+archive contents, relocated frozen startup/WebGL, source identity and all four
+platform receipts. Ten release assets (four archives, four sidecars, SHA256SUMS,
+provenance) match GitHub digests. Both public Latest APIs confirm stable,
+non-draft publication. No private project, recording, save or game binary shipped.
+
+356 Python tests/7 platform skips, Ruff and mypy passed. Reuse the focused
+owner-approved macOS/default CAF outfit/Terrordome proof through results:
+204 entrance/201 victory samples within 1.2e-7, original/guarded saves unchanged.
+Other native platforms/outfits, skip/rematch and every randomized voice variant
+remain unqualified. No new game run or all-platform manual editor acceptance
+is claimed. The normal Workshop preview still omits facial/finger evaluation;
+use the paired Blender bridge for those controls. Existing projects/formats
+retain their meaning; the new victory/finger fields require game 1.2.1.
+
+Next: owner tests the public pair and reports issues for a separately qualified
+future release. Preserve original inputs, earlier failures and native evidence.
+
 ## November20 — owner-authorized0.3.1 release preparation
 
 MergePR40 (c1812aa,5/5CI) into isolatedrelease/0.3.1; version/notes/download

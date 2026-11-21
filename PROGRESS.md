@@ -1,3 +1,15 @@
+## November20 — owner-authorized0.3.1 release preparation
+
+MergePR40 (c1812aa,5/5CI) into isolatedrelease/0.3.1; version/notes/download
+links updated. Owner explicitly requests stable0.3.1 alongside game1.2.1.
+New authored victory/left-finger documents are preserved and gated by compiler
+capabilities. Existing formats and original saves remain intact.356Python/7skips,
+Ruff/mypy and focused approved native evidence apply; no new all-platform manual
+editor/game or full-regression qualification is claimed. Next: releasePR/CI,
+merge, native default-branch build, tag exactgreen source, Stage release audit,
+verify4archives/SHA256SUMS/provenance and publish Latest. Keep all private assets
+and built game executables outside the source/release payload.
+
 ## November20 — game1.2.1 compatibility PR preparation
 
 Owner approved the completed private victory/held-finger performance and
